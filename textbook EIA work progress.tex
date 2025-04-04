@@ -1,0 +1,46 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath} % For advanced math typesetting
+\usepackage{amsfonts} % For additional math fonts
+\usepackage{amsthm} % For theorem environments
+\usepackage{graphicx}
+
+\newtheorem{definition}{Definition}
+
+\title{Textbook EIA Work Progress Logging}
+\author{Navit Dori}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+
+%%
+\section{Uploading data from OECD and Statcan and Integrating Them}
+\subsection{File $GDP_comp.py$}
+In $GDP_comp.py$ I upload OECD data and Statcan data and integrate them by
+\begin{enumerate}
+    \item Converting Statcan from CAD to USD
+    \item Mapping the Statcan sectors (more detailed) to OECD sectors
+\end{enumerate}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{STATCAN_2016_VA.png}
+    \caption{Value Added by Sector (StatCan, 2016)}
+    \label{fig:statcan2016va}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{STATCAN_2020_VA.png}
+    \caption{Value Added by Sector (StatCan, 2020)}
+    \label{fig:statcan2016va}
+\end{figure}
+
+
+
+
+
+
+\end{document}

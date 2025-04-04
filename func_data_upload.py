@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # finished 4.4.25
 
 
-def data_upload(year)
+def data_upload(year):
 
     start_time = time.time()
     print("working directory of func_Read_StatCan.py is: ",os.getcwd())  # Print the current working directory

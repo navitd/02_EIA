@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import time
-from func_Read_CAN2020 import Read_CAN2020
+from func_data_upload import data_upload
 
 
 
@@ -69,17 +69,9 @@ print("working directory of income_multipliers.py is: ",os.getcwd())  # Print th
 
 # Module 1: Get IO=II, X, GDP, from OECD, wages, compensation for employees and employment from CANSTAT
 # later move this to a function that receives country and year and uploads the results
+year = '2019'
+PPP, OECD, mapping_dict, statcan =  data_upload(year)
 
-OECD_path = "../Data/NATIODOMIMP/" # windows style: r".\\"
-OECD_name = 'CAN2019dom.csv'
-OECD_rough = pd.read_csv(OECD_path + OECD_name)
-
-# Remove imports from matrix
-OECD_rough = OECD_rough.set_index(OECD_rough.columns[0])  # Set first column as index
-OECD_rough.index = OECD_rough.index.astype(str)  # Ensure index is strings
-OECD = OECD_rough[~OECD_rough.index.str.startswith("IMP_")]
-simple_II_labels = OECD_rough.columns.tolist()[OECD_rough.columns.get_loc("A01_02") : OECD_rough.columns.get_loc("T") + 1]
-OECD.index = OECD.index.str.removeprefix("DOM_")
 II = OECD.loc[simple_II_labels, simple_II_labels]
 household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
 final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'DPABR',	'CONS_NONRES',	'EXPO',	'IMPO']
@@ -105,12 +97,7 @@ output_of_final_demand = OECD.loc['OUTPUT', final_demand_columns]   #probably wi
 
 #final demand and value added are not the same at all
 
-# uploading form CANSTAT from 
-# https://data-explorer.oecd.org/vis?tm=value%20added%20and%20its%20components%20by%20activity&pg=0&snb=10&df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_NAMAIN10%40DF_TABLE6&df[ag]=OECD.SDD.NAD&df[vs]=2.0&dq=A.AUS...B1G.....V..&lom=LASTNPERIODS&lo=5&to[TIME_PERIOD]=false
-# I downloaded it to C:\NavitComputer24\2024_NES\Economics\Data\STATCAN
-# I want to make another file that compares STATCAN to OECD and checks consistency between them.
-# the statcan file: OECD_VA_Breakdown.csv or OECD_VA_Breakdown2.csv
-# OECD is in USD and STATCAN is in CAD?
+
 
 
 

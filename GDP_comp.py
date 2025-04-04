@@ -5,7 +5,9 @@ import time
 import re
 import matplotlib.pyplot as plt
 
-
+# In this file I upload GDP from OECD and GDP from stat can and compare the two
+# I also upload the PPP conversion table to convert from CAD to USD
+# finished 4.4.25
 
 def data_exploration_flags(II,household_expenditure,other_final_demand,output,output_of_final_demand,OECD_rough):
     print( pd.DataFrame({
@@ -24,7 +26,7 @@ def data_exploration_flags(II,household_expenditure,other_final_demand,output,ou
 
 ###############################################               main               #########################
 start_time = time.time()
-print("working directory of income_multipliers.py is: ",os.getcwd())  # Print the current working directory
+print("working directory of GDP_comp.py is: ",os.getcwd())  # Print the current working directory
 
 
 
