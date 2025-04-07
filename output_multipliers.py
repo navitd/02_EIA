@@ -59,38 +59,7 @@ output_of_final_demand = OECD.loc['OUTPUT', final_demand_columns]   #probably wi
 
 #final demand and value added are not the same at all
 
-GDPstatcan = statcan[(statcan["TIME_PERIOD"] == int(year)) & (statcan["Transaction"] == 'Value added, gross')].drop(columns=["Economic activity","TIME_PERIOD","Transaction"])
-    #GDPstatcan.set_index("detailed_sectors")["OBS_VALUE"] #detailed_sectors is now the index
 
-    # now GSPstatcan is with detailed OECD codes and we need to translate it to known OECD codes
-    # from A01 and A02 to A01_02
-GDPstatcan['OECD_codes'] = GDPstatcan['detailed_sectors'].map(mapping_dict)
-GDPstatcan = GDPstatcan.sort_values(by="OECD_codes")
-
-# sum A01 and A02 to A01_02
-# Group by OECD_codes and sum the OBS_VALUE column
-GDPstatcan_grouped = GDPstatcan.groupby('OECD_codes', as_index=False)['OBS_VALUE'].sum()
-# GDPstatcan_grouped I checked and it is correct
-
-#chose from it only codes that appear in OECD:
-#merge values to GDP
-
-GDP2 = GDP.reset_index(name='GDP_OECD').copy()
-GDP2.rename(columns={'index': 'OECD_codes1'}, inplace=True)
-GDP2 = pd.merge(GDP2, GDPstatcan_grouped, left_on='OECD_codes1', right_on='OECD_codes', how='inner')
-
-GDP2['ratio'] = GDP2['GDP_OECD'] / GDP2['OBS_VALUE']
-GDP2.rename(columns={'OBS_VALUE':"GDP_statcan_CAD"},inplace=True)
-GDP2.drop(columns=['OECD_codes'], inplace=True)
-
-# CAD to USD
-# Load the Excel file and read the specific sheet, selecting only the necessary columns
-file_path = '/mnt/c/NavitComputer24/2024_NES/Economics/Data/PPP_data.xlsx'  
-PPPtable = pd.read_excel(file_path, sheet_name='PPP_data', usecols=['TIME_PERIOD', 'OBS_VALUE'])
-PPP = PPPtable[PPPtable["TIME_PERIOD"]==int(year)]["OBS_VALUE"].values[0] #this is the value for 2020
-
-
-GDP2["GDP_statcan_USD"] = (GDP2["GDP_statcan_CAD"] / PPP).round(1) 
 
 
 # Modul 2: calculate L and multipliers
@@ -101,7 +70,7 @@ Ldf, L_minus_I = clc_L(T)
 
 IIc = II.copy()
 IIc["HFCE"] = household_expenditure # added a column for closed model
-# I need to add a row for closed model
+# I need to add a row for closed model - compensation of employees from statcan. I need to get it and convert to USD
 IIc
 outputc = output.copy()
 outputc['HFCE'] = OECD.loc['OUTPUT', 'HFCE']
