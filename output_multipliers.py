@@ -4,7 +4,7 @@ import os
 import time
 from func_data_upload import data_upload
 from func_plot_L import plot_matrix_columns
-
+from func_clc_L import clc_L
 
 def data_exploration_flags(II,household_expenditure,other_final_demand,output,output_of_final_demand,OECD_rough):
     print( pd.DataFrame({
@@ -95,18 +95,18 @@ GDP2["GDP_statcan_USD"] = (GDP2["GDP_statcan_CAD"] / PPP).round(1)
 
 # Modul 2: calculate L and multipliers
 T = II.apply(lambda col: col.map(lambda val: safe_divide(val, output[col.name])))
-n = T.shape[0] #number of rows
-identity_matrix = np.eye(n)
-I_minus_T = identity_matrix - T 
-if np.linalg.det(I_minus_T) != 0:
-    L = np.linalg.inv(I_minus_T)
-    Ldf = pd.DataFrame(L, columns=T.columns, index=T.index)
-else:
-    print("Matrix I - T is not invertible.")
+Ldf, L_minus_I = clc_L(T)
+
+
 
 IIc = II.copy()
-IIc["household_expenditure"] = household_expenditure
-
+IIc["HFCE"] = household_expenditure # added a column for closed model
+# I need to add a row for closed model
+IIc
+outputc = output.copy()
+outputc['HFCE'] = OECD.loc['OUTPUT', 'HFCE']
+Tc = IIc.apply(lambda col: col.map(lambda val: safe_divide(val, outputc[col.name])))
+Lcdf, Lc_minus_I = clc_L(Tc)
 
 
 
@@ -139,7 +139,7 @@ for name, codes in ICT_sectors_dict.items():
 #    title=f'Leontief Matrix Column Profiles - output direct+indirect impact, year {year}'
 #)
 
-L_minus_I = Ldf - pd.DataFrame(identity_matrix, index=Ldf.index, columns=Ldf.columns)
+
 
 plot_matrix_columns(
     matrix=L_minus_I,
