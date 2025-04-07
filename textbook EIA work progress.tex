@@ -17,29 +17,40 @@
 
 %%
 \section{Uploading data from OECD and Statcan and Integrating Them}
-\subsection{File $GDP_comp.py$}
-In $GDP_comp.py$ I upload OECD data and Statcan data and integrate them by
+\subsection{File $GDP\_comp.py$}
+In $GDP\_comp.py$ I upload OECD data and Statcan data and integrate them by
 \begin{enumerate}
     \item Converting Statcan from CAD to USD
     \item Mapping the Statcan sectors (more detailed) to OECD sectors
 \end{enumerate}
 
+$GDP\_comp.py$ is the same as $func\_upload\_data.py$ where I upload OECD and statcan data into $income\_multipliers$.
+
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\textwidth]{STATCAN_2016_VA.png}
+    \includegraphics[width=0.8\textwidth]{graphs from GDP_comp/STATCAN_2016_VA.png}
     \caption{Value Added by Sector (StatCan, 2016)}
     \label{fig:statcan2016va}
 \end{figure}
 
+
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\textwidth]{STATCAN_2020_VA.png}
+    \includegraphics[width=0.8\textwidth]{graphs from GDP_comp/STATCAN_2020_VA.png}
     \caption{Value Added by Sector (StatCan, 2020)}
     \label{fig:statcan2016va}
 \end{figure}
 
 
+\subsection{Plotting T as function of year}
+$plot\_T\_vs\_time.py$ plots $T$ of the $6$ ICT sectors as function of year. Sector G (wholesaling) has variability in T.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{graphs from GDP_comp/T_by_year_2010_2020.png}
+    \caption{Value Added by Sector (StatCan, 2020)}
+    \label{fig:statcan2016va}
+\end{figure}
 
 
 

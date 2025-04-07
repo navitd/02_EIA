@@ -3,7 +3,7 @@ import numpy as np
 import os
 import time
 from func_data_upload import data_upload
-
+from func_plot_L import plot_matrix_columns
 
 
 def data_exploration_flags(II,household_expenditure,other_final_demand,output,output_of_final_demand,OECD_rough):
@@ -93,9 +93,8 @@ PPP = PPPtable[PPPtable["TIME_PERIOD"]==int(year)]["OBS_VALUE"].values[0] #this 
 GDP2["GDP_statcan_USD"] = (GDP2["GDP_statcan_CAD"] / PPP).round(1) 
 
 
-
+# Modul 2: calculate L and multipliers
 T = II.apply(lambda col: col.map(lambda val: safe_divide(val, output[col.name])))
-
 n = T.shape[0] #number of rows
 identity_matrix = np.eye(n)
 I_minus_T = identity_matrix - T 
@@ -105,12 +104,13 @@ if np.linalg.det(I_minus_T) != 0:
 else:
     print("Matrix I - T is not invertible.")
 
+IIc = II.copy()
+IIc["household_expenditure"] = household_expenditure
 
-#simple output multipliers = vectors of L
-later I need to do income multipleirs - income/output. 
-now I will copy the aboe (output mutlipleirs is actualy L) to an ouput_multipleirs.py and plot accordingly
-and make predictions
 
+
+
+# Modul 3: plotting
 #ICT sectors information
 ICT_sectors = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services',
                'ICT - Software and computer services',	'ICT - Software and computer services']
@@ -128,3 +128,22 @@ for name, codes in ICT_sectors_dict.items():
             code_to_name[code] = name
     else:
         code_to_name[codes] = name
+
+
+
+##Simple output multipliers: L
+#plot_matrix_columns(
+#    matrix=Ldf,
+#    sectors=OECD_sectors_ICT,
+#    sector_code_to_name=code_to_name,
+#    title=f'Leontief Matrix Column Profiles - output direct+indirect impact, year {year}'
+#)
+
+L_minus_I = Ldf - pd.DataFrame(identity_matrix, index=Ldf.index, columns=Ldf.columns)
+
+plot_matrix_columns(
+    matrix=L_minus_I,
+    sectors=OECD_sectors_ICT,
+    sector_code_to_name=code_to_name,
+    title=f'output indirect impact, year {year}'
+)

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # finished 4.4.25
 
 
-def data_upload(year):
+def data_upload(year,plot_GDP_flag=False):
 
     start_time = time.time()
     print("working directory of func_Read_StatCan.py is: ",os.getcwd())  # Print the current working directory
@@ -123,33 +123,33 @@ def data_upload(year):
     #https://data-explorer.oecd.org/vis?tm=PPP%20and%20exchange%20rates&pg=0&snb=17&df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_NAMAIN10%40DF_TABLE4&df[ag]=OECD.SDD.NAD&df[vs]=2.0&dq=A.CAN...PPP_B1GQ.......&pd=2007%2C&to[TIME_PERIOD]=false&vw=tb
 
 
+    if plot_GDP_flag:
+        # Create the plot
+        plt.figure(figsize=(10, 6))
 
-    # Create the plot
-    plt.figure(figsize=(10, 6))
+        # Plot the first line (GDP_OECD) with orange color and circles
+        plt.plot(GDP2["OECD_codes1"], GDP2["GDP_OECD"], label='GDP of OECD [USD]', color='orange', marker='o')
 
-    # Plot the first line (GDP_OECD) with orange color and circles
-    plt.plot(GDP2["OECD_codes1"], GDP2["GDP_OECD"], label='GDP of OECD [USD]', color='orange', marker='o')
+        # Plot the second line (GDP_statcan_USD) with red color and circles
+        plt.plot(GDP2["OECD_codes1"], GDP2["GDP_statcan_USD"], label='GDP of statcan [USD]', color='red', marker='o')
 
-    # Plot the second line (GDP_statcan_USD) with red color and circles
-    plt.plot(GDP2["OECD_codes1"], GDP2["GDP_statcan_USD"], label='GDP of statcan [USD]', color='red', marker='o')
+        # Set the title with the year variable
+        plt.title(f'GDP [USD] of year={year}, plotted by GDP_comp.py')
 
-    # Set the title with the year variable
-    plt.title(f'GDP [USD] of year={year}, plotted by GDP_comp.py')
+        # Set the y-axis label
+        plt.ylabel('GDP [Million USD]')
 
-    # Set the y-axis label
-    plt.ylabel('GDP [Million USD]')
+        # Set the x-axis label (you can change it based on your preference)
+        plt.xlabel('OECD Codes')
 
-    # Set the x-axis label (you can change it based on your preference)
-    plt.xlabel('OECD Codes')
+        # Show the legend
+        plt.legend()
 
-    # Show the legend
-    plt.legend()
-
-    # Display the plot
-    plt.xticks(rotation=45)  # Rotate x-ticks if necessary for better readability
-    plt.grid(True)
-    plt.tight_layout()  # Adjust layout for better spacing
-    plt.show()
+        # Display the plot
+        plt.xticks(rotation=45)  # Rotate x-ticks if necessary for better readability
+        plt.grid(True)
+        plt.tight_layout()  # Adjust layout for better spacing
+        plt.show()
 
 
-    return PPP, OECD, mapping_dict, statcan
+    return PPP, OECD, simple_II_labels, mapping_dict, statcan
