@@ -8,7 +8,6 @@ from func_data_upload import data_upload
 #read from StatCan everything they have:
 year = '2019'
 PPP, OECD, simple_II_labels, mapping_dict, statcan =  data_upload(year)
-print( statcan.Transaction.unique() )
 transaction_names = ['Other taxes less other subsidies on production', 'Value added, gross',
  'Compensation of employees', 'Intermediate consumption', 'Output']
 column_names = ['net_taxes', 'GDP', 'employees_compensation', 'intermediate_consumption', 'output']

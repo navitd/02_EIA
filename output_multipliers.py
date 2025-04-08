@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import time
-from func_data_upload import data_upload
+from func_data_upload2 import data_upload
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
 
@@ -32,7 +32,7 @@ print("working directory of income_multipliers.py is: ",os.getcwd())  # Print th
 # Module 1: Get IO=II, X, GDP, from OECD, wages, compensation for employees and employment from CANSTAT
 # later move this to a function that receives country and year and uploads the results
 year = '2019'
-PPP, OECD, simple_II_labels, mapping_dict, statcan =  data_upload(year)
+PPP, OECD, simple_II_labels, statcan_sectors_data =  data_upload(year)
 
 II = OECD.loc[simple_II_labels, simple_II_labels]
 household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
@@ -76,7 +76,6 @@ outputc = output.copy()
 outputc['HFCE'] = OECD.loc['OUTPUT', 'HFCE']
 Tc = IIc.apply(lambda col: col.map(lambda val: safe_divide(val, outputc[col.name])))
 Lcdf, Lc_minus_I = clc_L(Tc)
-
 
 
 # Modul 3: plotting
