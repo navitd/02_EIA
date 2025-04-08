@@ -18,21 +18,39 @@ def data_exploration_flags(II,household_expenditure,other_final_demand,output,ou
 
     print(f'sum of output:{output.sum()}, bottom right corner of the matrix:{OECD_rough.loc['OUTPUT', 'TOTAL']}, difference expected to be zero:{output.sum()-OECD_rough.loc['OUTPUT', 'TOTAL']}')
 
-def safe_divide(value, denom):
-    # Division with handling zero values
-    return value / denom if denom != 0 else "total output is zero"
+def safe_divide(II, output):
+    # Check if there are NaNs in either II or output
+    if II.isna().any().any():
+        raise ValueError("Matrix II contains NaN values.")
+    if output.isna().any():
+        raise ValueError("Output contains NaN values.")
+    
+    # Replace zeros in outputc with NaN to avoid division by zero
+    output_safe = output.replace(0, np.nan)
+    
+    # Divide II by output, handling NaN values (from division by zero)
+    T = II.divide(output_safe, axis=1)
+    
+    # Replace any NaN values (from division by zero) with zero
+    T = T.fillna(0)
+    
+    return T
 
 
 
 ###############################################               main               #########################
 start_time = time.time()
-print("working directory of income_multipliers.py is: ",os.getcwd())  # Print the current working directory
+print("working directory of output_multipliers.py is: ",os.getcwd())  # Print the current working directory
 
 
 # Module 1: Get IO=II, X, GDP, from OECD, wages, compensation for employees and employment from CANSTAT
 # later move this to a function that receives country and year and uploads the results
 year = '2019'
-PPP, OECD, simple_II_labels, statcan_sectors_data =  data_upload(year)
+PPP, OECD, simple_II_labels, statcan_sectors_data, sector_description, T97_values =  data_upload(year)
+# statcan_sector_description is the explanation in words of the codes. 
+# If I want to look something up in statcan_rough I can use read_statcan
+# in the files I downloaded from OECD there's no description of the sectors in words.
+# I should change statcan_sector_description into a dictionary
 
 II = OECD.loc[simple_II_labels, simple_II_labels]
 household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
@@ -59,22 +77,19 @@ output_of_final_demand = OECD.loc['OUTPUT', final_demand_columns]   #probably wi
 
 #final demand and value added are not the same at all
 
-
-
-
 # Modul 2: calculate L and multipliers
-T = II.apply(lambda col: col.map(lambda val: safe_divide(val, output[col.name])))
+T = safe_divide(II, output)
 Ldf, L_minus_I = clc_L(T)
-
-
 
 IIc = II.copy()
 IIc["HFCE"] = household_expenditure # added a column for closed model
-# I need to add a row for closed model - compensation of employees from statcan. I need to get it and convert to USD
-IIc
+IIc.loc['employees_compensation'] = statcan_sectors_data['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
+# temporary fix, perhaps I should put household_expenditure of employees_compensation to 0
+IIc.loc['employees_compensation', 'HFCE'] = 0 #T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
+#T is manifestly not HFCE because the numbers are different
 outputc = output.copy()
 outputc['HFCE'] = OECD.loc['OUTPUT', 'HFCE']
-Tc = IIc.apply(lambda col: col.map(lambda val: safe_divide(val, outputc[col.name])))
+Tc = safe_divide(IIc, outputc)
 Lcdf, Lc_minus_I = clc_L(Tc)
 
 

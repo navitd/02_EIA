@@ -3,7 +3,7 @@ import numpy as np
 import os
 import time
 from func_data_upload import data_upload
-
+# there's a new version func_data_upload2 that returns statcan_sectors_data with all statcan data - not just GDP
 
 #read from StatCan everything they have:
 year = '2019'

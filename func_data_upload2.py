@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 def data_upload(year,plot_GDP_flag=False):
 
     start_time = time.time()
-    print("working directory of func_Read_StatCan.py is: ",os.getcwd())  # Print the current working directory
+    print("working directory of func_data_upload2.py is: ",os.getcwd())  # Print the current working directory
 
     # 1. uploading the map from statcan sectors to OECD sectors:
     codes_map = pd.read_excel(
@@ -42,6 +42,7 @@ def data_upload(year,plot_GDP_flag=False):
     OECD_rough.index = OECD_rough.index.astype(str)  # Ensure index is strings
     OECD = OECD_rough[~OECD_rough.index.str.startswith("IMP_")]
     simple_II_labels = OECD_rough.columns.tolist()[OECD_rough.columns.get_loc("A01_02") : OECD_rough.columns.get_loc("T") + 1]
+    #In OECD there's no description of the labels (codes) in owrds. I should refer to Mira's file for that. try Input_Codes_Map.xlsx
     OECD.index = OECD.index.str.removeprefix("DOM_")
     # probably delete the following chunk:
     II = OECD.loc[simple_II_labels, simple_II_labels]
@@ -82,7 +83,10 @@ def data_upload(year,plot_GDP_flag=False):
     # Keep only columns where there is more than one unique value
     statcan = statcan_rough.loc[:, statcan_rough.nunique() > 1]
     statcan = statcan.drop(columns=["TRANSACTION"]).rename(columns={"ACTIVITY": "detailed_sectors"})
-
+    # to look at the titles of the detailed sectors
+    statcan_descriptions = statcan[(statcan["TIME_PERIOD"] ==int(year)) ].drop(columns=['TIME_PERIOD','Transaction','OBS_VALUE'])
+    sector_description = dict(zip(statcan_descriptions['detailed_sectors'], statcan_descriptions['Economic activity']))
+    
     #year = re.search(r'\d{4}', OECD_name).group() #this is a function and the year is an input variable
     
     # 4.2 putting statcan data after manipulation in statcan_sectors_data
@@ -116,10 +120,11 @@ def data_upload(year,plot_GDP_flag=False):
         # Add to statcan_data under the corresponding column name
         statcan_sectors_data[column_names[ix]] = df['OBS_VALUE_USD']
 
-   
-
-    #PPP?
+    # T97 is 'Activities of households as employers of domestic personnel'
+    T97_values = statcan[(statcan["detailed_sectors"] == 'T97') & (statcan["TIME_PERIOD"] == int(year)) ].drop(columns=['detailed_sectors','Economic activity','TIME_PERIOD'])
+    T97_values['OBS_VALUE_USD'] = (T97_values['OBS_VALUE'] / PPP).round(1)
+    T97_values.drop(columns=['OBS_VALUE'], inplace=True)
     #https://data-explorer.oecd.org/vis?tm=PPP%20and%20exchange%20rates&pg=0&snb=17&df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_NAMAIN10%40DF_TABLE4&df[ag]=OECD.SDD.NAD&df[vs]=2.0&dq=A.CAN...PPP_B1GQ.......&pd=2007%2C&to[TIME_PERIOD]=false&vw=tb
 
 
-    return PPP, OECD, simple_II_labels, statcan_sectors_data
+    return PPP, OECD, simple_II_labels, statcan_sectors_data, sector_description, T97_values
