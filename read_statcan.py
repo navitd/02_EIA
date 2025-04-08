@@ -43,10 +43,10 @@ for ix, name in enumerate(transaction_names):
     
     # last step:
     # choose from it only codes that appear in OECD:
-    df = col_statcan_grouped[col_statcan_grouped["OECD_codes"].isin(simple_II_labels)].copy()
-    df.set_index("OECD_codes", inplace=True)
+    df = col_statcan_grouped.set_index('OECD_codes').reindex(simple_II_labels, fill_value=0).copy()
 
     # Add to statcan_data under the corresponding column name
     statcan_sectors_data[column_names[ix]] = df['OBS_VALUE_USD']
 
-   
+
+print(statcan_sectors_data.head(10))
