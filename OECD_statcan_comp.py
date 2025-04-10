@@ -64,7 +64,7 @@ def clc_output_multipliers(year):
     Tc = safe_divide(IIc, outputc)
     Lcdf, Lc_minus_I = clc_L(Tc)
 
-    return statcan_sectors_data, simple_II_labels, final_demand_columns, II, IIc, output, outputc, T, Tc, Ldf, L_minus_I, Lcdf, Lc_minus_I
+    return statcan_sectors_data, OECD, simple_II_labels, final_demand_columns, II, IIc, output, outputc, T, Tc, Ldf, L_minus_I, Lcdf, Lc_minus_I
 
 def plot_six_panels(data_dict, sectors, title_prefix, y_label):
     fig, axes = plt.subplots(2, 3, figsize=(18, 10))
@@ -97,14 +97,23 @@ Tc_dict = {}
 Lc_dict = {}
 OECD_IIc_dict = {}
 #this I plot to see comparison with OECD
-OECD_output_dict = {}
+OECD_outputc_dict = {}
 # Collect Tc for each year
 for year in yearvec:
-    statcan_sectors_data, simple_II_labels, _, _, IIc, _, outputc, _, Tc, _, _, Lcdf, _ = clc_output_multipliers(year)
+    statcan_sectors_data, OECD, simple_II_labels, _, _, IIc, _, outputc, _, Tc, _, _, Lcdf, _ = clc_output_multipliers(year)
+#matrices
     Tc_dict[year] = Tc
     Lc_dict[year] = Lcdf 
-    OECD_output_dict[year] = outputc
     OECD_IIc_dict[year] = IIc
+#vectors
+    OECD_GDP = OECD.loc['VALU', simple_II_labels]
+    OECD_II = OECD.loc[simple_II_labels, simple_II_labels].sum(axis=1)
+    OECD_outputc_dict[year] = outputc
+#statcan data
+    statcan_E = statcan_sectors_data['employees_compensation']
+    statcan_GDP = statcan_sectors_data['GDP']
+    statcan_II = statcan_sectors_data['intermediate_consumption'] #this is a vector and not a matrix
+    statcan_output = statcan_sectors_data['output']
     
 
 

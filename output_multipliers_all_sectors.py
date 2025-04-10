@@ -88,7 +88,7 @@ def clc_output_multipliers(year):
     Tc = safe_divide(IIc, outputc)
     Lcdf, Lc_minus_I = clc_L(Tc)
 
-    return OECD, simple_II_labels, final_demand_columns, Ldf, Lcdf
+    return statcan_sectors_data, OECD, simple_II_labels, final_demand_columns, II, IIc, output, outputc, T, Tc, Ldf, L_minus_I, Lcdf, Lc_minus_I
 
 ###############################################               main               #########################
 start_time = time.time()
@@ -97,13 +97,11 @@ print("working directory of output_multipliers_all_sectors.py is: ",os.getcwd())
 # predicting output from year1 to year2
 year1 = '2015'
 year2 = '2020'
-_, _, _, Ldf_year1, Lcdf_year1 = clc_output_multipliers(year1)
 
-OECD_year2, simple_II_labels, final_demand_columns, _, _ = clc_output_multipliers(year2)
+_, _, _, _, _, _, _, _, _, _, Ldf_year1, _, Lcdf_year1, _ = clc_output_multipliers(year1)
 
-output_year2 = OECD_year2.loc['OUTPUT', simple_II_labels]
-outputc_year2 = output_year2.copy()
-outputc_year2.loc['HFCE'] = OECD_year2.loc['OUTPUT', 'HFCE']
+_, OECD_year2, simple_II_labels, final_demand_columns, _, _, output_year2, outputc_year2, _, _, _, _, _, _ = clc_output_multipliers(year2)
+
 fdf_year2 = OECD_year2.loc[simple_II_labels, final_demand_columns].sum(axis=1)
 fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
 fcdf_year2.loc['employees_compensation'] = 0
@@ -115,14 +113,15 @@ predicted_outputc_year2_np = np.round(Lcdf_year1.to_numpy() @ fcdf_year2.values.
 predicted_output_year2 = pd.DataFrame(predicted_output_year2_np, index=Ldf_year1.index, columns=['Predicted_Output'])
 predicted_outputc_year2 = pd.DataFrame(predicted_outputc_year2_np, index=Lcdf_year1.index, columns=['Predicted_Output'])
 
-
-simple model is good
-closed modle could be more accurate. check statcan info. output of HFCE etc.
-check output of HFCE and output of ther final demand
-follow the book for income multiliers
-GDP multipliers: give details of influence on individual sectors
+#10.4.25
+#simple model is good
+#closed modle could be more accurate. check statcan info. this I do in OECD_statcan_comp
+#check output of HFCE and output of ther final demand
+#follow the book for income multiliers
+#GDP multipliers: give details of influence on individual sectors
 
 ##############################              plotting          #############################
+# sinmple model
 plt.figure(figsize=(12, 5))
 
 plt.plot(output_year2.index, output_year2, label='Real Output', marker='o')
@@ -134,7 +133,7 @@ plt.title(f'Real and Predicted Output {year2} Based on Year {year1} - Simple Mod
 plt.legend()
 plt.show()
 
-
+# closed model
 plt.figure(figsize=(12, 5))
 
 plt.plot(outputc_year2.index, outputc_year2, label='Real Output', marker='o')
