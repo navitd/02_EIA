@@ -118,7 +118,9 @@ predicted_outputc_year2 = pd.DataFrame(predicted_outputc_year2_np, index=Lcdf_ye
 
 simple model is good
 closed modle could be more accurate. check statcan info. output of HFCE etc.
-check output of HFCE and outut of ther final demand
+check output of HFCE and output of ther final demand
+follow the book for income multiliers
+GDP multipliers: give details of influence on individual sectors
 
 ##############################              plotting          #############################
 plt.figure(figsize=(12, 5))
