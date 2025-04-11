@@ -85,6 +85,34 @@ def plot_six_panels(data_dict, sectors, title_prefix, y_label):
     plt.tight_layout()
     plt.show()
 
+def plot_six_panels_ratio(statcan_dict, oecd_dict, highlight_sectors, title_prefix, y_label):
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    axes = axes.flatten()
+
+    for i, sector in enumerate(highlight_sectors):
+        ax = axes[i]
+        for j, year in enumerate(yearvec):
+            statcan = statcan_dict[year]
+            oecd = oecd_dict[year]
+
+            # Align indexes and compute ratio safely
+            common_index = statcan.index.intersection(oecd.index)
+            ratio = statcan[common_index] / oecd[common_index]
+
+            ax.plot(ratio.index, ratio.values, label=year, marker='o')
+
+        ax.set_title(f'{title_prefix} – focus: {sector}')
+        ax.set_xlabel('Sector')
+        ax.set_ylabel(y_label)
+        ax.tick_params(axis='x', labelrotation=90)
+        ax.grid(True)
+        ax.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
+
 ###############################################               main               #################################
 start_time = time.time()
 print("working directory of OECD_statcan_comp.py is: ",os.getcwd())  # Print the current working directory
@@ -93,27 +121,28 @@ print("working directory of OECD_statcan_comp.py is: ",os.getcwd())  # Print the
 yearvec = ['2015', '2016', '2017', '2018', '2019', '2020']
 OECD_sectors_ICT = ['C26', 'G', 'J58T60', 'J61', 'J62_63', 'M']
 #these three I plot to see differences over years
-Tc_dict = {}
-Lc_dict = {}
-OECD_IIc_dict = {}
+Tc_dict, Lc_dict, OECD_IIc_dict = {}, {}, {}
 #this I plot to see comparison with OECD
-OECD_outputc_dict = {}
+OECD_GDP_dict, OECD_IIsum_dict, OECD_outputc_dict = {}, {}, {}
+statcan_E_dict, statcan_GDP_dict, statcan_II_dict, statcan_output_dict = {}, {}, {}, {}
 # Collect Tc for each year
 for year in yearvec:
     statcan_sectors_data, OECD, simple_II_labels, _, _, IIc, _, outputc, _, Tc, _, _, Lcdf, _ = clc_output_multipliers(year)
-#matrices
+#OECD matrices
     Tc_dict[year] = Tc
     Lc_dict[year] = Lcdf 
     OECD_IIc_dict[year] = IIc
-#vectors
-    OECD_GDP = OECD.loc['VALU', simple_II_labels]
+#OECD vectors
+    OECD_GDP_dict[year] = OECD.loc['VALU', simple_II_labels]
     OECD_II = OECD.loc[simple_II_labels, simple_II_labels].sum(axis=1)
+    OECD_IIsum_dict[year] = OECD_II
     OECD_outputc_dict[year] = outputc
+    
 #statcan data
-    statcan_E = statcan_sectors_data['employees_compensation']
-    statcan_GDP = statcan_sectors_data['GDP']
-    statcan_II = statcan_sectors_data['intermediate_consumption'] #this is a vector and not a matrix
-    statcan_output = statcan_sectors_data['output']
+    statcan_E_dict[year] = statcan_sectors_data['employees_compensation']
+    statcan_GDP_dict[year] = statcan_sectors_data['GDP']
+    statcan_II_dict[year] = statcan_sectors_data['intermediate_consumption'] #this is a vector and not a matrix
+    statcan_output_dict[year] = statcan_sectors_data['output']
     
 
 
@@ -123,10 +152,17 @@ for year in yearvec:
 #plot_six_panels(Tc_dict, OECD_sectors_ICT, title_prefix='Tc', y_label='Tc Value')
 #plot_six_panels(Lc_dict, OECD_sectors_ICT, title_prefix='Lc', y_label='Lcdf Value')
 #plot_six_panels(OECD_IIc_dict, OECD_sectors_ICT, title_prefix='IIc', y_label='IIc Value')
+#the above is pretty constant except for compensation of employees
+
+#plot ratio of GDP_OECD/GDP_statcan, output_OECD/output_statcan, II_OECD/II_statcan
+#see if there is repetition of pattern over years and over type of data
+
+plot_six_panels_ratio(statcan_GDP_dict, OECD_GDP_dict, OECD_sectors_ICT, title_prefix='StatCan/OECD GDP ratio', y_label='Ratio')
 
 
 
-
+#old plotting
+'''
 #ICT sectors information
 ICT_sectors = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services',
                'ICT - Software and computer services',	'ICT - Software and computer services']
@@ -154,6 +190,7 @@ for name, codes in ICT_sectors_dict.items():
 #    sector_code_to_name=code_to_name,
 #    title=f'Leontief Matrix Column Profiles - output direct+indirect impact, year {year}'
 #)
+'''
 
 
 
@@ -176,14 +213,6 @@ for name, codes in ICT_sectors_dict.items():
 
 
 
-
-
-
-#plot Lc over the years
-
-
-#plot ratio of GDP_OECD/GDP_statcan, output_OECD/output_statcan, II_OECD/II_statcan
-#see if there is repetition of pattern over years and over type of data
 
 
 
