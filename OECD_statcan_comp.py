@@ -64,7 +64,7 @@ def clc_output_multipliers(year):
     Tc = safe_divide(IIc, outputc)
     Lcdf, Lc_minus_I = clc_L(Tc)
 
-    return statcan_sectors_data, OECD, simple_II_labels, final_demand_columns, II, IIc, output, outputc, T, Tc, Ldf, L_minus_I, Lcdf, Lc_minus_I
+    return statcan_sectors_data, OECD, simple_II_labels, final_demand_columns, II, IIc, output, outputc, T, Tc, Ldf, L_minus_I, Lcdf, Lc_minus_I, PPP
 
 def plot_six_panels(data_dict, sectors, title_prefix, y_label):
     fig, axes = plt.subplots(2, 3, figsize=(18, 10))
@@ -85,31 +85,90 @@ def plot_six_panels(data_dict, sectors, title_prefix, y_label):
     plt.tight_layout()
     plt.show()
 
-def plot_six_panels_ratio(statcan_dict, oecd_dict, highlight_sectors, title_prefix, y_label):
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-    axes = axes.flatten()
+import matplotlib.pyplot as plt
 
-    for i, sector in enumerate(highlight_sectors):
-        ax = axes[i]
-        for j, year in enumerate(yearvec):
-            statcan = statcan_dict[year]
-            oecd = oecd_dict[year]
+import matplotlib.pyplot as plt
 
-            # Align indexes and compute ratio safely
-            common_index = statcan.index.intersection(oecd.index)
-            ratio = statcan[common_index] / oecd[common_index]
+import matplotlib.pyplot as plt
 
-            ax.plot(ratio.index, ratio.values, label=year, marker='o')
+def plot_three_ratios_with_ppp_matching_colors(statcan_GDP_dict, OECD_GDP_dict, statcan_II_dict, OECD_IIsum_dict, statcan_output_dict, OECD_outputc_dict, PPP_dict):
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
-        ax.set_title(f'{title_prefix} – focus: {sector}')
-        ax.set_xlabel('Sector')
-        ax.set_ylabel(y_label)
-        ax.tick_params(axis='x', labelrotation=90)
-        ax.grid(True)
-        ax.legend()
+    # Plot StatCan / OECD GDP Ratio
+    ax1 = axes[0]
+    for year in yearvec:
+        statcan = statcan_GDP_dict[year]
+        oecd = OECD_GDP_dict[year]
+        common_index = statcan.index.intersection(oecd.index)
+        ratio = statcan[common_index] / oecd[common_index]
+        
+        # Choose color for the line
+        line, = ax1.plot(ratio.index, ratio.values, label=year, marker='o')
 
+        # Add dashed line for PPP with the same color
+        ppp_value = PPP_dict.get(year)
+        if ppp_value:
+            ax1.axhline(y=ppp_value, color=line.get_color(), linestyle='--', label=f'PPP {year}')
+
+    ax1.set_title('StatCan / OECD GDP Ratio')
+    ax1.set_xlabel('Sector')
+    ax1.set_ylabel('GDP Ratio')
+    ax1.tick_params(axis='x', labelrotation=90)
+    ax1.grid(True)
+    ax1.legend()
+
+    # Plot StatCan / OECD II Ratio
+    ax2 = axes[1]
+    for year in yearvec:
+        statcan = statcan_II_dict[year]
+        oecd = OECD_IIsum_dict[year]
+        common_index = statcan.index.intersection(oecd.index)
+        ratio = statcan[common_index] / oecd[common_index]
+        
+        # Choose color for the line
+        line, = ax2.plot(ratio.index, ratio.values, label=year, marker='o')
+
+        # Add dashed line for PPP with the same color
+        ppp_value = PPP_dict.get(year)
+        if ppp_value:
+            ax2.axhline(y=ppp_value, color=line.get_color(), linestyle='--', label=f'PPP {year}')
+
+    ax2.set_title('StatCan / OECD II Ratio')
+    ax2.set_xlabel('Sector')
+    ax2.set_ylabel('II Ratio')
+    ax2.tick_params(axis='x', labelrotation=90)
+    ax2.grid(True)
+    ax2.legend()
+
+    # Plot StatCan / OECD Output Ratio
+    ax3 = axes[2]
+    for year in yearvec:
+        statcan = statcan_output_dict[year]
+        oecd = OECD_outputc_dict[year]
+        common_index = statcan.index.intersection(oecd.index)
+        ratio = statcan[common_index] / oecd[common_index]
+        
+        # Choose color for the line
+        line, = ax3.plot(ratio.index, ratio.values, label=year, marker='o')
+
+        # Add dashed line for PPP with the same color
+        ppp_value = PPP_dict.get(year)
+        if ppp_value:
+            ax3.axhline(y=ppp_value, color=line.get_color(), linestyle='--', label=f'PPP {year}')
+
+    ax3.set_title('StatCan / OECD Output Ratio')
+    ax3.set_xlabel('Sector')
+    ax3.set_ylabel('Output Ratio')
+    ax3.tick_params(axis='x', labelrotation=90)
+    ax3.grid(True)
+    ax3.legend()
+
+    # Adjust layout to avoid overlap
     plt.tight_layout()
     plt.show()
+
+
+
 
 
 
@@ -118,23 +177,25 @@ start_time = time.time()
 print("working directory of OECD_statcan_comp.py is: ",os.getcwd())  # Print the current working directory
 
 
-yearvec = ['2015', '2016', '2017', '2018', '2019', '2020']
+#yearvec = ['2018', '2019', '2020']
+yearvec = ['2015', '2016']
 OECD_sectors_ICT = ['C26', 'G', 'J58T60', 'J61', 'J62_63', 'M']
 #these three I plot to see differences over years
 Tc_dict, Lc_dict, OECD_IIc_dict = {}, {}, {}
 #this I plot to see comparison with OECD
 OECD_GDP_dict, OECD_IIsum_dict, OECD_outputc_dict = {}, {}, {}
 statcan_E_dict, statcan_GDP_dict, statcan_II_dict, statcan_output_dict = {}, {}, {}, {}
+PPP_dict = {}
 # Collect Tc for each year
 for year in yearvec:
-    statcan_sectors_data, OECD, simple_II_labels, _, _, IIc, _, outputc, _, Tc, _, _, Lcdf, _ = clc_output_multipliers(year)
+    statcan_sectors_data, OECD, simple_II_labels, _, _, IIc, _, outputc, _, Tc, _, _, Lcdf, _, PPP = clc_output_multipliers(year)
 #OECD matrices
     Tc_dict[year] = Tc
     Lc_dict[year] = Lcdf 
     OECD_IIc_dict[year] = IIc
 #OECD vectors
     OECD_GDP_dict[year] = OECD.loc['VALU', simple_II_labels]
-    OECD_II = OECD.loc[simple_II_labels, simple_II_labels].sum(axis=1)
+    OECD_II = OECD.loc[simple_II_labels, simple_II_labels].sum(axis=0)
     OECD_IIsum_dict[year] = OECD_II
     OECD_outputc_dict[year] = outputc
     
@@ -143,7 +204,7 @@ for year in yearvec:
     statcan_GDP_dict[year] = statcan_sectors_data['GDP']
     statcan_II_dict[year] = statcan_sectors_data['intermediate_consumption'] #this is a vector and not a matrix
     statcan_output_dict[year] = statcan_sectors_data['output']
-    
+    PPP_dict[year] = PPP
 
 
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$                 plotting            $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -157,9 +218,8 @@ for year in yearvec:
 #plot ratio of GDP_OECD/GDP_statcan, output_OECD/output_statcan, II_OECD/II_statcan
 #see if there is repetition of pattern over years and over type of data
 
-plot_six_panels_ratio(statcan_GDP_dict, OECD_GDP_dict, OECD_sectors_ICT, title_prefix='StatCan/OECD GDP ratio', y_label='Ratio')
 
-
+plot_three_ratios_with_ppp_matching_colors(statcan_GDP_dict, OECD_GDP_dict, statcan_II_dict, OECD_IIsum_dict, statcan_output_dict, OECD_outputc_dict, PPP_dict)
 
 #old plotting
 '''
