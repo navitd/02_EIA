@@ -188,10 +188,11 @@ mg = s2s_mg.sum(axis=0)
 mgc = s2s_mgc.sum(axis=0)
 
 # direct, indirect, induced separately
-#direct
-I
-Ej_by_xj
-GDPj_by_xj
+n = T.shape[0]
+# direct
+direct_o = identity_matrix = np.eye(n)
+direct_h = Ej_by_xj.iloc[:-1]
+direct_g = GDPj_by_xj.iloc[:-1]
 #indirect
 #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
 #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
