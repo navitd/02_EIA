@@ -106,6 +106,26 @@ def clc_output_multipliers(year):
 
     return statcan_sectors_data, OECD, simple_II_labels, final_demand_columns, II, IIc, output, outputc, T, Tc, Ldf, L_minus_I, Lcdf, Lc_minus_I
 
+
+
+def plot_market_multipliers(series_list, panel_titles, figure_title):
+    
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6, 8), sharex=True)
+    
+    for ax, series, panel_title in zip(axes, series_list, panel_titles):
+        ax.plot(series.index, series.values, marker='o', linestyle='-')
+        ax.set_title(panel_title)
+        ax.grid(True)
+        ax.tick_params(axis='x', labelsize=8)
+        ax.tick_params(axis='x', labelrotation=45)
+
+    fig.tight_layout()
+    fig.suptitle(figure_title, fontsize=14, y=0.98)
+    plt.subplots_adjust(top=0.9)  # lower top to make room for suptitle
+    plt.show()
+
+
+
 ###############################################               main               #########################
 start_time = time.time()
 print("working directory of C26_output_multipliers.py is: ",os.getcwd())  # Print the current working directory
@@ -117,9 +137,11 @@ print("working directory of C26_output_multipliers.py is: ",os.getcwd())  # Prin
 
 
 print(f'C26 is Manufacture of computer, electronic and optical products')
-
-sector = 'C26'
 year = '2015'
+PPP, _, _, _, sector_description, _ =  data_upload(year)
+sector = 'C26'
+sector_description = sector_description[sector]
+
 
 statcan_sectors_data, OECD, simple_II_labels, final_demand_columns, II, IIc, output, outputc, T, Tc, Ldf, L_minus_I, Lcdf, Lc_minus_I = clc_output_multipliers(year)
 
@@ -141,19 +163,19 @@ sum_income_F_multipliers = income_F_multipliers.sum(axis=0)
 # direct + indirect + induced effect - same calculation but with Lcdf
 
 #income multipliers second time
-Ej_by_xj = Tc
+Ej_by_xj = Tc.iloc[-1,:]
 #it has a different size than above
 
 # GDP multipliers
 GDPc = OECD.loc['VALU', simple_II_labels + ['HFCE']]
 GDPj_by_xj = safe_divide_vector(GDPc, outputc)
 
-#summary of multipliers without typeI and typeII - 
+# summary of multipliers without typeI and typeII - 
 # 12 multipliers output, income, GDP, X sector2sector, sector2market X simple model, closed model
 # all of the closed model multipliers are trancated (the row and column of salaries and final demand are not included)
 s2s_mo = Ldf                       # direct + indirect effect
 s2s_moc = Lcdf.iloc[ :-1, :-1 ]    # direct + indirect + iduced effect
-s2s_mh = Ldf.mul(Ej_by_xj.iloc[ :-1, :-1 ], axis=0)
+s2s_mh = Ldf.mul(Ej_by_xj.iloc[ :-1 ], axis=0) 
 s2s_mhc = Lcdf.iloc[ :-1, :-1].mul(Ej_by_xj, axis=0)
 s2s_mg =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
 s2s_mgc = Ldf.mul(GDPj_by_xj, axis=0)
@@ -167,32 +189,28 @@ mgc = s2s_mgc.sum(axis=0)
 
 
 
-
-
 ##############################              plotting          #############################
-# sinmple model
-plt.figure(figsize=(12, 5))
+panel_titles = ['output', 'income', 'GDP']
 
-plt.plot(output_year2.index, output_year2, label='Real Output', marker='o')
-plt.plot(predicted_output_year2.index, predicted_output_year2, label='Predicted Output', marker='o')
+plot_market_multipliers([mo, mh, mg], ['new dollar\'s output per new dollar\'s final demand',
+                                       'new dollar\'s income per new dollar\'s final demand',
+                                       'new dollar\'s GDP per new dollar\'s final demand'], figure_title=f"{year}, Simple model: direct + indirect")
+plot_market_multipliers([moc, mhc, mgc], ['new dollar\'s output per new dollar\'s final demand',
+                                          'new dollar\'s income per new dollar\'s final demand',
+                                          'new dollar\'s GDP per new dollar\'s final demand'], figure_title=f"{year}, Closed model: direct + indirect + induced")
 
-plt.xlabel('Sectors')
-plt.ylabel('Output Million [USD]')
-plt.title(f'Real and Predicted Output {year2} Based on Year {year1} - Simple Model')
-plt.legend()
-plt.show()
 
-# closed model
-plt.figure(figsize=(12, 5))
+plot_market_multipliers([s2s_mo.loc[:,sector], s2s_mh.loc[:,sector], s2s_mg.loc[:,sector]], ['new dollar\'s output per new dollar\'s final demand',
+                                       'new dollar\'s income per new dollar\'s final demand',
+                                       'new dollar\'s GDP per new dollar\'s final demand'], 
+                                       figure_title=f"{year}, Simple model: direct + indirect, {sector_description}")
+plot_market_multipliers([s2s_moc.loc[:,sector], s2s_mhc.loc[:,sector], s2s_mgc.loc[:,sector]], ['new dollar\'s output per new dollar\'s final demand',
+                                       'new dollar\'s income per new dollar\'s final demand',
+                                       'new dollar\'s GDP per new dollar\'s final demand'], 
+                                       figure_title=f"{year}, Closed model: direct + indirect + induced, {sector_description}")
 
-plt.plot(outputc_year2.index, outputc_year2, label='Real Output', marker='o')
-plt.plot(predicted_outputc_year2.index, predicted_outputc_year2, label='Predicted Output', marker='o')
+# calculate type I and type II multipleirs
 
-plt.xlabel('Sectors')
-plt.ylabel('Output Million [USD]')
-plt.title(f'Real and Predicted Output {year2} Based on Year {year1} - Closed Model')
-plt.legend()
-plt.show()
 
 
 
