@@ -85,11 +85,7 @@ def plot_six_panels(data_dict, sectors, title_prefix, y_label):
     plt.tight_layout()
     plt.show()
 
-import matplotlib.pyplot as plt
 
-import matplotlib.pyplot as plt
-
-import matplotlib.pyplot as plt
 
 def plot_three_ratios_with_ppp_matching_colors(statcan_GDP_dict, OECD_GDP_dict, statcan_II_dict, OECD_IIsum_dict, statcan_output_dict, OECD_outputc_dict, PPP_dict):
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
