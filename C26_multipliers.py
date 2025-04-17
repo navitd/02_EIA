@@ -187,6 +187,21 @@ mhc = s2s_mhc.sum(axis=0)
 mg = s2s_mg.sum(axis=0)
 mgc = s2s_mgc.sum(axis=0)
 
+# direct, indirect, induced separately
+#direct
+I
+Ej_by_xj
+GDPj_by_xj
+#indirect
+#Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
+#GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
+#induced
+s2s_mgc-s2s_mg 
+
+
+# calculate type I and typeII multipliers
+
+
 
 
 ##############################              plotting          #############################
@@ -209,7 +224,7 @@ plot_market_multipliers([s2s_moc.loc[:,sector], s2s_mhc.loc[:,sector], s2s_mgc.l
                                        'new dollar\'s GDP per new dollar\'s final demand'], 
                                        figure_title=f"{year}, Closed model: direct + indirect + induced, {sector_description}")
 
-# calculate type I and type II multipleirs
+
 
 
 
