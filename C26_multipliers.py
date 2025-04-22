@@ -125,6 +125,45 @@ def plot_market_multipliers(series_list, panel_titles, figure_title):
     plt.show()
 
 
+def multipliers2prediction(s2s_mo, fdf_year2, column_name):
+    predicted_output_year2_np  = np.round(s2s_mo.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
+    
+    predicted_output_year2 = pd.DataFrame(predicted_output_year2_np, index=s2s_mo.index, columns=[column_name])
+    
+    return predicted_output_year2
+
+def plot_real_vs_predicted(output_real, output_pred, 
+                           income_real, income_pred, 
+                           gdp_real, gdp_pred, 
+                           year1, year2):
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5), sharex=True)
+
+    # Panel 1: Output
+    axes[0].plot(output_real.index, output_real, label='Real Output', marker='o')
+    axes[0].plot(output_pred.index, output_pred, label='Predicted Output', marker='o')
+    axes[0].set_title(f'Output {year2} Based on {year1}')
+    axes[0].set_xlabel('Sectors')
+    axes[0].set_ylabel('Million USD')
+    axes[0].legend()
+
+    # Panel 2: Income
+    axes[1].plot(income_real.index, income_real, label='Real Income', marker='o')
+    axes[1].plot(income_pred.index, income_pred, label='Predicted Income', marker='o')
+    axes[1].set_title(f'Income {year2} Based on {year1}')
+    axes[1].set_xlabel('Sectors')
+    axes[1].set_ylabel('Million USD')
+    axes[1].legend()
+
+    # Panel 3: GDP
+    axes[2].plot(gdp_real.index, gdp_real, label='Real GDP', marker='o')
+    axes[2].plot(gdp_pred.index, gdp_pred, label='Predicted GDP', marker='o')
+    axes[2].set_title(f'GDP {year2} Based on {year1}')
+    axes[2].set_xlabel('Sectors')
+    axes[2].set_ylabel('Million USD')
+    axes[2].legend()
+
+    plt.tight_layout()
+    plt.show()
 
 ###############################################               main               #########################
 start_time = time.time()
@@ -190,14 +229,46 @@ mgc = s2s_mgc.sum(axis=0)
 # direct, indirect, induced separately
 n = T.shape[0]
 # direct
-direct_o = identity_matrix = np.eye(n)
+direct_o = np.eye(n)
 direct_h = Ej_by_xj.iloc[:-1]
 direct_g = GDPj_by_xj.iloc[:-1]
 #indirect
+indirect_o = s2s_mo - direct_o
 #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
+indirect_h  = s2s_mh - direct_h
 #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
+indirect_g  = s2s_mg - direct_g
 #induced
-s2s_mgc-s2s_mg 
+induced_o = s2s_moc - s2s_mo
+induced_h = s2s_mhc - s2s_mh
+induced_g = s2s_mgc - s2s_mg
+
+# predict output, income and GDP
+
+year2 = '2016'
+
+statcan_sectors_data_year2, OECD_year2, simple_II_labels, final_demand_columns, _, _, output_year2, outputc_year2, _, _, _, _, _, _ = clc_output_multipliers(year2)
+income_year2 = statcan_sectors_data_year2['employees_compensation']
+GDP_year2 = OECD_year2.loc['VALU', simple_II_labels]
+
+fdf_year2 = OECD_year2.loc[simple_II_labels, final_demand_columns].sum(axis=1)
+fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+fcdf_year2.loc['employees_compensation'] = 0
+
+predicted_output_year2 = multipliers2prediction(s2s_mo, fdf_year2, 'Predicted_Output')
+predicted_outputc_year2 = multipliers2prediction(s2s_moc, fcdf_year2, 'Predicted_Output Closed Model')
+predicted_income_year2 = multipliers2prediction(s2s_mh, fdf_year2, 'Predicted_Income')  
+predicted_incomec_year2 = multipliers2prediction(s2s_mhc, fcdf_year2, 'Predicted_Income Closed Model') 
+predicted_GDP_year2 = multipliers2prediction(s2s_mg, fdf_year2, 'Predicted_GDP') 
+predicted_GDPc_year2 = multipliers2prediction(s2s_mgc, fcdf_year2, 'Predicted_GDP Closed Model') 
+
+
+
+
+plot_real_vs_predicted(output_year2, predicted_output_year2,
+                       income_year2, predicted_income_year2,
+                       GDP_year2, predicted_GDP_year2,  
+                       year, year2)
 
 
 # calculate type I and typeII multipliers
@@ -206,26 +277,25 @@ s2s_mgc-s2s_mg
 
 
 ##############################              plotting          #############################
-panel_titles = ['output', 'income', 'GDP']
 
-plot_market_multipliers([mo, mh, mg], ['new dollar\'s output per new dollar\'s final demand',
-                                       'new dollar\'s income per new dollar\'s final demand',
-                                       'new dollar\'s GDP per new dollar\'s final demand'], figure_title=f"{year}, Simple model: direct + indirect")
-plot_market_multipliers([moc, mhc, mgc], ['new dollar\'s output per new dollar\'s final demand',
-                                          'new dollar\'s income per new dollar\'s final demand',
-                                          'new dollar\'s GDP per new dollar\'s final demand'], figure_title=f"{year}, Closed model: direct + indirect + induced")
-
-
-plot_market_multipliers([s2s_mo.loc[:,sector], s2s_mh.loc[:,sector], s2s_mg.loc[:,sector]], ['new dollar\'s output per new dollar\'s final demand',
-                                       'new dollar\'s income per new dollar\'s final demand',
-                                       'new dollar\'s GDP per new dollar\'s final demand'], 
-                                       figure_title=f"{year}, Simple model: direct + indirect, {sector_description}")
-plot_market_multipliers([s2s_moc.loc[:,sector], s2s_mhc.loc[:,sector], s2s_mgc.loc[:,sector]], ['new dollar\'s output per new dollar\'s final demand',
-                                       'new dollar\'s income per new dollar\'s final demand',
-                                       'new dollar\'s GDP per new dollar\'s final demand'], 
-                                       figure_title=f"{year}, Closed model: direct + indirect + induced, {sector_description}")
+plot_market_multipliers([mo, mh, mg], ['New Dollar\'s Output per New Dollar\'s Final Demand',
+                                       'New Dollar\'s Income per New Dollar\'s Final Demand',
+                                       'New Dollar\'s GDP per New Dollar\'s Final Demand'], figure_title=f"{year}, Simple Model: Direct + Indirect")
+plot_market_multipliers([moc, mhc, mgc], ['New Dollar\'s Output per New Dollar\'s Final Demand',
+                                          'New Dollar\'s Income per New Dollar\'s Final Demand',
+                                          'New Dollar\'s GDP per New Dollar\'s Final Demand'], figure_title=f"{year}, Closed Model: Direct + Indirect + Induced")
 
 
+plot_market_multipliers([s2s_mo.loc[:,sector], s2s_mh.loc[:,sector], s2s_mg.loc[:,sector]], ['New Dollar\'s Output per New Dollar\'s Final Demand',
+                                       'New Dollar\'s Income per New Dollar\'s Final Demand',
+                                       'New Dollar\'s GDP per New Dollar\'s Final Demand'], 
+                                       figure_title=f"{year}, Simple Model: Direct + Indirect, {sector_description}")
+plot_market_multipliers([s2s_moc.loc[:,sector], s2s_mhc.loc[:,sector], s2s_mgc.loc[:,sector]], ['New Dollar\'s Output per New Dollar\'s Final Demand',
+                                       'New Dollar\'s Income per New Dollar\'s Final Demand',
+                                       'New Dollar\'s GDP per New Dollar\'s Final Demand'], 
+                                       figure_title=f"{year}, Closed Model: Direct + Indirect + Induced, {sector_description}")
+
+# bar graphs of direct, indirect and induced
 
 
 
