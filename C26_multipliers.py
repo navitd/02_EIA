@@ -53,7 +53,7 @@ def safe_divide_vector(vector, output):
     coefficient = coefficient.fillna(0)
     return coefficient
 
-def clc_output_multipliers(year):
+def clc_output_multipliers(year,T97_flag=False):
     # Module 1: Get IO=II, X, GDP, from OECD, wages, compensation for employees and employment from CANSTAT
     # later move this to a function that receives country and year and uploads the results
 
@@ -78,7 +78,7 @@ def clc_output_multipliers(year):
     #GDP_of_household_expenditure = OECD.loc['VALU', 'HFCE']
     #GDP_of_total_column = OECD.loc['VALU', 'TOTAL'] # total is the output, should be equal to f_row_sums.sum(axis=0)
     #GDP_of_final_demand = OECD.loc['VALU', final_demand_columns]        #this could be added to the rows from the right or to the columns form the bottom
-    output_of_final_demand = OECD.loc['OUTPUT', final_demand_columns]   #probably will not be needed
+    #output_of_final_demand = OECD.loc['OUTPUT', final_demand_columns]   #probably will not be needed
 
     # from looking at the numbers:
     # total = output
@@ -97,7 +97,10 @@ def clc_output_multipliers(year):
     IIc["HFCE"] = household_expenditure # added a column for closed model
     IIc.loc['employees_compensation'] = statcan_sectors_data['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
     # temporary fix, perhaps I should put household_expenditure of employees_compensation to 0
-    IIc.loc['employees_compensation', 'HFCE'] = 0 #T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
+    if T97_flag:
+        IIc.loc['employees_compensation', 'HFCE'] = T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
+    else:
+        IIc.loc['employees_compensation', 'HFCE'] = 0 #T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
     #T is manifestly not HFCE because the numbers are different
     outputc = output.copy()
     outputc['HFCE'] = OECD.loc['OUTPUT', 'HFCE']
@@ -135,35 +138,87 @@ def multipliers2prediction(s2s_mo, fdf_year2, column_name):
 def plot_real_vs_predicted(output_real, output_pred, 
                            income_real, income_pred, 
                            gdp_real, gdp_pred, 
-                           year1, year2):
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5), sharex=True)
+                           year1, year2, title):
+    fig, axes = plt.subplots(3, 1, figsize=(6,8), sharex=True)
+    
+    fig.suptitle(title, fontsize=16)
 
     # Panel 1: Output
-    axes[0].plot(output_real.index, output_real, label='Real Output', marker='o')
-    axes[0].plot(output_pred.index, output_pred, label='Predicted Output', marker='o')
+    axes[0].plot(output_real.index, output_real, label='Real Output', color='purple', marker='o')
+    axes[0].plot(output_pred.index, output_pred, label='Predicted Output', color='red', marker='o')
     axes[0].set_title(f'Output {year2} Based on {year1}')
     axes[0].set_xlabel('Sectors')
     axes[0].set_ylabel('Million USD')
     axes[0].legend()
 
     # Panel 2: Income
-    axes[1].plot(income_real.index, income_real, label='Real Income', marker='o')
-    axes[1].plot(income_pred.index, income_pred, label='Predicted Income', marker='o')
+    axes[1].plot(income_real.index, income_real, label='Real Income', color='purple', marker='o')
+    axes[1].plot(income_pred.index, income_pred, label='Predicted Income', color='red', marker='o')
     axes[1].set_title(f'Income {year2} Based on {year1}')
     axes[1].set_xlabel('Sectors')
     axes[1].set_ylabel('Million USD')
     axes[1].legend()
 
     # Panel 3: GDP
-    axes[2].plot(gdp_real.index, gdp_real, label='Real GDP', marker='o')
-    axes[2].plot(gdp_pred.index, gdp_pred, label='Predicted GDP', marker='o')
+    axes[2].plot(gdp_real.index, gdp_real, label='Real GDP', color='purple', marker='o')
+    axes[2].plot(gdp_pred.index, gdp_pred, label='Predicted GDP', color='red', marker='o')
     axes[2].set_title(f'GDP {year2} Based on {year1}')
     axes[2].set_xlabel('Sectors')
     axes[2].set_ylabel('Million USD')
     axes[2].legend()
+    for ax in axes:
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True)
 
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show()
+
+def plot_multipliers(OECD_sectors_ICT, direct_o, indirect_o, induced_o,
+                     direct_h, indirect_h, induced_h,
+                     direct_g, indirect_g, induced_g, title="Multipliers Plot"):
+    
+    fig, axes = plt.subplots(3, 1, figsize=(6, 8), sharex=True)
+    fig.suptitle(title, fontsize=16)
+
+    # Define bar width and positions
+    bar_width = 0.25
+    index = np.arange(len(OECD_sectors_ICT))
+
+    # Panel 1: Output Multipliers
+    axes[0].bar(index, direct_o, bar_width, label='Direct', color='green')
+    axes[0].bar(index, indirect_o, bar_width, bottom=direct_o, label='Indirect', color='red')
+    axes[0].bar(index, induced_o, bar_width, bottom=direct_o + indirect_o, label='Induced', color='blue')
+    axes[0].set_title('Output Multipliers ICT sector')
+    axes[0].set_ylabel('Multiplier Value')
+    axes[0].set_xticks(index)
+    axes[0].set_xticklabels(OECD_sectors_ICT, rotation=45)
+    axes[0].legend()
+
+    # Panel 2: Income Multipliers
+    axes[1].bar(index, direct_h, bar_width, label='Direct', color='green')
+    axes[1].bar(index, indirect_h, bar_width, bottom=direct_h, label='Indirect', color='red')
+    axes[1].bar(index, induced_h, bar_width, bottom=direct_h + indirect_h, label='Induced', color='blue')
+    axes[1].set_title('Income Multipliers ICT sector')
+    axes[1].set_ylabel('Multiplier Value')
+    axes[1].set_xticks(index)
+    axes[1].set_xticklabels(OECD_sectors_ICT, rotation=45)
+    axes[1].legend()
+
+    # Panel 3: GDP Multipliers
+    axes[2].bar(index, direct_g, bar_width, label='Direct', color='green')
+    axes[2].bar(index, indirect_g, bar_width, bottom=direct_g, label='Indirect', color='red')
+    axes[2].bar(index, induced_g, bar_width, bottom=direct_g + indirect_g, label='Induced', color='blue')
+    axes[2].set_title('GDP Multipliers ICT sector')
+    axes[2].set_xlabel('Sectors')
+    axes[2].set_ylabel('Multiplier Value')
+    axes[2].set_xticks(index)
+    axes[2].set_xticklabels(OECD_sectors_ICT, rotation=45)
+    axes[2].legend()
+
+    # Adjust the layout for better visualization
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.show()
+
 
 ###############################################               main               #########################
 start_time = time.time()
@@ -213,11 +268,11 @@ GDPj_by_xj = safe_divide_vector(GDPc, outputc)
 # 12 multipliers output, income, GDP, X sector2sector, sector2market X simple model, closed model
 # all of the closed model multipliers are trancated (the row and column of salaries and final demand are not included)
 s2s_mo = Ldf                       # direct + indirect effect
-s2s_moc = Lcdf.iloc[ :-1, :-1 ]    # direct + indirect + iduced effect
+s2s_moc = Lcdf                     # direct + indirect + iduced effect
 s2s_mh = Ldf.mul(Ej_by_xj.iloc[ :-1 ], axis=0) 
-s2s_mhc = Lcdf.iloc[ :-1, :-1].mul(Ej_by_xj, axis=0)
+s2s_mhc = Lcdf.mul(Ej_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
 s2s_mg =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
-s2s_mgc = Ldf.mul(GDPj_by_xj, axis=0)
+s2s_mgc = Lcdf.mul(GDPj_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
 
 mo = s2s_mo.sum(axis=0)
 moc = s2s_moc.sum(axis=0)
@@ -226,12 +281,15 @@ mhc = s2s_mhc.sum(axis=0)
 mg = s2s_mg.sum(axis=0)
 mgc = s2s_mgc.sum(axis=0)
 
-# direct, indirect, induced separately
+# multipliers: direct, indirect, induced separately
+###################################################
 n = T.shape[0]
 # direct
-direct_o = np.eye(n)
-direct_h = Ej_by_xj.iloc[:-1]
-direct_g = GDPj_by_xj.iloc[:-1]
+direct_o = pd.DataFrame(np.ones((n, n)), index=s2s_mo.index, columns=s2s_mo.columns)
+direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
+np.fill_diagonal(direct_h.values, Ej_by_xj.values)
+direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
+np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
 #indirect
 indirect_o = s2s_mo - direct_o
 #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
@@ -239,12 +297,14 @@ indirect_h  = s2s_mh - direct_h
 #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
 indirect_g  = s2s_mg - direct_g
 #induced
-induced_o = s2s_moc - s2s_mo
-induced_h = s2s_mhc - s2s_mh
-induced_g = s2s_mgc - s2s_mg
+induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
+induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
+induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
+
+#add a bar plot of the 6 ict sectors
 
 # predict output, income and GDP
-
+#################################
 year2 = '2016'
 
 statcan_sectors_data_year2, OECD_year2, simple_II_labels, final_demand_columns, _, _, output_year2, outputc_year2, _, _, _, _, _, _ = clc_output_multipliers(year2)
@@ -256,19 +316,11 @@ fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=
 fcdf_year2.loc['employees_compensation'] = 0
 
 predicted_output_year2 = multipliers2prediction(s2s_mo, fdf_year2, 'Predicted_Output')
-predicted_outputc_year2 = multipliers2prediction(s2s_moc, fcdf_year2, 'Predicted_Output Closed Model')
+predicted_outputc_year2 = multipliers2prediction(s2s_moc, fcdf_year2, 'Predicted_Output')
 predicted_income_year2 = multipliers2prediction(s2s_mh, fdf_year2, 'Predicted_Income')  
-predicted_incomec_year2 = multipliers2prediction(s2s_mhc, fcdf_year2, 'Predicted_Income Closed Model') 
+predicted_incomec_year2 = multipliers2prediction(s2s_mhc, fcdf_year2, 'Predicted_Income') 
 predicted_GDP_year2 = multipliers2prediction(s2s_mg, fdf_year2, 'Predicted_GDP') 
-predicted_GDPc_year2 = multipliers2prediction(s2s_mgc, fcdf_year2, 'Predicted_GDP Closed Model') 
-
-
-
-
-plot_real_vs_predicted(output_year2, predicted_output_year2,
-                       income_year2, predicted_income_year2,
-                       GDP_year2, predicted_GDP_year2,  
-                       year, year2)
+predicted_GDPc_year2 = multipliers2prediction(s2s_mgc, fcdf_year2, 'Predicted_GDP') 
 
 
 # calculate type I and typeII multipliers
@@ -277,7 +329,21 @@ plot_real_vs_predicted(output_year2, predicted_output_year2,
 
 
 ##############################              plotting          #############################
+#prediction plotting
 
+plot_real_vs_predicted(output_year2, predicted_output_year2,
+                       income_year2, predicted_income_year2,
+                       GDP_year2, predicted_GDP_year2,  
+                       year, year2,'Simple Model')
+
+
+plot_real_vs_predicted(output_year2, predicted_outputc_year2.iloc[:-1],
+                       income_year2, predicted_incomec_year2.iloc[:-1],
+                       GDP_year2, predicted_GDPc_year2.iloc[:-1],  
+                       year, year2,'Closed Model')
+
+
+#multipliers plotting
 plot_market_multipliers([mo, mh, mg], ['New Dollar\'s Output per New Dollar\'s Final Demand',
                                        'New Dollar\'s Income per New Dollar\'s Final Demand',
                                        'New Dollar\'s GDP per New Dollar\'s Final Demand'], figure_title=f"{year}, Simple Model: Direct + Indirect")
@@ -295,7 +361,36 @@ plot_market_multipliers([s2s_moc.loc[:,sector], s2s_mhc.loc[:,sector], s2s_mgc.l
                                        'New Dollar\'s GDP per New Dollar\'s Final Demand'], 
                                        figure_title=f"{year}, Closed Model: Direct + Indirect + Induced, {sector_description}")
 
+
+'''
 # bar graphs of direct, indirect and induced
+ICT_sectors = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services',
+               'ICT - Software and computer services',	'ICT - Software and computer services']
+OECD_sectors_ICT = ['C26',	'G',	'J58T60',	'J61',	'J62_63',	'M']
+ICT_sectors_dict = {'ICT - Manufacturing': 'C26',
+                    'ICT - Wholesaling': 'G',
+                    'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
+                    'ICT - Communications services': 'J61'}
+# Build sector code to name mapping
+code_to_name = {}
+for name, codes in ICT_sectors_dict.items():
+    if isinstance(codes, list):
+        for code in codes:
+            code_to_name[code] = name
+    else:
+        code_to_name[codes] = name
+
+# assume I want to see the ICT sectors as selling sectors. how much they will sell
+plot_multipliers(OECD_sectors_ICT, direct_o.loc[OECD_sectors_ICT,:].sum(axis=1), indirect_o.loc[OECD_sectors_ICT,:].sum(axis=1), 
+                 induced_o.loc[OECD_sectors_ICT,:].sum(axis=1),
+                 direct_h.loc[OECD_sectors_ICT,:].sum(axis=1), indirect_h.loc[OECD_sectors_ICT,:].sum(axis=1),
+                 induced_h.loc[OECD_sectors_ICT,:].sum(axis=1),
+                 direct_g.loc[OECD_sectors_ICT,:].sum(axis=1), indirect_g.loc[OECD_sectors_ICT,:].sum(axis=1),
+                 induced_g.loc[OECD_sectors_ICT,:].sum(axis=1), 
+                  title="Multipliers")
+
+'''
+
 
 
 
