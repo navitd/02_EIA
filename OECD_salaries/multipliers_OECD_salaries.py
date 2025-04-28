@@ -1,9 +1,13 @@
-import pandas as pd
-import numpy as np
+import sys
+from pathlib import Path
 import os
 import time
+import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-from func_data_upload2 import data_upload
+# Add the parent directory to sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
+from func_data_upload_OECD_salaries import data_upload_OECD_salaries
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
 
@@ -52,64 +56,6 @@ def safe_divide_vector(vector, output):
     # Replace any NaN values (from division by zero) with zero
     coefficient = coefficient.fillna(0)
     return coefficient
-
-def clc_output_multipliers(year,T97_flag=False):
-    # Module 1: Get IO=II, X, GDP, from OECD, wages, compensation for employees and employment from CANSTAT
-    # later move this to a function that receives country and year and uploads the results
-
-    PPP, OECD, simple_II_labels, statcan_sectors_data, sector_description, T97_values =  data_upload(year)
-    # statcan_sector_description is the explanation in words of the codes. 
-    # If I want to look something up in statcan_rough I can use read_statcan
-    # in the files I downloaded from OECD there's no description of the sectors in words.
-    # I should change statcan_sector_description into a dictionary
-   
-
-    II = OECD.loc[simple_II_labels, simple_II_labels]
-    household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-    final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'DPABR',	'CONS_NONRES',	'EXPO',	'IMPO']
-    other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
-    total       = OECD.loc[simple_II_labels, 'TOTAL'] #equals to output, this is x
-    #GDP         = OECD.loc['VALU', simple_II_labels]
-    output      = OECD.loc['OUTPUT', simple_II_labels]
-    #I don't need to worry bout household_expenditure of GDP or output - they are both 0
-    # but output of GDP is given and should be marked independently
-
-    #single values in OECD:
-    #GDP_of_household_expenditure = OECD.loc['VALU', 'HFCE']
-    #GDP_of_total_column = OECD.loc['VALU', 'TOTAL'] # total is the output, should be equal to f_row_sums.sum(axis=0)
-    #GDP_of_final_demand = OECD.loc['VALU', final_demand_columns]        #this could be added to the rows from the right or to the columns form the bottom
-    #output_of_final_demand = OECD.loc['OUTPUT', final_demand_columns]   #probably will not be needed
-
-    # from looking at the numbers:
-    # total = output
-    # II_row_sums + f_row_sums = total = output
-    # household_expenditure is the column added to II to get the closed model
-    # when uploading data for the first time run:
-    # data_exploration_flags(II,household_expenditure,other_final_demand,output,output_of_final_demand,OECD_rough)
-
-    #final demand and value added are not the same at all
-
-    # Modul 2: calculate L and multipliers
-    T = safe_divide(II, output)
-    Ldf, L_minus_I = clc_L(T)
-
-    IIc = II.copy()
-    IIc["HFCE"] = household_expenditure # added a column for closed model
-    IIc.loc['employees_compensation'] = statcan_sectors_data['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
-    # temporary fix, perhaps I should put household_expenditure of employees_compensation to 0
-    if T97_flag:
-        IIc.loc['employees_compensation', 'HFCE'] = T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
-    else:
-        IIc.loc['employees_compensation', 'HFCE'] = 0 #T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
-    #T is manifestly not HFCE because the numbers are different
-    outputc = output.copy()
-    outputc['HFCE'] = OECD.loc['OUTPUT', 'HFCE']
-    Tc = safe_divide(IIc, outputc)
-    Lcdf, Lc_minus_I = clc_L(Tc)
-
-    return statcan_sectors_data, OECD, simple_II_labels, final_demand_columns, II, IIc, output, outputc, T, Tc, Ldf, L_minus_I, Lcdf, Lc_minus_I
-
-
 
 def plot_market_multipliers(series_list, panel_titles, figure_title):
     
@@ -220,25 +166,64 @@ def plot_multipliers(OECD_sectors_ICT, direct_o, indirect_o, induced_o,
     plt.show()
 
 
-###############################################               main               #########################
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@               main             @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
 print("working directory of C26_output_multipliers.py is: ",os.getcwd())  # Print the current working directory
-# the work on the multipliers is not finished yet, that's why it is still here and not in a separate file.
-# OECD_statcan_comp.py has a slightly different version of the same function (outputing PPP as well)
 
-#fix: create a function that calculates all the multipleirs. the above clc_multipliers is only for L and Lc. 
-#at the beginning they were the multipleirs.
-
-
-print(f'C26 is Manufacture of computer, electronic and optical products')
 year = '2015'
-PPP, _, _, _, sector_description, _ =  data_upload(year)
-sector = 'C26'
-sector_description = sector_description[sector]
+
+# 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
+##########################################################################################################################################   
+PPP, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year)
+
+additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
+                    'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
 
 
-statcan_sectors_data, OECD, simple_II_labels, final_demand_columns, II, IIc, output, outputc, T, Tc, Ldf, L_minus_I, Lcdf, Lc_minus_I = clc_output_multipliers(year)
+II = OECD.loc[simple_II_labels, simple_II_labels]
+household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
+final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'DPABR',	'CONS_NONRES',	'EXPO',	'IMPO']
+other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
+total       = OECD.loc[simple_II_labels, 'TOTAL'] #equals to output, this is x
+GDP         = OECD.loc['VALU', simple_II_labels]
+output      = OECD.loc['OUTPUT', simple_II_labels]
+#I don't need to worry bout household_expenditure of GDP or output - they are both 0
+# but output of GDP is given and should be marked independently
 
+#single values in OECD:
+#GDP_of_household_expenditure = OECD.loc['VALU', 'HFCE']
+#GDP_of_total_column = OECD.loc['VALU', 'TOTAL'] # total is the output, should be equal to f_row_sums.sum(axis=0)
+#GDP_of_final_demand = OECD.loc['VALU', final_demand_columns]        #this could be added to the rows from the right or to the columns form the bottom
+#output_of_final_demand = OECD.loc['OUTPUT', final_demand_columns]   #probably will not be needed
+
+# from looking at the numbers:
+# total = output
+# II_row_sums + f_row_sums = total = output
+# household_expenditure is the column added to II to get the closed model
+# when uploading data for the first time run:
+# data_exploration_flags(II,household_expenditure,other_final_demand,output,output_of_final_demand,OECD_rough)
+
+#final demand and value added are not the same at all
+
+# 2. calculate L and Lc
+###########################################################################################################################################
+T = safe_divide(II, output)
+Ldf, L_minus_I = clc_L(T)
+
+IIc = II.copy()
+IIc["HFCE"] = household_expenditure # added a column for closed model
+IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
+
+IIc.loc['employees_compensation', 'HFCE'] = 0 #T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
+
+outputc = output.copy()
+outputc['HFCE'] = OECD.loc['OUTPUT', 'HFCE']
+Tc = safe_divide(IIc, outputc)
+Lcdf, Lc_minus_I = clc_L(Tc)
+
+
+# 3. calculate multipliers
+###########################################################################################################################################
 
 mo = Ldf.sum(axis=0) #dollar's worth of outcome per 1 dollar's worth of new final demand
 moc_trancated = Lcdf.iloc[:-1].sum(axis=0) #dollar's worth of outcome per 1 dollar's worth of new final demand
@@ -305,10 +290,10 @@ induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
 
 # predict output, income and GDP
 #################################
-year2 = '2016'
+year2 = '2020'
 
-statcan_sectors_data_year2, OECD_year2, simple_II_labels, final_demand_columns, _, _, output_year2, outputc_year2, _, _, _, _, _, _ = clc_output_multipliers(year2)
-income_year2 = statcan_sectors_data_year2['employees_compensation']
+_, OECD_year2, _, OECDadditional_year2, _ =  data_upload_OECD_salaries(year2)
+income_year2 = OECDadditional_year2['employees_compensation']
 GDP_year2 = OECD_year2.loc['VALU', simple_II_labels]
 
 fdf_year2 = OECD_year2.loc[simple_II_labels, final_demand_columns].sum(axis=1)
@@ -321,7 +306,7 @@ predicted_income_year2 = multipliers2prediction(s2s_mh, fdf_year2, 'Predicted_In
 predicted_incomec_year2 = multipliers2prediction(s2s_mhc, fcdf_year2, 'Predicted_Income') 
 predicted_GDP_year2 = multipliers2prediction(s2s_mg, fdf_year2, 'Predicted_GDP') 
 predicted_GDPc_year2 = multipliers2prediction(s2s_mgc, fcdf_year2, 'Predicted_GDP') 
-
+output_year2      = OECD_year2.loc['OUTPUT', simple_II_labels]
 
 # calculate type I and typeII multipliers
 

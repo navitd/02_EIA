@@ -1,7 +1,11 @@
-import pandas as pd
-import numpy as np
+import sys
+from pathlib import Path
 import os
 import time
+import pandas as pd
+import numpy as np
+# Add the parent directory to sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
 from func_data_upload import data_upload
 # there's a new version func_data_upload2 that returns statcan_sectors_data with all statcan data - not just GDP
 

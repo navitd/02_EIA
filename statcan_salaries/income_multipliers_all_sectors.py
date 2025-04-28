@@ -1,8 +1,12 @@
-import pandas as pd
-import numpy as np
+import sys
+from pathlib import Path
 import os
 import time
+import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
+# Add the parent directory to sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
 from func_data_upload2 import data_upload
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
