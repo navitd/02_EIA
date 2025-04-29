@@ -57,112 +57,35 @@ def safe_divide_vector(vector, output):
     coefficient = coefficient.fillna(0)
     return coefficient
 
-def plot_market_multipliers(series_list, panel_titles, figure_title):
-    
-    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6, 8), sharex=True)
-    
-    for ax, series, panel_title in zip(axes, series_list, panel_titles):
-        ax.plot(series.index, series.values, marker='o', linestyle='-')
-        ax.set_title(panel_title)
-        ax.grid(True)
-        ax.tick_params(axis='x', labelsize=8)
-        ax.tick_params(axis='x', labelrotation=45)
-
-    fig.tight_layout()
-    fig.suptitle(figure_title, fontsize=14, y=0.98)
-    plt.subplots_adjust(top=0.9)  # lower top to make room for suptitle
-    plt.show()
-
-
-def multipliers2prediction(s2s_mo, fdf_year2, column_name):
-    predicted_output_year2_np  = np.round(s2s_mo.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
-    
-    predicted_output_year2 = pd.DataFrame(predicted_output_year2_np, index=s2s_mo.index, columns=[column_name])
-    
-    return predicted_output_year2
-
-def plot_real_vs_predicted(output_real, output_pred, 
-                           income_real, income_pred, 
-                           gdp_real, gdp_pred, 
-                           year1, year2, title):
-    fig, axes = plt.subplots(3, 1, figsize=(6,8), sharex=True)
-    
+def plot_OECD_OECD_comparison(GDP, GDP_additional, II, II_additional, output, output_additional, title):
+    fig, axes = plt.subplots(3,1, figsize=(18, 6))  # 1 row, 3 columns
     fig.suptitle(title, fontsize=16)
-
-    # Panel 1: Output
-    axes[0].plot(output_real.index, output_real, label='Real Output', color='purple', marker='o')
-    axes[0].plot(output_pred.index, output_pred, label='Predicted Output', color='red', marker='o')
-    axes[0].set_title(f'Output {year2} Based on {year1}')
-    axes[0].set_xlabel('Sectors')
-    axes[0].set_ylabel('Million USD')
+    # Plot GDP and GDP_additional
+    axes[0].plot(GDP, marker='o', label=GDP.name if GDP.name else 'GDP')
+    axes[0].plot(GDP_additional, marker='o', label=GDP_additional.name if GDP_additional.name else 'GDP Additional')
+    axes[0].set_title('GDP vs GDP Additional')
+    axes[0].set_ylabel('Value')
     axes[0].legend()
+    axes[0].grid(True)
+    axes[0].tick_params(axis='x', rotation=45)
 
-    # Panel 2: Income
-    axes[1].plot(income_real.index, income_real, label='Real Income', color='purple', marker='o')
-    axes[1].plot(income_pred.index, income_pred, label='Predicted Income', color='red', marker='o')
-    axes[1].set_title(f'Income {year2} Based on {year1}')
-    axes[1].set_xlabel('Sectors')
-    axes[1].set_ylabel('Million USD')
+    # Plot II and II_additional
+    axes[1].plot(II, marker='o', label=II.name if II.name else 'II')
+    axes[1].plot(II_additional, marker='o', label=II_additional.name if II_additional.name else 'II Additional')
+    axes[1].set_title('II vs II Additional')
     axes[1].legend()
+    axes[1].grid(True)
+    axes[1].tick_params(axis='x', rotation=45)
 
-    # Panel 3: GDP
-    axes[2].plot(gdp_real.index, gdp_real, label='Real GDP', color='purple', marker='o')
-    axes[2].plot(gdp_pred.index, gdp_pred, label='Predicted GDP', color='red', marker='o')
-    axes[2].set_title(f'GDP {year2} Based on {year1}')
-    axes[2].set_xlabel('Sectors')
-    axes[2].set_ylabel('Million USD')
+    # Plot output and output_additional
+    axes[2].plot(output, marker='o', label=output.name if output.name else 'Output')
+    axes[2].plot(output_additional, marker='o', label=output_additional.name if output_additional.name else 'Output Additional')
+    axes[2].set_title('Output vs Output Additional')
     axes[2].legend()
-    for ax in axes:
-        ax.tick_params(axis='x', rotation=45)
-        ax.grid(True)
+    axes[2].grid(True)
+    axes[2].tick_params(axis='x', rotation=45)
 
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-    plt.show()
-
-def plot_multipliers(OECD_sectors_ICT, direct_o, indirect_o, induced_o,
-                     direct_h, indirect_h, induced_h,
-                     direct_g, indirect_g, induced_g, title="Multipliers Plot"):
-    
-    fig, axes = plt.subplots(3, 1, figsize=(6, 8), sharex=True)
-    fig.suptitle(title, fontsize=16)
-
-    # Define bar width and positions
-    bar_width = 0.25
-    index = np.arange(len(OECD_sectors_ICT))
-
-    # Panel 1: Output Multipliers
-    axes[0].bar(index, direct_o, bar_width, label='Direct', color='green')
-    axes[0].bar(index, indirect_o, bar_width, bottom=direct_o, label='Indirect', color='red')
-    axes[0].bar(index, induced_o, bar_width, bottom=direct_o + indirect_o, label='Induced', color='blue')
-    axes[0].set_title('Output Multipliers ICT sector')
-    axes[0].set_ylabel('Multiplier Value')
-    axes[0].set_xticks(index)
-    axes[0].set_xticklabels(OECD_sectors_ICT, rotation=45)
-    axes[0].legend()
-
-    # Panel 2: Income Multipliers
-    axes[1].bar(index, direct_h, bar_width, label='Direct', color='green')
-    axes[1].bar(index, indirect_h, bar_width, bottom=direct_h, label='Indirect', color='red')
-    axes[1].bar(index, induced_h, bar_width, bottom=direct_h + indirect_h, label='Induced', color='blue')
-    axes[1].set_title('Income Multipliers ICT sector')
-    axes[1].set_ylabel('Multiplier Value')
-    axes[1].set_xticks(index)
-    axes[1].set_xticklabels(OECD_sectors_ICT, rotation=45)
-    axes[1].legend()
-
-    # Panel 3: GDP Multipliers
-    axes[2].bar(index, direct_g, bar_width, label='Direct', color='green')
-    axes[2].bar(index, indirect_g, bar_width, bottom=direct_g, label='Indirect', color='red')
-    axes[2].bar(index, induced_g, bar_width, bottom=direct_g + indirect_g, label='Induced', color='blue')
-    axes[2].set_title('GDP Multipliers ICT sector')
-    axes[2].set_xlabel('Sectors')
-    axes[2].set_ylabel('Multiplier Value')
-    axes[2].set_xticks(index)
-    axes[2].set_xticklabels(OECD_sectors_ICT, rotation=45)
-    axes[2].legend()
-
-    # Adjust the layout for better visualization
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.tight_layout()
     plt.show()
 
 
@@ -176,10 +99,6 @@ year = '2015'
 ##########################################################################################################################################   
 PPP, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year)
 
-additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
-                    'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
-
-
 II = OECD.loc[simple_II_labels, simple_II_labels]
 household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
 final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'DPABR',	'CONS_NONRES',	'EXPO',	'IMPO']
@@ -189,19 +108,29 @@ GDP         = OECD.loc['VALU', simple_II_labels]
 output      = OECD.loc['OUTPUT', simple_II_labels]
 
 
-# 2. calculate L and Lc
-###########################################################################################################################################
-T = safe_divide(II, output)
-Ldf, L_minus_I = clc_L(T)
 
-IIc = II.copy()
-IIc["HFCE"] = household_expenditure # added a column for closed model
-IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
+additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
+                    'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
+# compare: GDP, output, intermediate_consumption
+GDP_additional = OECDadditional.loc[ simple_II_labels, 'GDP']
+output_additional = OECDadditional.loc[ simple_II_labels, 'output']
+II_additional = OECDadditional.loc[ simple_II_labels, 'intermediate_consumption']
+E_additional = OECDadditional.loc[ simple_II_labels, 'employees_compensation']  
 
-IIc.loc['employees_compensation', 'HFCE'] = 0 #T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
 
-outputc = output.copy()
-outputc['HFCE'] = OECD.loc['OUTPUT', 'HFCE']
-Tc = safe_divide(IIc, outputc)
-Lcdf, Lc_minus_I = clc_L(Tc)
 
+plot_OECD_OECD_comparison(GDP, GDP_additional, II.sum(axis=0), II_additional, output, output_additional,f'OECD vs OECD Additional, {year}')
+
+def plot_single_series(E_additional, title):
+    plt.figure(figsize=(8, 6))
+    
+    plt.plot(E_additional, marker='o', label=E_additional.name if E_additional.name else 'Series')
+    plt.ylabel('Value')
+    plt.title(title)
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+plot_single_series(E_additional, f'Employees Compensation, {year}')

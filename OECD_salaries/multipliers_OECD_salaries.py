@@ -5,6 +5,7 @@ import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
 from func_data_upload_OECD_salaries import data_upload_OECD_salaries
@@ -166,6 +167,17 @@ def plot_multipliers(OECD_sectors_ICT, direct_o, indirect_o, induced_o,
     plt.show()
 
 
+
+
+def plot_heatmap(df, title):
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(df, annot=True, fmt=".2f", cmap="coolwarm", cbar=True)
+    plt.title(title)
+    plt.xticks(rotation=45)
+    plt.yticks(rotation=0)
+    plt.tight_layout()
+    plt.show()
+
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@               main             @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
 print("working directory of C26_output_multipliers.py is: ",os.getcwd())  # Print the current working directory
@@ -182,7 +194,7 @@ additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross'
 
 II = OECD.loc[simple_II_labels, simple_II_labels]
 household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'DPABR',	'CONS_NONRES',	'EXPO',	'IMPO']
+final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
 other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
 total       = OECD.loc[simple_II_labels, 'TOTAL'] #equals to output, this is x
 GDP         = OECD.loc['VALU', simple_II_labels]
@@ -213,7 +225,6 @@ Ldf, L_minus_I = clc_L(T)
 IIc = II.copy()
 IIc["HFCE"] = household_expenditure # added a column for closed model
 IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
-
 IIc.loc['employees_compensation', 'HFCE'] = 0 #T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
 
 outputc = output.copy()
@@ -297,7 +308,10 @@ income_year2 = OECDadditional_year2['employees_compensation']
 GDP_year2 = OECD_year2.loc['VALU', simple_II_labels]
 
 fdf_year2 = OECD_year2.loc[simple_II_labels, final_demand_columns].sum(axis=1)
-fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+#there is what causes closed model to be in accuarete:
+#fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+#I should take HFCE inside fcdf_year2. 
+fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns].sum(axis=1)
 fcdf_year2.loc['employees_compensation'] = 0
 
 predicted_output_year2 = multipliers2prediction(s2s_mo, fdf_year2, 'Predicted_Output')
@@ -322,19 +336,28 @@ plot_real_vs_predicted(output_year2, predicted_output_year2,
                        year, year2,'Simple Model')
 
 
+
 plot_real_vs_predicted(output_year2, predicted_outputc_year2.iloc[:-1],
                        income_year2, predicted_incomec_year2.iloc[:-1],
                        GDP_year2, predicted_GDPc_year2.iloc[:-1],  
                        year, year2,'Closed Model')
 
+'''
+# see how Lcdf compares to L
+plot_heatmap(Lc_minus_I.iloc[:-1,:-1] - L_minus_I, f"Lc-L, Lc trancated, {year}")
+'''
+
+
 
 #multipliers plotting
+'''
 plot_market_multipliers([mo, mh, mg], ['New Dollar\'s Output per New Dollar\'s Final Demand',
                                        'New Dollar\'s Income per New Dollar\'s Final Demand',
                                        'New Dollar\'s GDP per New Dollar\'s Final Demand'], figure_title=f"{year}, Simple Model: Direct + Indirect")
 plot_market_multipliers([moc, mhc, mgc], ['New Dollar\'s Output per New Dollar\'s Final Demand',
                                           'New Dollar\'s Income per New Dollar\'s Final Demand',
                                           'New Dollar\'s GDP per New Dollar\'s Final Demand'], figure_title=f"{year}, Closed Model: Direct + Indirect + Induced")
+
 
 
 plot_market_multipliers([s2s_mo.loc[:,sector], s2s_mh.loc[:,sector], s2s_mg.loc[:,sector]], ['New Dollar\'s Output per New Dollar\'s Final Demand',
@@ -346,9 +369,10 @@ plot_market_multipliers([s2s_moc.loc[:,sector], s2s_mhc.loc[:,sector], s2s_mgc.l
                                        'New Dollar\'s GDP per New Dollar\'s Final Demand'], 
                                        figure_title=f"{year}, Closed Model: Direct + Indirect + Induced, {sector_description}")
 
-
 '''
+
 # bar graphs of direct, indirect and induced
+'''
 ICT_sectors = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services',
                'ICT - Software and computer services',	'ICT - Software and computer services']
 OECD_sectors_ICT = ['C26',	'G',	'J58T60',	'J61',	'J62_63',	'M']
@@ -373,8 +397,8 @@ plot_multipliers(OECD_sectors_ICT, direct_o.loc[OECD_sectors_ICT,:].sum(axis=1),
                  direct_g.loc[OECD_sectors_ICT,:].sum(axis=1), indirect_g.loc[OECD_sectors_ICT,:].sum(axis=1),
                  induced_g.loc[OECD_sectors_ICT,:].sum(axis=1), 
                   title="Multipliers")
-
 '''
+
 
 
 
