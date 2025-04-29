@@ -1,8 +1,12 @@
-import pandas as pd
-import numpy as np
+import sys
+from pathlib import Path
 import os
 import time
+import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
+# Add the parent directory to sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
 from func_data_upload2 import data_upload
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
@@ -104,7 +108,7 @@ _, _, _, _, _, _, _, _, T_year1, Tc_year1, Ldf_year1, _, Lcdf_year1, _ = clc_out
 _, OECD_year2, simple_II_labels, final_demand_columns, _, _, output_year2, outputc_year2, _, _, _, _, _, _ = clc_output_multipliers(year2)
 
 fdf_year2 = OECD_year2.loc[simple_II_labels, final_demand_columns].sum(axis=1)
-fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns].sum(axis=1) #corrected: added HFCE to fcdf_year2
 fcdf_year2.loc['employees_compensation'] = 0
 
 

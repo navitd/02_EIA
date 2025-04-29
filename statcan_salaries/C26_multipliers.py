@@ -316,7 +316,7 @@ income_year2 = statcan_sectors_data_year2['employees_compensation']
 GDP_year2 = OECD_year2.loc['VALU', simple_II_labels]
 
 fdf_year2 = OECD_year2.loc[simple_II_labels, final_demand_columns].sum(axis=1)
-fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns].sum(axis=1) #added HFCE to fcdf_year2
 fcdf_year2.loc['employees_compensation'] = 0
 
 predicted_output_year2 = multipliers2prediction(s2s_mo, fdf_year2, 'Predicted_Output')

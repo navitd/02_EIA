@@ -108,7 +108,7 @@ _, _, _, _, _, _, _, _, T_year1, Tc_year1, Ldf_year1, _, Lcdf_year1, _ = clc_out
 _, OECD_year2, simple_II_labels, final_demand_columns, _, _, output_year2, outputc_year2, _, _, _, _, _, _ = clc_output_multipliers(year2)
 
 fdf_year2 = OECD_year2.loc[simple_II_labels, final_demand_columns].sum(axis=1)
-fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns].sum(axis=1) #corrected: added HFCE to fcdf_year2
 fcdf_year2.loc['employees_compensation'] = 0
 
 
