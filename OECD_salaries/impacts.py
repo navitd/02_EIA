@@ -17,8 +17,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 
 
-def print_L_Lc_to_excel(Ldf: pd.DataFrame, Lcdf: pd.DataFrame, filename):
-
+def print_matrices_to_excel(Ldf: pd.DataFrame, matrix1_name, Lcdf: pd.DataFrame, matrix2_name, filename):
 
     wb = Workbook()
     ws = wb.active
@@ -41,7 +40,7 @@ def print_L_Lc_to_excel(Ldf: pd.DataFrame, Lcdf: pd.DataFrame, filename):
     rows_Ldf = list(dataframe_to_rows(Ldf, index=True, header=True))
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
     cell = ws.cell(row=1, column=1)
-    cell.value = "Matrix L"
+    cell.value = matrix1_name
     cell.fill = green
     cell.font = bold_font
     cell.alignment = center_align
@@ -66,7 +65,7 @@ def print_L_Lc_to_excel(Ldf: pd.DataFrame, Lcdf: pd.DataFrame, filename):
     # --- Matrix Lcdf ---
     ws.merge_cells(start_row=1, start_column=sep_col + 1, end_row=1, end_column=sep_col + 4)
     cell = ws.cell(row=1, column=sep_col + 1)
-    cell.value = "Matrix Lc"
+    cell.value = matrix2_name
     cell.fill = green
     cell.font = bold_font
     cell.alignment = center_align
@@ -313,7 +312,7 @@ IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If
 IIc.loc['employees_compensation', 'HFCE'] = 0 #T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
 
 outputc = output.copy()
-outputc['HFCE'] = OECD.loc['OUTPUT', 'HFCE']
+outputc['HFCE'] = OECDadditional['employees_compensation'].sum()
 Tc = safe_divide(IIc, outputc)
 Lcdf, Lc_minus_I = clc_L(Tc)
 
@@ -385,12 +384,9 @@ induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
 induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
 induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
 
-print_L_Lc_to_excel(Ldf, Lcdf, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
+print_matrices_to_excel(Ldf, "Matrix L", Lcdf, "Matrix Lc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
 
-
-
-
-
+print_matrices_to_excel(T, "Matrix T", Tc, "Matrix Tc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_T_Tc.xlsx')
 
 
 # predict output, income and GDP
