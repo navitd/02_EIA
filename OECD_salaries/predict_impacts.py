@@ -75,7 +75,7 @@ def print_impacts_to_excel( year,
         row = 1
         row = write_section(ws, output_df, row, f"{year} Output impact")
         row = write_section(ws, income_df, row, f"{year} Income impact")
-        write_section(ws, gdp_df, row, f"{year}GDP impact")
+        write_section(ws, gdp_df, row, f"{year} GDP impact")
 
     print(f"Excel file written to: {filename}")
 
@@ -444,10 +444,9 @@ print_impacts_to_excel( year,
                        direct_g, indirect_g, induced_g, s2s_mgc,
                        filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/impact_multipliers.xlsx')
 
+#print_matrices_to_excel(Ldf, "Matrix L", Lcdf, "Matrix Lc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
 
-print_matrices_to_excel(Ldf, "Matrix L", Lcdf, "Matrix Lc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
-
-print_matrices_to_excel(T, "Matrix T", Tc, "Matrix Tc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_T_Tc.xlsx')
+#print_matrices_to_excel(T, "Matrix T", Tc, "Matrix Tc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_T_Tc.xlsx')
 
 
 # predict output, income and GDP
@@ -479,7 +478,6 @@ output_year2      = OECD_year2.loc['OUTPUT', simple_II_labels]
 
 
 ##############################              plotting          #############################
-#prediction plotting
 
 plot_real_vs_predicted(output_year2, predicted_output_year2,
                        income_year2, predicted_income_year2,
