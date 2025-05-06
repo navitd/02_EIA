@@ -14,35 +14,74 @@ from func_clc_L import clc_L
 
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.styles import PatternFill, Alignment, Font
+from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 
-def print_L_to_excel(L: pd.DataFrame, filename='matrix_L.xlsx'):
+
+def print_L_Lc_to_excel(Ldf: pd.DataFrame, Lcdf: pd.DataFrame, filename):
+
+
     wb = Workbook()
     ws = wb.active
 
-    # --- 1. Add merged green title ---
-    title = "Matrix L"
+    # Styles
+    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+
+    # Black border style
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    # --- Matrix Ldf ---
+    rows_Ldf = list(dataframe_to_rows(Ldf, index=True, header=True))
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
     cell = ws.cell(row=1, column=1)
-    cell.value = title
-    cell.fill = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")  # green
-    cell.alignment = Alignment(horizontal="center", vertical="center")
-    cell.font = Font(bold=True)
+    cell.value = "Matrix L"
+    cell.fill = green
+    cell.font = bold_font
+    cell.alignment = center_align
 
-    # --- 2. Write the DataFrame to the sheet ---
-    rows = dataframe_to_rows(L, index=True, header=True)
+    for r_idx, row in enumerate(rows_Ldf, start=2):
+        for c_idx, val in enumerate(row, start=1):
+            cell = ws.cell(row=r_idx, column=c_idx, value=val)
+            if r_idx == 2 or c_idx == 1:
+                cell.fill = light_blue
+                cell.font = bold_font
 
-    for r_idx, row in enumerate(rows, start=2):  # start at row 2, below title
-        for c_idx, value in enumerate(row, start=1):
-            cell = ws.cell(row=r_idx, column=c_idx, value=value)
+    # --- Separator column ---
+    sep_col = Ldf.shape[1] + 2  # index + data + 1 separator
+    rows_Lcdf = list(dataframe_to_rows(Lcdf, index=True, header=True))
+    max_rows = max(len(rows_Ldf), len(rows_Lcdf))
 
-            # Light blue background for headers and index
-            if r_idx == 2 or c_idx == 1:  # header row or index column
-                cell.fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")  # light blue
-                cell.font = Font(bold=True)
+    for r in range(1, max_rows + 1):
+        cell = ws.cell(row=r, column=sep_col, value=' ')
+        cell.border = black_border
+        cell.alignment = center_align
 
-    # --- 3. Save the workbook ---
+    # --- Matrix Lcdf ---
+    ws.merge_cells(start_row=1, start_column=sep_col + 1, end_row=1, end_column=sep_col + 4)
+    cell = ws.cell(row=1, column=sep_col + 1)
+    cell.value = "Matrix Lc"
+    cell.fill = green
+    cell.font = bold_font
+    cell.alignment = center_align
+
+    for r_idx, row in enumerate(rows_Lcdf, start=2):
+        for c_idx, val in enumerate(row, start=1):
+            col = sep_col + c_idx
+            cell = ws.cell(row=r_idx, column=col, value=val)
+            if r_idx == 2 or c_idx == 1:
+                cell.fill = light_blue
+                cell.font = bold_font
+
     wb.save(filename)
+
+
 
 
 
@@ -346,7 +385,7 @@ induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
 induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
 induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
 
-print_L_to_excel(Ldf, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L.xlsx')
+print_L_Lc_to_excel(Ldf, Lcdf, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
 
 
 
