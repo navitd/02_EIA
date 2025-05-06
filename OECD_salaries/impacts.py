@@ -17,6 +17,79 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 
 
+def print_impacts_to_excel(
+    direct_o: pd.DataFrame, indirect_o: pd.DataFrame, induced_o: pd.DataFrame, s2s_moc: pd.DataFrame,
+    direct_h: pd.DataFrame, indirect_h: pd.DataFrame, induced_h: pd.DataFrame, s2s_mhc: pd.DataFrame,
+    direct_g: pd.DataFrame, indirect_g: pd.DataFrame, induced_g: pd.DataFrame, s2s_mgc: pd.DataFrame,
+    filename: str
+):
+    def prepare_section(direct, indirect, induced, total):
+        direct_sum = direct.sum(axis=0).to_frame().T
+        indirect_sum = indirect.sum(axis=0).to_frame().T
+        induced_sum = induced.sum(axis=0).to_frame().T
+        total_sum = total.iloc[:-1, :-1].sum(axis=0).to_frame().T
+
+        for df, label in zip(
+            [direct_sum, indirect_sum, induced_sum, total_sum],
+            ['Direct', 'Indirect', 'Induced', 'Total']
+        ):
+            df.insert(0, 'Impact Type', [label])
+        return pd.concat([direct_sum, indirect_sum, induced_sum, total_sum], ignore_index=True)
+
+    output_df = prepare_section(direct_o, indirect_o, induced_o, s2s_moc)
+    income_df = prepare_section(direct_h, indirect_h, induced_h, s2s_mhc)
+    gdp_df = prepare_section(direct_g, indirect_g, induced_g, s2s_mgc)
+
+    def write_section(ws, df, start_row, section_title):
+        n_cols = df.shape[1]
+        # Section title
+        ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=n_cols)
+        title_cell = ws.cell(row=start_row, column=1)
+        title_cell.value = section_title
+        title_cell.font = Font(size=14, bold=True, color="000000")
+        title_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Column headers
+        for col_num, column_title in enumerate(df.columns, start=1):
+            cell = ws.cell(row=start_row + 1, column=col_num, value=column_title)
+            if column_title == 'Impact Type':
+                cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # White
+            else:
+                cell.fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")  # Light blue
+            cell.font = Font(bold=True)
+
+        # Data rows
+        for row_idx, row in enumerate(df.itertuples(index=False), start=start_row + 2):
+            for col_idx, value in enumerate(row, start=1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                if col_idx == 1:
+                    cell.fill = PatternFill(start_color="FFA07A", end_color="FFA07A", fill_type="solid")  # Light orange
+
+        return start_row + 2 + len(df) + 1  # Next row start
+
+    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+        # Dummy write to create sheet
+        output_df.to_excel(writer, index=False, startrow=0)
+        ws = writer.sheets['Sheet1']
+
+        row = 1
+        row = write_section(ws, output_df, row, "Output impact")
+        row = write_section(ws, income_df, row, "Income impact")
+        write_section(ws, gdp_df, row, "GDP impact")
+
+    print(f"Excel file written to: {filename}")
+
+
+
+
+
+
+
+
+
+
+
 def print_matrices_to_excel(Ldf: pd.DataFrame, matrix1_name, Lcdf: pd.DataFrame, matrix2_name, filename):
 
     wb = Workbook()
@@ -79,18 +152,6 @@ def print_matrices_to_excel(Ldf: pd.DataFrame, matrix1_name, Lcdf: pd.DataFrame,
                 cell.font = bold_font
 
     wb.save(filename)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -368,7 +429,7 @@ mgc = s2s_mgc.sum(axis=0)
 ###################################################
 n = T.shape[0]
 # direct
-direct_o = pd.DataFrame(np.ones((n, n)), index=s2s_mo.index, columns=s2s_mo.columns)
+direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
 direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
 np.fill_diagonal(direct_h.values, Ej_by_xj.values)
 direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
@@ -383,6 +444,13 @@ indirect_g  = s2s_mg - direct_g
 induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
 induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
 induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
+
+
+print_impacts_to_excel(direct_o, indirect_o, induced_o, s2s_moc,
+                       direct_h, indirect_h, induced_h, s2s_mhc,
+                       direct_g, indirect_g, induced_g, s2s_mgc,
+                       filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/impact_multipliers.xlsx')
+
 
 print_matrices_to_excel(Ldf, "Matrix L", Lcdf, "Matrix Lc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
 
