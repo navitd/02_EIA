@@ -12,6 +12,52 @@ from func_data_upload_OECD_salaries import data_upload_OECD_salaries
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
 
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import PatternFill, Alignment, Font
+
+def print_L_to_excel(L: pd.DataFrame, filename='matrix_L.xlsx'):
+    wb = Workbook()
+    ws = wb.active
+
+    # --- 1. Add merged green title ---
+    title = "Matrix L"
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
+    cell = ws.cell(row=1, column=1)
+    cell.value = title
+    cell.fill = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")  # green
+    cell.alignment = Alignment(horizontal="center", vertical="center")
+    cell.font = Font(bold=True)
+
+    # --- 2. Write the DataFrame to the sheet ---
+    rows = dataframe_to_rows(L, index=True, header=True)
+
+    for r_idx, row in enumerate(rows, start=2):  # start at row 2, below title
+        for c_idx, value in enumerate(row, start=1):
+            cell = ws.cell(row=r_idx, column=c_idx, value=value)
+
+            # Light blue background for headers and index
+            if r_idx == 2 or c_idx == 1:  # header row or index column
+                cell.fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")  # light blue
+                cell.font = Font(bold=True)
+
+    # --- 3. Save the workbook ---
+    wb.save(filename)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##################################################             old functions               ######################################################
 
 def data_exploration_flags(II,household_expenditure,other_final_demand,output,output_of_final_demand,OECD_rough):
     print( pd.DataFrame({
@@ -180,7 +226,7 @@ def plot_heatmap(df, title):
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@               main             @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
-print("working directory of C26_output_multipliers.py is: ",os.getcwd())  # Print the current working directory
+print("working directory of impacts.py is: ",os.getcwd())  # Print the current working directory
 
 year = '2015'
 
@@ -277,6 +323,9 @@ mhc = s2s_mhc.sum(axis=0)
 mg = s2s_mg.sum(axis=0)
 mgc = s2s_mgc.sum(axis=0)
 
+
+# impact analysis
+###################################################
 # multipliers: direct, indirect, induced separately
 ###################################################
 n = T.shape[0]
@@ -296,6 +345,13 @@ indirect_g  = s2s_mg - direct_g
 induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
 induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
 induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
+
+print_L_to_excel(Ldf, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L.xlsx')
+
+
+
+
+
 
 
 # predict output, income and GDP
