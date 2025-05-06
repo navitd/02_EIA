@@ -21,9 +21,9 @@ def print_impacts_to_excel(
     direct_o: pd.DataFrame, indirect_o: pd.DataFrame, induced_o: pd.DataFrame, s2s_moc: pd.DataFrame,
     direct_h: pd.DataFrame, indirect_h: pd.DataFrame, induced_h: pd.DataFrame, s2s_mhc: pd.DataFrame,
     direct_g: pd.DataFrame, indirect_g: pd.DataFrame, induced_g: pd.DataFrame, s2s_mgc: pd.DataFrame,
-    filename: str
-):
-    def prepare_section(direct, indirect, induced, total):
+    filename: str):
+
+    def prepare_section(direct, indirect, induced, total, small_title):
         direct_sum = direct.sum(axis=0).to_frame().T
         indirect_sum = indirect.sum(axis=0).to_frame().T
         induced_sum = induced.sum(axis=0).to_frame().T
@@ -31,14 +31,13 @@ def print_impacts_to_excel(
 
         for df, label in zip(
             [direct_sum, indirect_sum, induced_sum, total_sum],
-            ['Direct', 'Indirect', 'Induced', 'Total']
-        ):
-            df.insert(0, 'Impact Type', [label])
+            ['Direct', 'Indirect', 'Induced', 'Total']):
+            df.insert(0, small_title, [label])
         return pd.concat([direct_sum, indirect_sum, induced_sum, total_sum], ignore_index=True)
 
-    output_df = prepare_section(direct_o, indirect_o, induced_o, s2s_moc)
-    income_df = prepare_section(direct_h, indirect_h, induced_h, s2s_mhc)
-    gdp_df = prepare_section(direct_g, indirect_g, induced_g, s2s_mgc)
+    output_df = prepare_section(direct_o, indirect_o, induced_o, s2s_moc, "Output impact")
+    income_df = prepare_section(direct_h, indirect_h, induced_h, s2s_mhc, "Income impact")
+    gdp_df = prepare_section(direct_g, indirect_g, induced_g, s2s_mgc, "GDP impact")
 
     def write_section(ws, df, start_row, section_title):
         n_cols = df.shape[1]
@@ -53,7 +52,7 @@ def print_impacts_to_excel(
         # Column headers
         for col_num, column_title in enumerate(df.columns, start=1):
             cell = ws.cell(row=start_row + 1, column=col_num, value=column_title)
-            if column_title == 'Impact Type':
+            if column_title in ["Output impact", "Income impact", "GDP impact"]:
                 cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # White
             else:
                 cell.fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")  # Light blue
@@ -79,13 +78,6 @@ def print_impacts_to_excel(
         write_section(ws, gdp_df, row, "GDP impact")
 
     print(f"Excel file written to: {filename}")
-
-
-
-
-
-
-
 
 
 
