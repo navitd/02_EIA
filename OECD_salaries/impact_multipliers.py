@@ -17,76 +17,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 
 
-def print_impacts_to_excel( year,
-    direct_o: pd.DataFrame, indirect_o: pd.DataFrame, induced_o: pd.DataFrame, s2s_moc: pd.DataFrame,
-    direct_h: pd.DataFrame, indirect_h: pd.DataFrame, induced_h: pd.DataFrame, s2s_mhc: pd.DataFrame,
-    direct_g: pd.DataFrame, indirect_g: pd.DataFrame, induced_g: pd.DataFrame, s2s_mgc: pd.DataFrame,
-    filename: str):
-
-    def prepare_section(direct, indirect, induced, total, small_title):
-        direct_sum = direct.T #direct.to_frame().T
-        indirect_sum = indirect.T #indirect.to_frame().T
-        induced_sum = induced.T #induced.to_frame().T
-        total_sum = total.T#total.iloc[:-1, :-1].to_frame().T
-
-    
-
-        for df, label in zip(
-            [direct_sum, indirect_sum, induced_sum, total_sum],
-            ['Direct', 'Indirect', 'Induced', 'Total']):
-            df.insert(0, small_title, [label])
-        return pd.concat([direct_sum, indirect_sum, induced_sum, total_sum], ignore_index=True)
-
-    output_df = prepare_section(direct_o, indirect_o, induced_o, s2s_moc, f"Output impact")
-    income_df = prepare_section(direct_h, indirect_h, induced_h, s2s_mhc, f"Income impact")
-    gdp_df = prepare_section(direct_g, indirect_g, induced_g, s2s_mgc, f"GDP impact")
-
-    def write_section(ws, df, start_row, section_title):
-        n_cols = df.shape[1]
-        # Section title
-        ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=n_cols)
-        title_cell = ws.cell(row=start_row, column=1)
-        title_cell.value = section_title
-        title_cell.font = Font(size=14, bold=True, color="000000")
-        title_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
-        title_cell.alignment = Alignment(horizontal="center", vertical="center")
-
-        # Column headers
-        for col_num, column_title in enumerate(df.columns, start=1):
-            cell = ws.cell(row=start_row + 1, column=col_num, value=column_title)
-            if column_title in ["Output impact", "Income impact", "GDP impact"]:
-                cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # White
-            else:
-                cell.fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")  # Light blue
-            cell.font = Font(bold=True)
-
-        # Data rows
-        for row_idx, row in enumerate(df.itertuples(index=False), start=start_row + 2):
-            for col_idx, value in enumerate(row, start=1):
-                cell = ws.cell(row=row_idx, column=col_idx, value=value)
-                if col_idx == 1:
-                    cell.fill = PatternFill(start_color="FFA07A", end_color="FFA07A", fill_type="solid")  # Light orange
-
-        return start_row + 2 + len(df) + 1  # Next row start
-
-    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-        # Dummy write to create sheet
-        output_df.to_excel(writer, index=False, startrow=0)
-        ws = writer.sheets['Sheet1']
-
-        row = 1
-        row = write_section(ws, output_df, row, f"{year} Output impact")
-        row = write_section(ws, income_df, row, f"{year} Income impact")
-        write_section(ws, gdp_df, row, f"{year} GDP impact")
-
-    print(f"Excel file written to: {filename}")
-
-
-
-
-
-
-def print_impact_multipliers_to_excel( year,
+def print_impact_multiliers_to_excel( year,
     direct_o: pd.DataFrame, indirect_o: pd.DataFrame, induced_o: pd.DataFrame, s2s_moc: pd.DataFrame,
     direct_h: pd.DataFrame, indirect_h: pd.DataFrame, induced_h: pd.DataFrame, s2s_mhc: pd.DataFrame,
     direct_g: pd.DataFrame, indirect_g: pd.DataFrame, induced_g: pd.DataFrame, s2s_mgc: pd.DataFrame,
@@ -147,11 +78,6 @@ def print_impact_multipliers_to_excel( year,
         write_section(ws, gdp_df, row, f"{year} GDP impact")
 
     print(f"Excel file written to: {filename}")
-
-
-
-
-
 
 
 
@@ -410,7 +336,7 @@ other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exlud
 total       = OECD.loc[simple_II_labels, 'TOTAL'] #equals to output, this is x
 GDP         = OECD.loc['VALU', simple_II_labels]
 output      = OECD.loc['OUTPUT', simple_II_labels]
-#I don't need to worry about household_expenditure of GDP or output - they are both 0
+#I don't need to worry bout household_expenditure of GDP or output - they are both 0
 # but output of GDP is given and should be marked independently
 
 #single values in OECD:
@@ -512,25 +438,21 @@ induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
 induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
 
 
-
-print_impact_multipliers_to_excel( year,
+print_impacts_to_excel( year,
                        direct_o, indirect_o, induced_o, s2s_moc,
                        direct_h, indirect_h, induced_h, s2s_mhc,
                        direct_g, indirect_g, induced_g, s2s_mgc,
                        filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/impact_multipliers.xlsx')
 
-#the above is the printing of the multipliers
-correct all the file so it prints out to the same excel file  - everything
-                       
 
-#print_matrices_to_excel(Ldf, "Matrix L", Lcdf, "Matrix Lc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
+print_matrices_to_excel(Ldf, "Matrix L", Lcdf, "Matrix Lc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
 
-#print_matrices_to_excel(T, "Matrix T", Tc, "Matrix Tc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_T_Tc.xlsx')
+print_matrices_to_excel(T, "Matrix T", Tc, "Matrix Tc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_T_Tc.xlsx')
 
 
 # predict output, income and GDP
 #################################
-year2 = '2015'
+year2 = '2020'
 
 _, OECD_year2, _, OECDadditional_year2, _ =  data_upload_OECD_salaries(year2)
 income_year2 = OECDadditional_year2['employees_compensation']
@@ -551,41 +473,13 @@ predicted_GDP_year2 = multipliers2prediction(s2s_mg, fdf_year2, 'Predicted_GDP')
 predicted_GDPc_year2 = multipliers2prediction(s2s_mgc, fcdf_year2, 'Predicted_GDP') 
 output_year2      = OECD_year2.loc['OUTPUT', simple_II_labels]
 
-
-def multipliers_by_f(M, fcdf_year2, title):
-    fcdf_year2 = fcdf_year2.values.reshape(-1, 1) if isinstance(fcdf_year2, pd.Series) else fcdf_year2
-    result = M.values @ fcdf_year2
-    result_df = pd.DataFrame(result, index=M.index, columns=[title])
-    return result_df
-
-temp = multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total output impact')
-
-
-print_impacts_to_excel( year,
-                       multipliers_by_f(direct_o, fcdf_year2[:-1], 'Direct output impact'), 
-                       multipliers_by_f(indirect_o, fcdf_year2[:-1], 'Indirect output impact'),
-                       multipliers_by_f(induced_o, fcdf_year2[:-1], 'Induced output impact'),  
-                       multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total output impact'),
-                       multipliers_by_f(direct_h, fcdf_year2[:-1], 'Direct income impact'), 
-                       multipliers_by_f(indirect_h, fcdf_year2[:-1], 'Indirect income impact'),
-                       multipliers_by_f(induced_h, fcdf_year2[:-1], 'Induced income impact'),  
-                       multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total income impact'),
-                       multipliers_by_f(direct_g, fcdf_year2[:-1], 'Direct GDP impact'), 
-                       multipliers_by_f(indirect_g, fcdf_year2[:-1], 'Indirect GDP impact'),
-                       multipliers_by_f(induced_g, fcdf_year2[:-1], 'Induced GDP impact'),  
-                       multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total GDP impact'),  
-                       filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/impacts.xlsx')
-
-
-
-
-
 # calculate type I and typeII multipliers
-print()
+
 
 
 
 ##############################              plotting          #############################
+#prediction plotting
 
 plot_real_vs_predicted(output_year2, predicted_output_year2,
                        income_year2, predicted_income_year2,

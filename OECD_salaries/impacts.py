@@ -75,7 +75,7 @@ def print_impacts_to_excel( year,
         row = 1
         row = write_section(ws, output_df, row, f"{year} Output impact")
         row = write_section(ws, income_df, row, f"{year} Income impact")
-        write_section(ws, gdp_df, row, f"{year}GDP impact")
+        write_section(ws, gdp_df, row, f"{year} GDP impact")
 
     print(f"Excel file written to: {filename}")
 
