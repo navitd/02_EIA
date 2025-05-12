@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 
 
 
-def data_upload_OECD_salaries(year):
+def data_upload_OECD_salaries(year, currency_exchange_type):
 
     start_time = time.time()
-    print("working directory of func_data_upload2.py is: ",os.getcwd())  # Print the current working directory
+    print("working directory of func_data_upload_OECD_salaries.py is: ",os.getcwd())  # Print the current working directory
 
     # 1. uploading the map from statcan sectors to OECD sectors:
     codes_map = pd.read_excel(
@@ -29,8 +29,8 @@ def data_upload_OECD_salaries(year):
     PPP_filtered = PPP_rough[
         (PPP_rough['LOCATION'] == 'CAN') &
         (PPP_rough['TIME_PERIOD'] == int(year)) &
-        (PPP_rough['INDICATOR'] == 'PPP') ]
-    PPP = PPP_filtered['OBS_VALUE'].iloc[0]
+        (PPP_rough['INDICATOR'] == currency_exchange_type) ]
+    PPP_or_exch = PPP_filtered['OBS_VALUE'].iloc[0]
 
   
     # 3. Loading OECD data
@@ -99,8 +99,8 @@ def data_upload_OECD_salaries(year):
         # GDPstatcan_grouped has OECD sectors but also other sectors. it has 95 rows. but the OECD sectors are correct (summed correctly)
         # I checked.
 
-        # convert CAD to USD
-        col_data2_grouped['OBS_VALUE_USD'] = (col_data2_grouped['OBS_VALUE'] / PPP).round(1)
+        # convert CAD to USD by PPP_or_exch
+        col_data2_grouped['OBS_VALUE_USD'] = (col_data2_grouped['OBS_VALUE'] / PPP_or_exch).round(1)
         col_data2_grouped.drop(columns=['OBS_VALUE'], inplace=True)
         
         # last step:
@@ -112,4 +112,4 @@ def data_upload_OECD_salaries(year):
 
     
 
-    return PPP, OECD, simple_II_labels, OECDadditional, sector_description
+    return PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description

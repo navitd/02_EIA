@@ -377,9 +377,6 @@ def plot_multipliers(OECD_sectors_ICT, direct_o, indirect_o, induced_o,
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
 
-
-
-
 def plot_heatmap(df, title):
     plt.figure(figsize=(10, 8))
     sns.heatmap(df, annot=True, fmt=".2f", cmap="coolwarm", cbar=True)
@@ -389,6 +386,7 @@ def plot_heatmap(df, title):
     plt.tight_layout()
     plt.show()
 
+
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@               main             @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
 print("working directory of impacts.py is: ",os.getcwd())  # Print the current working directory
@@ -397,10 +395,12 @@ year = '2015'
 
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
-PPP, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year)
+currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
+PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type)
+print(f'PPP_or_exch {PPP_or_exch}')
 
 additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
-                    'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
+                                'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
 
 
 II = OECD.loc[simple_II_labels, simple_II_labels]
@@ -520,7 +520,7 @@ print_impact_multipliers_to_excel( year,
                        filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/impact_multipliers.xlsx')
 
 #the above is the printing of the multipliers
-correct all the file so it prints out to the same excel file  - everything
+
                        
 
 #print_matrices_to_excel(Ldf, "Matrix L", Lcdf, "Matrix Lc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
@@ -532,7 +532,7 @@ correct all the file so it prints out to the same excel file  - everything
 #################################
 year2 = '2015'
 
-_, OECD_year2, _, OECDadditional_year2, _ =  data_upload_OECD_salaries(year2)
+_, OECD_year2, _, OECDadditional_year2, _ =  data_upload_OECD_salaries(year2, currency_exchange_type)
 income_year2 = OECDadditional_year2['employees_compensation']
 GDP_year2 = OECD_year2.loc['VALU', simple_II_labels]
 
