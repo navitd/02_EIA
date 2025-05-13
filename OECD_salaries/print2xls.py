@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from openpyxl import Workbook
+from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 import openpyxl
@@ -84,195 +84,6 @@ def print_impacts_to_excel( year,
 
     print(f"Excel file written to: {filename}")
 
-def print_impact_multipliers_to_excel( year,
-    direct_o: pd.DataFrame, indirect_o: pd.DataFrame, induced_o: pd.DataFrame, s2s_moc: pd.DataFrame,
-    direct_h: pd.DataFrame, indirect_h: pd.DataFrame, induced_h: pd.DataFrame, s2s_mhc: pd.DataFrame,
-    direct_g: pd.DataFrame, indirect_g: pd.DataFrame, induced_g: pd.DataFrame, s2s_mgc: pd.DataFrame,
-    filename: str):
-
-    def prepare_section(direct, indirect, induced, total, small_title):
-        direct_sum = direct.sum(axis=0).to_frame().T
-        indirect_sum = indirect.sum(axis=0).to_frame().T
-        induced_sum = induced.sum(axis=0).to_frame().T
-        total_sum = total.iloc[:-1, :-1].sum(axis=0).to_frame().T
-
-        for df, label in zip(
-            [direct_sum, indirect_sum, induced_sum, total_sum],
-            ['Direct', 'Indirect', 'Induced', 'Total']):
-            df.insert(0, small_title, [label])
-        return pd.concat([direct_sum, indirect_sum, induced_sum, total_sum], ignore_index=True)
-
-    output_df = prepare_section(direct_o, indirect_o, induced_o, s2s_moc, f"Output impact")
-    income_df = prepare_section(direct_h, indirect_h, induced_h, s2s_mhc, f"Income impact")
-    gdp_df = prepare_section(direct_g, indirect_g, induced_g, s2s_mgc, f"GDP impact")
-
-    def write_section(ws, df, start_row, section_title):
-        n_cols = df.shape[1]
-        # Section title
-        ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=n_cols)
-        title_cell = ws.cell(row=start_row, column=1)
-        title_cell.value = section_title
-        title_cell.font = Font(size=14, bold=True, color="000000")
-        title_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
-        title_cell.alignment = Alignment(horizontal="center", vertical="center")
-
-        # Column headers
-        for col_num, column_title in enumerate(df.columns, start=1):
-            cell = ws.cell(row=start_row + 1, column=col_num, value=column_title)
-            if column_title in ["Output impact", "Income impact", "GDP impact"]:
-                cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # White
-            else:
-                cell.fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")  # Light blue
-            cell.font = Font(bold=True)
-
-        # Data rows
-        for row_idx, row in enumerate(df.itertuples(index=False), start=start_row + 2):
-            for col_idx, value in enumerate(row, start=1):
-                cell = ws.cell(row=row_idx, column=col_idx, value=value)
-                if col_idx == 1:
-                    cell.fill = PatternFill(start_color="FFA07A", end_color="FFA07A", fill_type="solid")  # Light orange
-
-        return start_row + 2 + len(df) + 1  # Next row start
-
-    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-        # Dummy write to create sheet
-        output_df.to_excel(writer, index=False, startrow=0)
-        ws = writer.sheets['Sheet1']
-
-        row = 1
-        row = write_section(ws, output_df, row, f"{year} Output impact")
-        row = write_section(ws, income_df, row, f"{year} Income impact")
-        write_section(ws, gdp_df, row, f"{year} GDP impact")
-
-    print(f"Excel file written to: {filename}")
-
-def print_matrices_to_excel(Ldf: pd.DataFrame, matrix1_name, Lcdf: pd.DataFrame, matrix2_name, filename):
-
-    wb = Workbook()
-    ws = wb.active
-
-    # Styles
-    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
-    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
-    bold_font = Font(bold=True)
-    center_align = Alignment(horizontal="center", vertical="center")
-
-    # Black border style
-    black_border = Border(
-        left=Side(style='thin', color='000000'),
-        right=Side(style='thin', color='000000'),
-        top=Side(style='thin', color='000000'),
-        bottom=Side(style='thin', color='000000')
-    )
-
-    # --- Matrix Ldf ---
-    rows_Ldf = list(dataframe_to_rows(Ldf, index=True, header=True))
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
-    cell = ws.cell(row=1, column=1)
-    cell.value = matrix1_name
-    cell.fill = green
-    cell.font = bold_font
-    cell.alignment = center_align
-
-    for r_idx, row in enumerate(rows_Ldf, start=2):
-        for c_idx, val in enumerate(row, start=1):
-            cell = ws.cell(row=r_idx, column=c_idx, value=val)
-            if r_idx == 2 or c_idx == 1:
-                cell.fill = light_blue
-                cell.font = bold_font
-
-    # --- Separator column ---
-    sep_col = Ldf.shape[1] + 2  # index + data + 1 separator
-    rows_Lcdf = list(dataframe_to_rows(Lcdf, index=True, header=True))
-    max_rows = max(len(rows_Ldf), len(rows_Lcdf))
-
-    for r in range(1, max_rows + 1):
-        cell = ws.cell(row=r, column=sep_col, value=' ')
-        cell.border = black_border
-        cell.alignment = center_align
-
-    # --- Matrix Lcdf ---
-    ws.merge_cells(start_row=1, start_column=sep_col + 1, end_row=1, end_column=sep_col + 4)
-    cell = ws.cell(row=1, column=sep_col + 1)
-    cell.value = matrix2_name
-    cell.fill = green
-    cell.font = bold_font
-    cell.alignment = center_align
-
-    for r_idx, row in enumerate(rows_Lcdf, start=2):
-        for c_idx, val in enumerate(row, start=1):
-            col = sep_col + c_idx
-            cell = ws.cell(row=r_idx, column=col, value=val)
-            if r_idx == 2 or c_idx == 1:
-                cell.fill = light_blue
-                cell.font = bold_font
-
-    wb.save(filename)
-
-
-def append_styled_matrix_to_excel(df, matrix_name=None, year="Sheet1", filename="output.xlsx"):
-    # Infer matrix name from variable name if not provided
-    if matrix_name is None:
-        frame = inspect.currentframe().f_back
-        matrix_name = next((name for name, val in frame.f_locals.items() if val is df), "UnnamedMatrix")
-
-    # Open or create workbook
-    if os.path.exists(filename):
-        wb = openpyxl.load_workbook(filename)
-        if year in wb.sheetnames:
-            ws = wb[year]
-        else:
-            ws = wb.create_sheet(title=year)
-    else:
-        wb = Workbook()
-        ws = wb.active
-        ws.title = year
-
-    # Styles
-    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
-    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
-    bold_font = Font(bold=True)
-    center_align = Alignment(horizontal="center", vertical="center")
-    black_border = Border(
-        left=Side(style='thin', color='000000'),
-        right=Side(style='thin', color='000000'),
-        top=Side(style='thin', color='000000'),
-        bottom=Side(style='thin', color='000000')
-    )
-
-    # Convert df to rows
-    rows = list(dataframe_to_rows(df, index=True, header=True))
-    n_rows = len(rows)
-    n_cols = len(rows[0])
-
-    # Find first empty column
-    start_col = 1
-    while any(ws.cell(row=row, column=start_col).value is not None for row in range(1, n_rows + 1)):
-        start_col += n_cols + 1  # skip past previous matrix + 1 separator
-
-    # --- Merge only the first 4 columns for title row ---
-    merge_end_col = min(start_col + 3, start_col + n_cols - 1)
-    if merge_end_col > start_col:
-        ws.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=merge_end_col)
-    title_cell = ws.cell(row=1, column=start_col)
-    title_cell.value = matrix_name
-    title_cell.fill = green
-    title_cell.font = bold_font
-    title_cell.alignment = center_align
-
-    # Write the matrix
-    for r_idx, row in enumerate(rows, start=2):
-        for c_idx, val in enumerate(row, start=0):  # includes index
-            col = start_col + c_idx
-            cell = ws.cell(row=r_idx, column=col, value=val)
-            if r_idx == 2 or c_idx == 0:  # header or index column
-                cell.fill = light_blue
-                cell.font = bold_font
-            cell.border = black_border
-            cell.alignment = center_align
-
-    # Save the workbook
-    wb.save(filename)
 
 
 def create_excel_file_with_title(year: str, filename: str = "output.xlsx") -> int:
@@ -363,6 +174,141 @@ def append_styled_matrix_to_excel(df, matrix_name, year: str, start_col: int, fi
     wb.save(filename)
 
     return sep_col + 1  # Return column to start the next matrix (skip separator too)
+
+def append_styled_series_to_excel(series: pd.Series, series_name, year: str, start_col: int, filename: str = "output.xlsx") -> int:
+    # Infer series name from variable name if not provided
+    if series_name is None:
+        frame = inspect.currentframe().f_back
+        series_name = next((name for name, val in frame.f_locals.items() if val is series), "UnnamedSeries")
+
+    wb = openpyxl.load_workbook(filename)
+    if year not in wb.sheetnames:
+        raise ValueError(f"Sheet named '{year}' does not exist. Create it first using create_excel_file_with_title.")
+    ws = wb[year]
+
+    # Convert Series to DataFrame for uniformity
+    df = series.to_frame(name=series.name if series.name else "Value")
+    rows = list(dataframe_to_rows(df, index=True, header=True))
+    n_rows = len(rows)
+    n_cols = len(rows[0])  # Should be 2: index and value
+
+    # Styles
+    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    # Green title merged over up to 2 columns
+    merge_end_col = min(start_col + 1, start_col + n_cols - 1)
+    if merge_end_col > start_col:
+        ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
+    title_cell = ws.cell(row=4, column=start_col)
+    title_cell.value = series_name
+    title_cell.fill = green
+    title_cell.font = bold_font
+    title_cell.alignment = center_align
+
+    # Write the series below the title
+    for r_idx, row in enumerate(rows, start=5):
+        for c_idx, val in enumerate(row):
+            col = start_col + c_idx
+            cell = ws.cell(row=r_idx, column=col, value=val)
+            if r_idx == 5 or c_idx == 0:  # header or index
+                cell.fill = light_blue
+                cell.font = bold_font
+            cell.border = black_border
+            cell.alignment = center_align
+
+    # Add a black separator column
+    sep_col = start_col + n_cols
+    for r in range(4, 5 + n_rows):
+        cell = ws.cell(row=r, column=sep_col)
+        cell.border = black_border
+        cell.alignment = center_align
+
+    wb.save(filename)
+    return sep_col + 1
+
+def append_styled_multipliers_to_excel(
+    year: str,
+    direct_o: pd.DataFrame, indirect_o: pd.DataFrame, induced_o: pd.DataFrame, s2s_moc: pd.DataFrame,
+    direct_h: pd.DataFrame, indirect_h: pd.DataFrame, induced_h: pd.DataFrame, s2s_mhc: pd.DataFrame,
+    direct_g: pd.DataFrame, indirect_g: pd.DataFrame, induced_g: pd.DataFrame, s2s_mgc: pd.DataFrame,
+    filename: str,
+    sheet_name: str
+):
+    
+
+    def prepare_section(direct, indirect, induced, total, small_title):
+        direct_sum = direct.sum(axis=0).to_frame().T
+        indirect_sum = indirect.sum(axis=0).to_frame().T
+        induced_sum = induced.sum(axis=0).to_frame().T
+        total_sum = total.iloc[:-1, :-1].sum(axis=0).to_frame().T
+
+        for df, label in zip(
+            [direct_sum, indirect_sum, induced_sum, total_sum],
+            ['Direct', 'Indirect', 'Induced', 'Total']):
+            df.insert(0, small_title, [label])
+        return pd.concat([direct_sum, indirect_sum, induced_sum, total_sum], ignore_index=True)
+
+    output_df = prepare_section(direct_o, indirect_o, induced_o, s2s_moc, f"Output impact")
+    income_df = prepare_section(direct_h, indirect_h, induced_h, s2s_mhc, f"Income impact")
+    gdp_df = prepare_section(direct_g, indirect_g, induced_g, s2s_mgc, f"GDP impact")
+
+    # Load or create workbook
+    try:
+        wb = load_workbook(filename)
+    except FileNotFoundError:
+        wb = Workbook()
+        wb.remove(wb.active)
+
+    # Create new sheet for multipliers
+    if sheet_name in wb.sheetnames:
+        del wb[sheet_name]
+    ws = wb.create_sheet(title=sheet_name)
+
+    def write_section(ws, df, start_row, section_title):
+        n_cols = df.shape[1]
+        # Section title
+        ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=n_cols)
+        title_cell = ws.cell(row=start_row, column=1)
+        title_cell.value = section_title
+        title_cell.font = Font(size=14, bold=True, color="000000")
+        title_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Column headers
+        for col_num, column_title in enumerate(df.columns, start=1):
+            cell = ws.cell(row=start_row + 1, column=col_num, value=column_title)
+            if column_title in ["Output impact", "Income impact", "GDP impact"]:
+                cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+            else:
+                cell.fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+            cell.font = Font(bold=True)
+
+        # Data rows
+        for row_idx, row in enumerate(df.itertuples(index=False), start=start_row + 2):
+            for col_idx, value in enumerate(row, start=1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                if col_idx == 1:
+                    cell.fill = PatternFill(start_color="FFA07A", end_color="FFA07A", fill_type="solid")
+
+        return start_row + 2 + len(df) + 1  # Next row start
+
+    row = 1
+    row = write_section(ws, output_df, row, f"{year} Output impact")
+    row = write_section(ws, income_df, row, f"{year} Income impact")
+    write_section(ws, gdp_df, row, f"{year} GDP impact")
+
+    wb.save(filename)
+    print(f"Multipliers sheet added to: {filename}")
+
 
 ##################################################             old functions               ######################################################
 
@@ -655,25 +601,23 @@ induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
 induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
 
 
-
-print_impact_multipliers_to_excel( year,
-                       direct_o, indirect_o, induced_o, s2s_moc,
-                       direct_h, indirect_h, induced_h, s2s_mhc,
-                       direct_g, indirect_g, induced_g, s2s_mgc,
-                       filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/impact_multipliers.xlsx')
-
-#the above is the printing of the multipliers
-
-                       
-
-#print_matrices_to_excel(Ldf, "Matrix L", Lcdf, "Matrix Lc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
-
-#print_matrices_to_excel(T, "Matrix T", Tc, "Matrix Tc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_T_Tc.xlsx')
 start_col = create_excel_file_with_title(year, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx')
+start_col = append_styled_matrix_to_excel(IIc, 'IIc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
+start_col = append_styled_series_to_excel(outputc, 'outputc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
 start_col = append_styled_matrix_to_excel(T, 'T', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
 start_col = append_styled_matrix_to_excel(Tc, 'Tc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
 start_col = append_styled_matrix_to_excel(Ldf, 'L', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
 start_col = append_styled_matrix_to_excel(Lcdf, 'Lc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
+
+append_styled_multipliers_to_excel( year,
+                       direct_o, indirect_o, induced_o, s2s_moc,
+                       direct_h, indirect_h, induced_h, s2s_mhc,
+                       direct_g, indirect_g, induced_g, s2s_mgc,
+                       filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx',
+                        sheet_name = 'Multipliers' )
+
+
+
 
 # predict output, income and GDP
 #################################
@@ -708,7 +652,7 @@ def multipliers_by_f(M, fcdf_year2, title):
 temp = multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total output impact')
 
 
-print_impacts_to_excel( year,
+append_styled_multipliers_to_excel( year,
                        multipliers_by_f(direct_o, fcdf_year2[:-1], 'Direct output impact'), 
                        multipliers_by_f(indirect_o, fcdf_year2[:-1], 'Indirect output impact'),
                        multipliers_by_f(induced_o, fcdf_year2[:-1], 'Induced output impact'),  
@@ -721,7 +665,8 @@ print_impacts_to_excel( year,
                        multipliers_by_f(indirect_g, fcdf_year2[:-1], 'Indirect GDP impact'),
                        multipliers_by_f(induced_g, fcdf_year2[:-1], 'Induced GDP impact'),  
                        multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total GDP impact'),  
-                       filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/impacts.xlsx')
+                       filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx',
+                       sheet_name = "Impacts")
 
 
 
