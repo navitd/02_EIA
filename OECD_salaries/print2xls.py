@@ -275,7 +275,94 @@ def append_styled_matrix_to_excel(df, matrix_name=None, year="Sheet1", filename=
     wb.save(filename)
 
 
+def create_excel_file_with_title(year: str, filename: str = "output.xlsx") -> int:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = year
 
+    # Styles
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    # Merge title box over first 4 columns and 3 rows
+    ws.merge_cells(start_row=1, start_column=1, end_row=3, end_column=4)
+    cell = ws.cell(row=1, column=1)
+    cell.value = f"EIA details - {year}"
+    cell.fill = green
+    cell.font = bold_font
+    cell.alignment = center_align
+    cell.border = black_border
+
+    wb.save(filename)
+
+    return 1  # Next available column after title box
+
+def append_styled_matrix_to_excel(df, matrix_name, year: str, start_col: int, filename: str = "output.xlsx") -> int:
+    # Infer matrix name from variable name if not provided
+    if matrix_name is None:
+        frame = inspect.currentframe().f_back
+        matrix_name = next((name for name, val in frame.f_locals.items() if val is df), "UnnamedMatrix")
+
+    wb = openpyxl.load_workbook(filename)
+    if year not in wb.sheetnames:
+        raise ValueError(f"Sheet named '{year}' does not exist. Create it first using create_excel_file_with_title.")
+    ws = wb[year]
+
+    # Styles
+    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    # Convert DataFrame to rows (including index and header)
+    rows = list(dataframe_to_rows(df, index=True, header=True))
+    n_rows = len(rows)
+    n_cols = len(rows[0])  # includes index
+
+    # Green title merged over up to 4 columns
+    merge_end_col = min(start_col + 3, start_col + n_cols - 1)
+    if merge_end_col > start_col:
+        ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
+    title_cell = ws.cell(row=4, column=start_col)
+    title_cell.value = matrix_name
+    title_cell.fill = green
+    title_cell.font = bold_font
+    title_cell.alignment = center_align
+
+    # Write the matrix below the title
+    for r_idx, row in enumerate(rows, start=5):
+        for c_idx, val in enumerate(row):
+            col = start_col + c_idx
+            cell = ws.cell(row=r_idx, column=col, value=val)
+            if r_idx == 5 or c_idx == 0:  # header or index
+                cell.fill = light_blue
+                cell.font = bold_font
+            cell.border = black_border
+            cell.alignment = center_align
+
+    # Add a black separator column
+    sep_col = start_col + n_cols
+    for r in range(4, 5 + n_rows):
+        cell = ws.cell(row=r, column=sep_col)
+        cell.border = black_border
+        cell.alignment = center_align
+
+    wb.save(filename)
+
+    return sep_col + 1  # Return column to start the next matrix (skip separator too)
 
 ##################################################             old functions               ######################################################
 
@@ -582,11 +669,11 @@ print_impact_multipliers_to_excel( year,
 #print_matrices_to_excel(Ldf, "Matrix L", Lcdf, "Matrix Lc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_L_Lc.xlsx')
 
 #print_matrices_to_excel(T, "Matrix T", Tc, "Matrix Tc", filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/matrix_T_Tc.xlsx')
-
-append_styled_matrix_to_excel(T, 'T', year, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_details.xlsx')
-append_styled_matrix_to_excel(Tc, 'Tc', year, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_details.xlsx')
-append_styled_matrix_to_excel(Ldf, 'L matrix', year, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_details.xlsx')
-append_styled_matrix_to_excel(Lcdf, 'Lc matrix', year, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_details.xlsx')
+start_col = create_excel_file_with_title(year, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx')
+start_col = append_styled_matrix_to_excel(T, 'T', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
+start_col = append_styled_matrix_to_excel(Tc, 'Tc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
+start_col = append_styled_matrix_to_excel(Ldf, 'L', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
+start_col = append_styled_matrix_to_excel(Lcdf, 'Lc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
 
 # predict output, income and GDP
 #################################
