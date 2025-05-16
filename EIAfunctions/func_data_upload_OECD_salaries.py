@@ -35,7 +35,7 @@ def data_upload_OECD_salaries(year, currency_exchange_type):
   
     # 3. Loading OECD data
     OECD_path = "../Data/NATIODOMIMP/" # windows style: r".\\"
-    OECD_name = filename = f'CAN{year}dom.csv'
+    OECD_name = f'CAN{year}dom.csv'
     OECD_rough = pd.read_csv(OECD_path + OECD_name)
 
     # Remove imports from matrix

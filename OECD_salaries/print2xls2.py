@@ -474,7 +474,7 @@ def plot_heatmap(df, title):
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
-print("working directory of impacts.py is: ",os.getcwd())  # Print the current working directory
+print("working directory of print2xls2.py is: ",os.getcwd())  # Print the current working directory
 
 year = '2015'
 
@@ -487,7 +487,7 @@ print(f'PPP_or_exch {PPP_or_exch}')
 additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
                                 'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
 
-
+# the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
 II = OECD.loc[simple_II_labels, simple_II_labels]
 household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
 final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
@@ -596,21 +596,21 @@ induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
 induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
 induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
 
-
-start_col = create_excel_file_with_title(year, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx')
-start_col = append_styled_matrix_to_excel(IIc, 'IIc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
-start_col = append_styled_series_to_excel(outputc, 'outputc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
-start_col = append_styled_series_to_excel(GDP, 'OECD GDP', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
-start_col = append_styled_matrix_to_excel(T, 'T', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
-start_col = append_styled_matrix_to_excel(Tc, 'Tc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
-start_col = append_styled_matrix_to_excel(Ldf, 'L', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
-start_col = append_styled_matrix_to_excel(Lcdf, 'Lc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
+output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx'
+start_col = create_excel_file_with_title(year, filename=output_filename)
+start_col = append_styled_matrix_to_excel(IIc, 'IIc', year, start_col, filename=output_filename) 
+start_col = append_styled_series_to_excel(outputc, 'outputc', year, start_col, filename=output_filename )
+start_col = append_styled_series_to_excel(GDP, 'OECD GDP', year, start_col, filename=output_filename )
+start_col = append_styled_matrix_to_excel(T, 'T', year, start_col, filename=output_filename )
+start_col = append_styled_matrix_to_excel(Tc, 'Tc', year, start_col, filename=output_filename)
+start_col = append_styled_matrix_to_excel(Ldf, 'L', year, start_col, filename=output_filename)
+start_col = append_styled_matrix_to_excel(Lcdf, 'Lc', year, start_col, filename=output_filename)
 
 append_styled_multipliers_to_excel( year,
                        direct_o.sum(axis=0), indirect_o.sum(axis=0), induced_o.sum(axis=0), s2s_moc.iloc[:-1, :-1].sum(axis=0),
                        direct_h.sum(axis=0), indirect_h.sum(axis=0), induced_h.sum(axis=0), s2s_mhc.iloc[:-1, :-1].sum(axis=0),
                        direct_g.sum(axis=0), indirect_g.sum(axis=0), induced_g.sum(axis=0), s2s_mgc.iloc[:-1, :-1].sum(axis=0),
-                       filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx',
+                       filename=output_filename,
                         sheet_name = f'{year} Multipliers' )
 
 
@@ -662,7 +662,7 @@ append_styled_multipliers_to_excel( year,
                        multipliers_by_f(indirect_g, fcdf_year2[:-1], 'Indirect GDP impact'),
                        multipliers_by_f(induced_g, fcdf_year2[:-1], 'Induced GDP impact'),  
                        multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total GDP impact'),  
-                       filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx',
+                       filename=output_filename,
                        sheet_name = f"{year} Impacts")
 
 
