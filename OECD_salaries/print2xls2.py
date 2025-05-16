@@ -600,6 +600,7 @@ induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
 start_col = create_excel_file_with_title(year, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx')
 start_col = append_styled_matrix_to_excel(IIc, 'IIc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
 start_col = append_styled_series_to_excel(outputc, 'outputc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
+start_col = append_styled_series_to_excel(GDP, 'OECD GDP', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
 start_col = append_styled_matrix_to_excel(T, 'T', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
 start_col = append_styled_matrix_to_excel(Tc, 'Tc', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
 start_col = append_styled_matrix_to_excel(Ldf, 'L', year, start_col, filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx' )
@@ -610,7 +611,7 @@ append_styled_multipliers_to_excel( year,
                        direct_h.sum(axis=0), indirect_h.sum(axis=0), induced_h.sum(axis=0), s2s_mhc.iloc[:-1, :-1].sum(axis=0),
                        direct_g.sum(axis=0), indirect_g.sum(axis=0), induced_g.sum(axis=0), s2s_mgc.iloc[:-1, :-1].sum(axis=0),
                        filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx',
-                        sheet_name = 'Multipliers' )
+                        sheet_name = f'{year} Multipliers' )
 
 
 
@@ -662,7 +663,7 @@ append_styled_multipliers_to_excel( year,
                        multipliers_by_f(induced_g, fcdf_year2[:-1], 'Induced GDP impact'),  
                        multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total GDP impact'),  
                        filename='/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx',
-                       sheet_name = "Impacts")
+                       sheet_name = f"{year} Impacts")
 
 
 
