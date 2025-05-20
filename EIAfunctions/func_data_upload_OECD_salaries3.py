@@ -5,12 +5,17 @@ import time
 import re
 import matplotlib.pyplot as plt
 
+OECD_PATH = '../Data/' # windows style: r".\\"
 
-
-def data_upload_TTL(year, currency_exchange_type):
+def data_upload_OECD_salaries3(year, currency_exchange_type, table_type='DOM'):
 
     start_time = time.time()
-    print("working directory of func_data_upload_TTL.py is: ",os.getcwd())  # Print the current working directory
+    if table_type == 'DOM':
+        input_filename = f'{OECD_PATH}NATIO{table_type}IMP/CAN{year}{table_type.lower()}.csv' # windows style: r".\\"
+    elif table_type == 'TTL':
+        input_filename = f'{OECD_PATH}NATIO{table_type}/CAN{year}{table_type.lower()}.csv'
+
+    print("working directory of func_data_upload_OECD_salaries3.py is: ",os.getcwd())  # Print the current working directory
 
     # 1. uploading the map from statcan sectors to OECD sectors:
     codes_map = pd.read_excel(
@@ -34,9 +39,7 @@ def data_upload_TTL(year, currency_exchange_type):
 
   
     # 3. Loading OECD data
-    OECD_path = "../../Data/NATIOTTL/" # windows style: r".\\"
-    OECD_name = f'CAN{year}ttl.csv'
-    OECD_rough = pd.read_csv(OECD_path + OECD_name)
+    OECD_rough = pd.read_csv(input_filename)
 
     # Remove imports from matrix
     OECD_rough = OECD_rough.set_index(OECD_rough.columns[0])  # Set first column as index
@@ -44,7 +47,7 @@ def data_upload_TTL(year, currency_exchange_type):
     OECD = OECD_rough[~OECD_rough.index.str.startswith("IMP_")]
     simple_II_labels = OECD_rough.columns.tolist()[OECD_rough.columns.get_loc("A01_02") : OECD_rough.columns.get_loc("T") + 1]
     #In OECD there's no description of the labels (codes) in owrds. I should refer to Mira's file for that. try Input_Codes_Map.xlsx
-    OECD.index = OECD.index.str.removeprefix("TTL_")
+    OECD.index = OECD.index.str.removeprefix(table_type + '_')
     # probably delete the following chunk:
     II = OECD.loc[simple_II_labels, simple_II_labels]
     household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
@@ -59,9 +62,8 @@ def data_upload_TTL(year, currency_exchange_type):
     # 4. Upload salaries from a different file of OECD UTF-8SUT Use, Value added and its components by activity.csv
 
     # WSL-compatible path
-    filepath = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/UTF-8SUT Use, Value added and its components by activity.csv"
-   
-    additional_data_rough = pd.read_csv(filepath)
+    additional_filepath = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/UTF-8SUT Use, Value added and its components by activity.csv"
+    additional_data_rough = pd.read_csv(additional_filepath)
     # Keep only columns where there is more than one unique value
     data2 = additional_data_rough.loc[:, additional_data_rough.nunique() > 1]
     data2 = data2.drop(columns=["TRANSACTION"]).rename(columns={"ACTIVITY": "detailed_sectors"})
