@@ -151,7 +151,35 @@ outputc['HFCE'] = OECDadditional['employees_compensation'].sum()
 Tc = safe_divide(IIc, outputc)
 Lcdf, Lc_minus_I = clc_L(Tc)
 
-print_two_matrices_with_spacing(T, extracted["Type I: Technical Coefficients [T]"],output_path="outputfile2.xlsx")
+#compare T
+#print_two_matrices_with_spacing(T, extracted["Type I: Technical Coefficients [T]"],output_path="./comp_Tanveer/outputfile2.xlsx")
+Tanveer_T = extracted["Type I: Technical Coefficients [T]"]
+Tanveer_T.columns = Tanveer_T.iloc[0]  # Set first row as column names
+Tanveer_T = Tanveer_T[1:].reset_index(drop=True)  # Drop the first row and reset index
 
-#example of access to a vector
-print(extracted["OUTPUT"])
+diff_sum_T = (T.iloc[:45, :45] - Tanveer_T.iloc[:45, :45]).abs().sum().sum()
+
+#compare Tc
+diff_sum_Tc = (Tc - Tanveer_T).abs().sum().sum()
+
+#compare L
+Tanveer_inv_L = extracted["Leonteiff Inverse Matrix [L-1]"]
+Tanveer_inv_L.columns = Tanveer_inv_L.iloc[0]  # Set first row as column names
+Tanveer_inv_L = Tanveer_inv_L[1:].reset_index(drop=True)  # Drop the first row and reset index
+
+diff_sum_L = (Ldf.iloc[:45, :45] - Tanveer_inv_L.iloc[:45, :45]).abs().sum().sum()
+
+print_two_matrices_with_spacing(Ldf, extracted["Leonteiff Inverse Matrix [L-1]"],output_path="./comp_Tanveer/outputfile2.xlsx")
+#this file does not clean itself. it'll have the matrixes from before if the new matrices are smaller.
+
+
+print('')
+print(f'absolute value of difference between T and Tanveer_T: {diff_sum_T}')
+print(f'absolute value of difference between Tc and Tanveer_T: {diff_sum_Tc}')
+print(f'absolute value of difference between L and Tanveer_inv_L: {diff_sum_L}')
+print('')
+print('')
+
+
+next steps: compare compensatio of employees
+find a good way to compare output impacts

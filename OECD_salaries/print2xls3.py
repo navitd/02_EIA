@@ -235,7 +235,6 @@ def append_styled_series_to_excel(series: pd.Series, series_name, year: str, sta
     return sep_col + 1
 
 
-
 def append_styled_multipliers_to_excel(
     year: str,
     direct_o: pd.Series, indirect_o: pd.Series, induced_o: pd.Series, total_o: pd.Series,
@@ -418,15 +417,6 @@ def plot_multipliers(OECD_sectors_ICT, direct_o, indirect_o, induced_o,
 
     # Adjust the layout for better visualization
     plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
-
-def plot_heatmap(df, title):
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(df, annot=True, fmt=".2f", cmap="coolwarm", cbar=True)
-    plt.title(title)
-    plt.xticks(rotation=45)
-    plt.yticks(rotation=0)
-    plt.tight_layout()
     plt.show()
 
 
