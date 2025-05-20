@@ -14,9 +14,10 @@ import inspect
 from openpyxl.cell.cell import MergedCell
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
-from func_data_upload_OECD_salaries3 import data_upload_OECD_salaries3
+from func_data_upload_OECD_salaries import data_upload_OECD_salaries
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
+from func_safe_divide import safe_divide, safe_divide_vector
 
 
 
@@ -308,50 +309,7 @@ def append_styled_multipliers_to_excel(
 
 ##################################################             old functions               ######################################################
 
-def data_exploration_flags(II,household_expenditure,other_final_demand,output,output_of_final_demand,OECD_rough):
-    print( pd.DataFrame({
-        'II plus f total': II.sum(axis=1) + household_expenditure + other_final_demand.sum(axis=1) ,
-        'Output': output
-    }) )
-    print('expected to be zero:')
-    print(pd.DataFrame({
-        'output_of_final_demand': output_of_final_demand
-    }))
 
-    print(f'sum of output:{output.sum()}, bottom right corner of the matrix:{OECD_rough.loc['OUTPUT', 'TOTAL']}, difference expected to be zero:{output.sum()-OECD_rough.loc['OUTPUT', 'TOTAL']}')
-
-def safe_divide(II, output):
-    # Check if there are NaNs in either II or output
-    if II.isna().any().any():
-        raise ValueError("Matrix II contains NaN values.")
-    if output.isna().any():
-        raise ValueError("Output contains NaN values.")
-    
-    # Replace zeros in outputc with NaN to avoid division by zero
-    output_safe = output.replace(0, np.nan)
-    
-    # Divide II by output, handling NaN values (from division by zero)
-    T = II.divide(output_safe, axis=1)
-    
-    # Replace any NaN values (from division by zero) with zero
-    T = T.fillna(0)
-    
-    return T
-
-def safe_divide_vector(vector, output):
-    # Check if there are NaNs in either II or output
-    if vector.isna().any():
-        raise ValueError("numerator contains NaN values.")
-    if output.isna().any():
-        raise ValueError("Output contains NaN values.")
-    
-    # Replace zeros in outputc with NaN to avoid division by zero
-    output_safe = output.replace(0, np.nan)
-    # Divide vector by output, handling NaN values (from division by zero)
-    coefficient = vector.divide(output_safe, axis=0)
-    # Replace any NaN values (from division by zero) with zero
-    coefficient = coefficient.fillna(0)
-    return coefficient
 
 def multipliers2prediction(s2s_mo, fdf_year2, column_name):
     predicted_output_year2_np  = np.round(s2s_mo.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
@@ -478,7 +436,7 @@ print("working directory of print2xls3.py is: ",os.getcwd())  # Print the curren
 
 year = '2015'
 year2 = '2015'
-table_type = 'DOM' #or'DOM'   
+table_type = 'TTL' #or'DOM'   
 OECD_path = "../Data/" # windows style: r".\\"
 if table_type == 'DOM':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx'
@@ -490,7 +448,7 @@ elif table_type == 'TTL':
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
 currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
-PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries3(year, currency_exchange_type, table_type)
+PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type)
 print(f'PPP_or_exch {PPP_or_exch}')
 
 additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
@@ -628,7 +586,7 @@ append_styled_multipliers_to_excel( year,
 #################################
 #year2 = '2015'
 
-_, OECD_year2, _, OECDadditional_year2, _ =  data_upload_OECD_salaries3(year, currency_exchange_type, table_type)
+_, OECD_year2, _, OECDadditional_year2, _ =  data_upload_OECD_salaries(year, currency_exchange_type, table_type)
 income_year2 = OECDadditional_year2['employees_compensation']
 GDP_year2 = OECD_year2.loc['VALU', simple_II_labels]
 

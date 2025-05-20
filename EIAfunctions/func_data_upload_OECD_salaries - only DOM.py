@@ -5,17 +5,12 @@ import time
 import re
 import matplotlib.pyplot as plt
 
-OECD_PATH = '../Data/' # windows style: r".\\"
 
-def data_upload_OECD_salaries3(year, currency_exchange_type, table_type='DOM'):
+
+def data_upload_OECD_salaries(year, currency_exchange_type):
 
     start_time = time.time()
-    if table_type == 'DOM':
-        input_filename = f'{OECD_PATH}NATIO{table_type}IMP/CAN{year}{table_type.lower()}.csv' # windows style: r".\\"
-    elif table_type == 'TTL':
-        input_filename = f'{OECD_PATH}NATIO{table_type}/CAN{year}{table_type.lower()}.csv'
-
-    print("working directory of func_data_upload_OECD_salaries3.py is: ",os.getcwd())  # Print the current working directory
+    print("working directory of func_data_upload_OECD_salaries.py is: ",os.getcwd())  # Print the current working directory
 
     # 1. uploading the map from statcan sectors to OECD sectors:
     codes_map = pd.read_excel(
@@ -39,7 +34,9 @@ def data_upload_OECD_salaries3(year, currency_exchange_type, table_type='DOM'):
 
   
     # 3. Loading OECD data
-    OECD_rough = pd.read_csv(input_filename)
+    OECD_path = "../Data/NATIODOMIMP/" # windows style: r".\\"
+    OECD_name = f'CAN{year}dom.csv'
+    OECD_rough = pd.read_csv(OECD_path + OECD_name)
 
     # Remove imports from matrix
     OECD_rough = OECD_rough.set_index(OECD_rough.columns[0])  # Set first column as index
@@ -47,12 +44,13 @@ def data_upload_OECD_salaries3(year, currency_exchange_type, table_type='DOM'):
     OECD = OECD_rough[~OECD_rough.index.str.startswith("IMP_")]
     simple_II_labels = OECD_rough.columns.tolist()[OECD_rough.columns.get_loc("A01_02") : OECD_rough.columns.get_loc("T") + 1]
     #In OECD there's no description of the labels (codes) in owrds. I should refer to Mira's file for that. try Input_Codes_Map.xlsx
-    OECD.index = OECD.index.str.removeprefix(table_type + '_')
+    OECD.index = OECD.index.str.removeprefix("DOM_")
     # probably delete the following chunk:
     II = OECD.loc[simple_II_labels, simple_II_labels]
     household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
     final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'DPABR',	'CONS_NONRES',	'EXPO',	'IMPO']
     other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
+    total       = OECD.loc[simple_II_labels, 'TOTAL'] #equals to output, this is x
     GDP         = OECD.loc['VALU', simple_II_labels]
     output      = OECD.loc['OUTPUT', simple_II_labels]
     #I don't need to worry bout household_expenditure of GDP or output - they are both 0
@@ -62,8 +60,9 @@ def data_upload_OECD_salaries3(year, currency_exchange_type, table_type='DOM'):
     # 4. Upload salaries from a different file of OECD UTF-8SUT Use, Value added and its components by activity.csv
 
     # WSL-compatible path
-    additional_filepath = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/UTF-8SUT Use, Value added and its components by activity.csv"
-    additional_data_rough = pd.read_csv(additional_filepath)
+    filepath = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/UTF-8SUT Use, Value added and its components by activity.csv"
+   
+    additional_data_rough = pd.read_csv(filepath)
     # Keep only columns where there is more than one unique value
     data2 = additional_data_rough.loc[:, additional_data_rough.nunique() > 1]
     data2 = data2.drop(columns=["TRANSACTION"]).rename(columns={"ACTIVITY": "detailed_sectors"})

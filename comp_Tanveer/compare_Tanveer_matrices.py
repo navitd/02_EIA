@@ -1,4 +1,23 @@
+import sys
+from pathlib import Path
+import os
+import time
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from openpyxl import load_workbook, Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
+import openpyxl
+import inspect
+from openpyxl.cell.cell import MergedCell
+# Add the parent directory to sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
+from func_data_upload_OECD_salaries import data_upload_OECD_salaries
+from func_plot_L import plot_matrix_columns
+from func_clc_L import clc_L
+from func_safe_divide import safe_divide, safe_divide_vector
 
 
 
@@ -22,20 +41,7 @@ def extract_vector_h(df, i, j):
     return pd.DataFrame([data], index=["value"])
 
 def extract_matrix(df, i, j, skip_rows=4):
-    """
-    Extract a rectangular numeric block that starts *skip_rows* below the title
-    cell (i, j) and is bounded on the bottom and the right by NaNs.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame         # the raw sheet
-    i, j : int, int               # coordinates of the title cell
-    skip_rows : int               # how many rows to skip after the title
-
-    Returns
-    -------
-    pd.DataFrame                  # the extracted matrix
-    """
+    
     start_row = i + skip_rows      # row where the matrix really starts
     start_col = j                  # same column as the title cell
 
@@ -54,13 +60,37 @@ def extract_matrix(df, i, j, skip_rows=4):
 
 
 
+def print_two_matrices_with_spacing(left_matrix, right_matrix, output_path="outputfile2.xlsx", spacing=0):
+    
+    if right_matrix is None or right_matrix.empty:
+        raise ValueError("Right-hand matrix is empty or None.")
+
+    # Ensure both matrices have the same number of rows
+    max_rows = max(left_matrix.shape[0], right_matrix.shape[0])
+
+    def pad_df(df, rows):
+        if df.shape[0] < rows:
+            pad = pd.DataFrame([[""] * df.shape[1]] * (rows - df.shape[0]))
+            df = pd.concat([df, pad], ignore_index=True)
+        return df.reset_index(drop=True)
+
+    left_padded = pad_df(left_matrix, max_rows)
+    right_padded = pad_df(right_matrix, max_rows)
+    space = pd.DataFrame([[""] * spacing] * max_rows)
+
+    combined = pd.concat([left_padded, space, right_padded], axis=1)
+
+    combined.to_excel(output_path, index=False, header=False)
+    print(f"Saved combined matrix to {output_path}")
+
+
 
 
 
 
 
 # Load entire Excel sheet into raw dataframe
-file_name = '../../old_EIA/Tanveer_Model/EIA-Canada V3.xlsx'
+file_name = '../old_EIA/Tanveer_Model/EIA-Canada V3.xlsx'
 year = '2015'
 raw_df = pd.read_excel(file_name, header=None, sheet_name=year)
 
@@ -94,5 +124,34 @@ for title, typ in targets.items():
             extracted[title] = extract_matrix(raw_df, i, j)
         break  # stop at first match
 
-# Example: access the OUTPUT vector
+
+
+# My data
+year = '2015'
+table_type = 'TTL' #or'DOM'   
+OECD_path = "../Data/" # windows style: r".\\"
+currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
+PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type)
+II = OECD.loc[simple_II_labels, simple_II_labels]
+household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
+final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
+other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
+GDP         = OECD.loc['VALU', simple_II_labels]
+output      = OECD.loc['OUTPUT', simple_II_labels]
+T = safe_divide(II, output)
+Ldf, L_minus_I = clc_L(T)
+
+IIc = II.copy()
+IIc["HFCE"] = household_expenditure # added a column for closed model
+IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
+IIc.loc['employees_compensation', 'HFCE'] = 0 #T97_values.loc[T97_values['Transaction'] == 'Compensation of employees', 'OBS_VALUE_USD'].values[0]
+
+outputc = output.copy()
+outputc['HFCE'] = OECDadditional['employees_compensation'].sum()
+Tc = safe_divide(IIc, outputc)
+Lcdf, Lc_minus_I = clc_L(Tc)
+
+print_two_matrices_with_spacing(T, extracted["Type I: Technical Coefficients [T]"],output_path="outputfile2.xlsx")
+
+#example of access to a vector
 print(extracted["OUTPUT"])

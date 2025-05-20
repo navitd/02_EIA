@@ -77,6 +77,21 @@ $impacts.py$ prints out the impacts nicely. excel file $impact\_multipliers.xlsx
 
 $impacts.py$ has everything that $multipliers\_OECD\_salaries.py$, plus a printing to excel of the multipliers of the impacts.
 
+$print2xls2.py$ takes all the printouts from before and prints to a single excel file the II, T, L matrices as well as the multipleirs and the impacts.
+
+
+\subsection{print2xls1 - print2xls3 - printing to xls}
+$print2xls3.py$: prints all the three data: II, T, L matrices as well as multipliers and impacts on three sheets in one excel file.
+$func\_data\_upload\_OECD\_salaries.py$ is updated to read either TTL  or DOM OECD tables.
+
+What happened is that Tanveer did his work on a TTL OECD data, which means total = domestic plus imports.
+I needed to update the files: $print2xls.py$ and $upload\_data\_OECD\_salaries.py$ to be able to read and write TTL  data as well as DOM (domestic) data.  
+
+\subsection{$compare\_Tanveer\_matrices.py$}
+
+$compare\_Tanveer\_matrices.py$ - to compare my matrices with Tanveers.
+
+Even when the files are located in different directories, always open vscode from Textbook_EIA to run the files from there.
 
 
 
