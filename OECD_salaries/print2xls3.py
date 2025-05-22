@@ -114,7 +114,7 @@ def create_excel_file_with_title(year: str, filename: str = "output.xlsx") -> in
 
     return 1  # Next available column after title box
 
-def append_styled_matrix_to_excel(df, matrix_name, year: str, start_col: int, filename: str = "output.xlsx") -> int:
+def append_styled_matrix_to_excel(df, matrix_name, year: str, start_col: int, filename: str = "output.xlsx", title_size=3) -> int:
     # Infer matrix name from variable name if not provided
     if matrix_name is None:
         frame = inspect.currentframe().f_back
@@ -143,7 +143,7 @@ def append_styled_matrix_to_excel(df, matrix_name, year: str, start_col: int, fi
     n_cols = len(rows[0])  # includes index
 
     # Green title merged over up to 4 columns
-    merge_end_col = min(start_col + 3, start_col + n_cols - 1)
+    merge_end_col = min(start_col + title_size, start_col + n_cols - 1)
     if merge_end_col > start_col:
         ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
     title_cell = ws.cell(row=4, column=start_col)
@@ -419,7 +419,7 @@ def plot_multipliers(OECD_sectors_ICT, direct_o, indirect_o, induced_o,
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
 
-
+ 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
 print("working directory of print2xls3.py is: ",os.getcwd())  # Print the current working directory
@@ -561,6 +561,21 @@ start_col = append_styled_matrix_to_excel(T, 'T', year, start_col, filename=outp
 start_col = append_styled_matrix_to_excel(Tc, 'Tc', year, start_col, filename=output_filename)
 start_col = append_styled_matrix_to_excel(Ldf, 'L', year, start_col, filename=output_filename)
 start_col = append_styled_matrix_to_excel(Lcdf, 'Lc', year, start_col, filename=output_filename)
+# output multipliers divided into sectors
+start_col = append_styled_matrix_to_excel(direct_o, 'sector to sector output multiliers, direct', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_mo, 'sector to sector output multiliers, direct+indirect', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_moc, 'sector to sector output multiliers, direct+indirct+induced', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(direct_h, 'sector to sector E multiliers, direct', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_mh, 'sector to sector E multiliers, direct+indirect', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_mhc, 'sector to sector E multiliers, direct+indirct+induced', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(direct_g, 'sector to sector GDP multiliers, direct', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_mg, 'sector to sector GDP multiliers, direct+indirect', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_mgc, 'sector to sector GDP multiliers, direct+indirct+induced', year, start_col, filename=output_filename, title_size=6)
+
+
+
+
+
 
 append_styled_multipliers_to_excel( year,
                        direct_o.sum(axis=0), indirect_o.sum(axis=0), induced_o.sum(axis=0), s2s_moc.iloc[:-1, :-1].sum(axis=0),
@@ -624,13 +639,32 @@ append_styled_multipliers_to_excel( year,
 
 
 
+# going back to the first worksheet and adding the impacts
+def s2s_impacts_multipliers_by_f(M, fcdf_year2):
+    fcdf_year2 = fcdf_year2.values.reshape(1, -1) if isinstance(fcdf_year2, pd.Series) else fcdf_year2.reshape(1, -1)
+    result = M.values * fcdf_year2  # Element-wise multiplication, broadcasted across rows
+    result_df = pd.DataFrame(result, index=M.index, columns=M.columns)
+    return result_df
+
+# output impacts divided into sectors
+start_col = append_styled_matrix_to_excel(s2s_impacts_multipliers_by_f(direct_o, fcdf_year2.iloc[:-1]), 'sector to sector output impact, direct', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_impacts_multipliers_by_f(s2s_mo, fcdf_year2.iloc[:-1]), 'sector to sector output impact, direct+indirect', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_impacts_multipliers_by_f(s2s_moc, fcdf_year2), 'sector to sector output impact, direct+indirct+induced', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_impacts_multipliers_by_f(direct_h, fcdf_year2.iloc[:-1]), 'sector to sector E impact, direct', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_impacts_multipliers_by_f(s2s_mh, fcdf_year2.iloc[:-1]), 'sector to sector E impact, direct+indirect', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_impacts_multipliers_by_f(s2s_mhc, fcdf_year2), 'sector to sector E impact, direct+indirct+induced', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_impacts_multipliers_by_f(direct_g, fcdf_year2.iloc[:-1]), 'sector to sector GDP impact, direct', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_impacts_multipliers_by_f(s2s_mg, fcdf_year2.iloc[:-1]), 'sector to sector GDP impact, direct+indirect', year, start_col, filename=output_filename, title_size=6)
+start_col = append_styled_matrix_to_excel(s2s_impacts_multipliers_by_f(s2s_mgc, fcdf_year2), 'sector to sector GDP impact, direct+indirct+induced', year, start_col, filename=output_filename, title_size=6)
+
+
 # calculate type I and typeII multipliers
 print()
 
 
 
 ##############################              plotting          #############################
-
+'''
 plot_real_vs_predicted(output_year2, predicted_output_year2,
                        income_year2, predicted_income_year2,
                        GDP_year2, predicted_GDP_year2,  
@@ -644,6 +678,9 @@ plot_real_vs_predicted(output_year2, predicted_outputc_year2.iloc[:-1],
                        year, year2,'Closed Model')
 
 '''
+                       
+                       
+'''                    
 # see how Lcdf compares to L
 plot_heatmap(Lc_minus_I.iloc[:-1,:-1] - L_minus_I, f"Lc-L, Lc trancated, {year}")
 '''

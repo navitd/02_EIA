@@ -156,6 +156,7 @@ Lcdf, Lc_minus_I = clc_L(Tc)
 Tanveer_T = extracted["Type I: Technical Coefficients [T]"]
 Tanveer_T.columns = Tanveer_T.iloc[0]  # Set first row as column names
 Tanveer_T = Tanveer_T[1:].reset_index(drop=True)  # Drop the first row and reset index
+Tanveer_T.index = Tc.index
 
 diff_sum_T = (T.iloc[:45, :45] - Tanveer_T.iloc[:45, :45]).abs().sum().sum()
 
@@ -166,7 +167,7 @@ diff_sum_Tc = (Tc - Tanveer_T).abs().sum().sum()
 Tanveer_inv_L = extracted["Leonteiff Inverse Matrix [L-1]"]
 Tanveer_inv_L.columns = Tanveer_inv_L.iloc[0]  # Set first row as column names
 Tanveer_inv_L = Tanveer_inv_L[1:].reset_index(drop=True)  # Drop the first row and reset index
-
+Tanveer_inv_L.index = Ldf.index
 diff_sum_L = (Ldf.iloc[:45, :45] - Tanveer_inv_L.iloc[:45, :45]).abs().sum().sum()
 
 print_two_matrices_with_spacing(Ldf, extracted["Leonteiff Inverse Matrix [L-1]"],output_path="./comp_Tanveer/outputfile2.xlsx")
@@ -181,5 +182,12 @@ print('')
 print('')
 
 
-next steps: compare compensatio of employees
-find a good way to compare output impacts
+Tanveer_E = extracted["Compensation of employees"]
+Navit_E = OECDadditional["employees_compensation"]
+diff_E = np.abs(Tanveer_E.values[0] - Navit_E.values).sum()
+print(f'absolute value of difference compensation of employees Tanveer and Navit: {diff_E}')
+print('')
+
+print((Tc - Tanveer_T))
+
+
