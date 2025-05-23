@@ -99,7 +99,7 @@ targets = {
     "HFCE": "vector_v",
     "VALU": "vector_h",
     "OUTPUT": "vector_h",
-    "Compensation of employees": "vector_h",
+    "Compensation": "vector_h",
     "Direct GDP/OUTPUT Ratio": "vector_h",
     "I-O Table": "matrix",
     "Type I: Technical Coefficients [T]": "matrix",
@@ -152,16 +152,13 @@ Tc = safe_divide(IIc, outputc)
 Lcdf, Lc_minus_I = clc_L(Tc)
 
 #compare T
-#print_two_matrices_with_spacing(T, extracted["Type I: Technical Coefficients [T]"],output_path="./comp_Tanveer/outputfile2.xlsx")
+# Tanveer doesn't have Tc. the bottom row of T is output
 Tanveer_T = extracted["Type I: Technical Coefficients [T]"]
 Tanveer_T.columns = Tanveer_T.iloc[0]  # Set first row as column names
 Tanveer_T = Tanveer_T[1:].reset_index(drop=True)  # Drop the first row and reset index
 Tanveer_T.index = Tc.index
 
 diff_sum_T = (T.iloc[:45, :45] - Tanveer_T.iloc[:45, :45]).abs().sum().sum()
-
-#compare Tc
-diff_sum_Tc = (Tc - Tanveer_T).abs().sum().sum()
 
 #compare L
 Tanveer_inv_L = extracted["Leonteiff Inverse Matrix [L-1]"]
@@ -176,18 +173,29 @@ print_two_matrices_with_spacing(Ldf, extracted["Leonteiff Inverse Matrix [L-1]"]
 
 print('')
 print(f'absolute value of difference between T and Tanveer_T: {diff_sum_T}')
-print(f'absolute value of difference between Tc and Tanveer_T: {diff_sum_Tc}')
 print(f'absolute value of difference between L and Tanveer_inv_L: {diff_sum_L}')
 print('')
 print('')
 
 
-Tanveer_E = extracted["Compensation of employees"]
+Tanveer_E = extracted["Compensation"]
 Navit_E = OECDadditional["employees_compensation"]
 diff_E = np.abs(Tanveer_E.values[0] - Navit_E.values).sum()
 print(f'absolute value of difference compensation of employees Tanveer and Navit: {diff_E}')
 print('')
 
-print((Tc - Tanveer_T))
+#print(np.abs(Tanveer_E.values[0] - Navit_E.values))
+top4 = np.abs(Tanveer_E.values[0] - Navit_E.values).argsort()[::-1][:4]
+Navit_E.index[top4]
+print(Navit_E.index[top4])
+print( Tanveer_E.values[0][top4])
+print(Navit_E.iloc[top4])
+
+Tanveer_o = extracted["Compensation"].iloc[:45]
+Navit_o = OECD.loc["OUTPUT"]
+diff_o = np.abs(Tanveer_o.values[0] - Navit_o.values).sum()
+print(f'absolute value of difference output Tanveer and Navit: {diff_o}')
+print('')
+
 
 
