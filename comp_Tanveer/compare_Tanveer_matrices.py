@@ -186,16 +186,21 @@ diff_E = np.abs(Tanveer_E.values[0] - Navit_E.values).sum()
 print(f'absolute value of difference compensation of employees Tanveer and Navit: {diff_E}')
 print('')
 
-#print(np.abs(Tanveer_E.values[0] - Navit_E.values))
+# Find the top 4 sectors with the largest difference in compensation
 top4 = np.abs(Tanveer_E.values[0] - Navit_E.values).argsort()[::-1][:4]
-Navit_E.index[top4]
-print(Navit_E.index[top4])
-print( Tanveer_E.values[0][top4])
-print(Navit_E.iloc[top4])
+
+# for print
+    Navit_E.index[top4].to_list(),            # Row 1: sector labels
+    np.round(Tanveer_E.values[0][top4], 1),                # Row 2: Tanveer values
+    Navit_E.values[top4]                      # Row 3: Navit values
+])
+# Optionally set row labels
+summary_df.index = ['Sectors', 'Tanveer', 'Navit']
+print(summary_df)
 
 Tanveer_o = extracted["Compensation"].iloc[:45]
-Navit_o = OECD.loc["OUTPUT"]
-diff_o = np.abs(Tanveer_o.values[0] - Navit_o.values).sum()
+Navit_o = pd.DataFrame([OECD.loc["OUTPUT"]])
+diff_o = np.abs(Tanveer_o.values[0] - Navit_o.iloc[:45].values).sum()
 print(f'absolute value of difference output Tanveer and Navit: {diff_o}')
 print('')
 
