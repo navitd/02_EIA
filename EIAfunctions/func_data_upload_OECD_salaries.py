@@ -115,13 +115,7 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM'):
         OECDadditional[column_names[ix]] = df['OBS_VALUE_USD']
 
     # from J to a correct value of J61
-    OECDadditional.loc["J61"] = (
-    OECDadditional.loc["J"] 
-    - OECDadditional.loc["J58T60"] if "J58T60" in OECDadditional.index else 0 
-    - OECDadditional.loc["J62_63"] if "J62_63" in OECDadditional.index else 0
-    )
+    OECDadditional.loc["J61"] = OECDadditional.loc["J"] - OECDadditional.loc["J58T60"] - OECDadditional.loc["J62_63"]   
     OECDadditional = OECDadditional.drop("J")
-
-
 
     return PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description

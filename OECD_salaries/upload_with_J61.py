@@ -116,14 +116,14 @@ for ix, name in enumerate(transaction_names):
     OECDadditional[column_names[ix]] = df['OBS_VALUE_USD']
 
 # from J to a correct value of J61
-OECDadditional.loc["J61"] = (
-    OECDadditional.loc["J"] 
-    - OECDadditional.loc["J58T60"] if "J58T60" in OECDadditional.index else 0 
-    - OECDadditional.loc["J62_63"] if "J62_63" in OECDadditional.index else 0
-)
+OECDadditional.loc["J61"] = OECDadditional.loc["J"] - OECDadditional.loc["J58T60"] - OECDadditional.loc["J62_63"]
 
+
+print(f'J:  = {OECDadditional.loc["J", "employees_compensation"]}')
+print(f'J62_63:  {OECDadditional.loc["J62_63", "employees_compensation"]}')
+print(f'J58T60:  {OECDadditional.loc["J58T60", "employees_compensation"]}')
+print(f'J61:  {OECDadditional.loc["J61", "employees_compensation"]}')
 
 OECDadditional = OECDadditional.drop("J")
 
-print(f"OECDadditional:\n{OECDadditional}")
 
