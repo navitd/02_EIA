@@ -493,7 +493,6 @@ moc_trancated = Lcdf.iloc[:-1].sum(axis=0) #dollar's worth of outcome per 1 doll
 
 # income multipliers mh
 Ej_by_xj = Tc.iloc[-1,:-1] #hosehold income received per dollar's worth of sector output  
-
 income_F_multipliers = Ldf.mul(Ej_by_xj, axis=0) #household income recieved per dollar's worth of secotr final demand
 # Ej/xj*Ljk - Ljk is how much output was sold from j to k. and j is the sector that paid the salaries, so Ej/xj is used.
 sum_income_F_multipliers = income_F_multipliers.sum(axis=0) 

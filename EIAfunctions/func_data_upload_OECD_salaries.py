@@ -114,6 +114,6 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM'):
         # Add to statcan_data under the corresponding column name
         OECDadditional[column_names[ix]] = df['OBS_VALUE_USD']
 
-    
+    #but this is not good. I can't output J, I need to output the correct value of J61
 
     return PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description

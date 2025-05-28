@@ -105,19 +105,25 @@ for ix, name in enumerate(transaction_names):
     # convert CAD to USD by PPP_or_exch
     col_data2_grouped['OBS_VALUE_USD'] = (col_data2_grouped['OBS_VALUE'] / PPP_or_exch).round(1)
     col_data2_grouped.drop(columns=['OBS_VALUE'], inplace=True)
-    
-    
 
     # last step:
     # choose from it only codes that appear in OECD:
     if 'J' not in simple_II_labels:
         simple_II_labels_plus_J = simple_II_labels + ['J']
-    df = col_data2_grouped.set_index('OECD_codes').reindex(simple_II_labels_plus_J, fill_value=0).copy()
-    # add J61 data
-    print(col_data2_grouped[col_data2_grouped['OECD_codes'].str.startswith('J')])
+    df = col_data2_grouped.set_index('OECD_codes').reindex(simple_II_labels_plus_J, fill_value=0).copy()   
 
     # Add to statcan_data under the corresponding column name
     OECDadditional[column_names[ix]] = df['OBS_VALUE_USD']
 
+# from J to a correct value of J61
+OECDadditional.loc["J61"] = (
+    OECDadditional.loc["J"] 
+    - OECDadditional.loc["J58T60"] if "J58T60" in OECDadditional.index else 0 
+    - OECDadditional.loc["J62_63"] if "J62_63" in OECDadditional.index else 0
+)
 
-print('OECDadditional is ready')
+
+OECDadditional = OECDadditional.drop("J")
+
+print(f"OECDadditional:\n{OECDadditional}")
+
