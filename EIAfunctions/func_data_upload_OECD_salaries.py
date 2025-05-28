@@ -1,3 +1,4 @@
+# J61 added here
 import pandas as pd
 import numpy as np #numpy is installed but not used
 import os
@@ -59,7 +60,7 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM'):
     # but output of GDP is given and should be marked independently
  
     
-    # 4. Upload salaries from a different file of OECD UTF-8SUT Use, Value added and its components by activity.csv
+    # 4. Upload salaries from a different file of OECD UTF-8SUT 
 
     # WSL-compatible path
     additional_filepath = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/UTF-8SUT Use, Value added and its components by activity.csv"
@@ -106,8 +107,10 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM'):
         
         # last step:
         # choose from it only codes that appear in OECD:
-        df = col_data2_grouped.set_index('OECD_codes').reindex(simple_II_labels, fill_value=0).copy()
-
+        if 'J' not in simple_II_labels:
+            simple_II_labels_plus_J = simple_II_labels + ['J']
+        df = col_data2_grouped.set_index('OECD_codes').reindex(simple_II_labels_plus_J, fill_value=0).copy()   
+    
         # Add to statcan_data under the corresponding column name
         OECDadditional[column_names[ix]] = df['OBS_VALUE_USD']
 

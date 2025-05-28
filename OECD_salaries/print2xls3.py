@@ -507,6 +507,8 @@ sum_income_F_multipliers = income_F_multipliers.sum(axis=0)
 #income multipliers second time
 Ej_by_xj = Tc.iloc[-1,:]
 #it has a different size than above
+# to add: J61 = J - J58T60 - J62_63
+# my disagreement with Tanveer is from compensation of employees J61, B07_08, C31T33, J62_63
 
 # GDP multipliers
 GDPc = OECD.loc['VALU', simple_II_labels + ['HFCE']]

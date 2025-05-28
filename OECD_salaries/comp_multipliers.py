@@ -1,82 +1,73 @@
-# uploading multipliers data from statcan and comparing with my calculation (DOM, not TTL)
+#this file is called comp_multipliers.py but as it is now it only deals with mapping from NIACS to OECD
+#thi sis the automated version of the mapping from NAICS to OECD sectors
+#it works but I'mnot sure it does a good job
+#this is for comparison with statcan, not with Tanveer.
 
 import pandas as pd
-import numpy as np #numpy is installed but not used
+import numpy as np  # numpy is installed but not used
 import os
-import time
 import re
 import matplotlib.pyplot as plt
 from fuzzywuzzy import process
+import time
+OECD_PATH = '../Data/'
 
-OECD_PATH = '../Data/' # windows style: r".\\"
+start_time = time.time()
+print("working directory of comp_multipliers.py is: ", os.getcwd())
 
-
-print("working directory of comp_multipliers.py is: ",os.getcwd())  # Print the current working directory
-#OECD_PATH = '../Data/' # windows style: r".\\"
-
+output_path = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/NAICS_OECD_map.xlsx"
 year = '2015'
-table_type='DOM'
+table_type = 'DOM'
 if table_type == 'DOM':
-    input_filename = f'{OECD_PATH}NATIO{table_type}IMP/CAN{year}{table_type.lower()}.csv' # windows style: r".\\"
+    input_filename = f'{OECD_PATH}NATIO{table_type}IMP/CAN{year}{table_type.lower()}.csv'
 elif table_type == 'TTL':
     input_filename = f'{OECD_PATH}NATIO{table_type}/CAN{year}{table_type.lower()}.csv'
 
 # 1. uploading the map from statcan sectors to OECD sectors:
 OECD_codes = pd.read_excel(
-                            '/mnt/c/NavitComputer24/2024_NES/Economics/Data/Input_Codes_Map.xlsx', 
-                            usecols="A,B,C",      # Use Excel column letters directly
-                            header=None,        # Do not treat any row as the header
-                            names=['codes detailed', 'sector description' ,'codes short list'],  # Assign these names to the columns
-                            skiprows=1          # Skip the first row (Excel is 1-based, so row 2 is index 1)
-                            )
-#mapping_dict = dict(zip(codes_map['Detailed_Codes'], codes_map['OECD_Codes']))
+    '/mnt/c/NavitComputer24/2024_NES/Economics/Data/Input_Codes_Map.xlsx',
+    usecols="A,B,C",
+    header=None,
+    names=['codes detailed', 'sector description', 'codes short list'],
+    skiprows=1
+)
 
-# WSL-compatible path
 multipliers_filepath = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/statcan_multipliers_2015/36100594.csv"
-data_rough = pd.read_csv(multipliers_filepath)
-# Keep only columns where there is more than one unique value
-data = data_rough.loc[:, data_rough.nunique() > 1]
+data_rough = pd.read_csv(multipliers_filepath,dtype={13: str, 15: str})
 
-rename_dict = {
+# Keep only columns with more than one unique value, then explicitly copy
+data = data_rough.loc[:, data_rough.nunique() > 1].copy()
+
+# Rename columns without inplace to avoid warnings
+data = data.rename(columns={
     'REF_DATE': 'year',
     'Variable': 'variable type',
     'Industry': 'sector',
     'VALUE': 'multiplier value',
     'UOM': 'per what?'
-}
-data.rename(columns=rename_dict, inplace=True)
-data['sector_code'] = data['sector'].str.extract(r'\[([^\[\]]+)\]')
+})
 
+# Extract sector_code safely
+data.loc[:, 'sector_code'] = data['sector'].str.extract(r'\[([^\[\]]+)\]')
 
+# Remove brackets in sector names
+data.loc[:, 'sector_clean'] = data['sector'].apply(lambda x: re.sub(r"\s*\[.*?\]\s*", "", str(x)).strip())
 
-# Remove [BS312200] etc.
-data['sector_clean'] = data['sector'].apply(lambda x: re.sub(r"\s*\[.*?\]\s*", "", str(x)).strip())
-
-# 2. Prepare a list of OECD sector names to match against
 oecd_sector_list = OECD_codes['sector description'].dropna().unique().tolist()
 
-# 3. Fuzzy match and assign best match to new column
+# I shouldn't use fuzzywuzzy. the sectors are not close at all
 def get_best_match(sector, choices):
     match, score = process.extractOne(sector, choices)
-    return match if score >= 80 else None  # Adjust threshold as needed
+    return match if score >= 80 else None
 
-data['matched_OECD_sector'] = data['sector_clean'].apply(lambda x: get_best_match(x, oecd_sector_list))
+data.loc[:, 'matched_OECD_sector'] = data['sector_clean'].apply(lambda x: get_best_match(x, oecd_sector_list))
 
+# Write to Excel
+data.to_excel(output_path, sheet_name='MAICS_OECD_map', index=False)
 
-
-
-
-
-
+print(f"Data exported to {output_path}")
 
 
 
-
-
-
-
-
-
-sectors = data['sector'].unique()
-
-
+end_time = time.time()
+print(f"Time taken to process data: {end_time - start_time:.2f} seconds")

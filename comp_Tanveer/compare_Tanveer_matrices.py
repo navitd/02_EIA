@@ -88,6 +88,8 @@ def print_two_matrices_with_spacing(left_matrix, right_matrix, output_path="outp
 
 
 
+####################################################              main                      ##############################################        
+
 
 # Load entire Excel sheet into raw dataframe
 file_name = '../old_EIA/Tanveer_Model/EIA-Canada V3.xlsx'
