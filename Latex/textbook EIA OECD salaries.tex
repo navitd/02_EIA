@@ -81,11 +81,14 @@ $print2xls2.py$ takes all the printouts from before and prints to a single excel
 
 
 \subsection{print2xls1 - print2xls3 - printing to xls}
+I made $print2xls3.py$ and all the other print2xls in order to compare results with Tanveer.
+
 $print2xls3.py$: prints all the three data: II, T, L matrices as well as multipliers and impacts on three sheets in one excel file.
 $func\_data\_upload\_OECD\_salaries.py$ is updated to read either TTL  or DOM OECD tables.
 
 What happened is that Tanveer did his work on a TTL OECD data, which means total = domestic plus imports.
 I needed to update the files: $print2xls.py$ and $upload\_data\_OECD\_salaries.py$ to be able to read and write TTL  data as well as DOM (domestic) data.  
+
 
 \subsection{$compare\_Tanveer\_matrices.py$}
 
@@ -113,15 +116,17 @@ Already did this in
 
 
 
-\subsection{Going back to print3xls3}
-\subsection{mapping from statcan NAICS to OECD sectors for multipliers comparison}
+
+\subsection{Mapping from statcan NAICS to OECD sectors for multipliers comparison}
 
 $comp\_multipliers.py$ this is with fuzzy wuzzy and this doesn't work. the mapping is too comlex
+I put it in a directory outside of Textbook. I am not completing it now.
 
 
+\subsection{Benchmark report}
 
-
-
+I start from print2xls3 use TTL data and set a function to be used for the project benchmarking.
+The function will not be caalled print2xls because printing the matrices is no longer important.
 
 
 
