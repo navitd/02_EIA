@@ -16,7 +16,7 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', co
     elif table_type == 'TTL':
         input_filename = f'{OECD_PATH}NATIO{table_type}/{country}{year}{table_type.lower()}.csv'
 
-    print("working directory of func_data_upload_OECD_salaries3.py is: ",os.getcwd())  # Print the current working directory
+    #print("working directory of func_data_upload_OECD_salaries3.py is: ",os.getcwd())  # Print the current working directory
 
     # 1. uploading the map from statcan sectors to OECD sectors:
     codes_map = pd.read_excel(

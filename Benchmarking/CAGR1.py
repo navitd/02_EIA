@@ -38,6 +38,13 @@ def sector_values(pandas_series: pd.Series, sector_groups: dict) -> dict:
         result[group] = total
     return result
 
+def clc_CAGR(data_CAGR):
+    """
+    Calculate the Compound Annual Growth Rate (CAGR) for each sector in the DataFrame.
+    """
+    years = data_CAGR.index
+    cagr = ((data_CAGR.iloc[-1] / data_CAGR.iloc[0]) ** (1 / (len(years) - 1))) - 1
+    return cagr
 
 
 ##################################################             old functions               ######################################################
@@ -106,20 +113,20 @@ last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 report_title = f'ICT sectors, {last_year}'
 sector_groups = {'ICT - Manufacturing': 'C26',
-                    'ICT - Wholesaling': 'G',
-                    'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
-                    'ICT - Communications services': 'J61'}
+                'ICT - Wholesaling': 'G',
+                'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
+                'ICT - Communications services': 'J61'}
 
-countries = ['Canada', 'The United States', 'Great Britain', 'France', 'Germany', 'Italiy', 'Japan']
+country_names = ['Canada', 'The United States', 'Great Britain', 'France', 'Germany', 'Italiy', 'Japan']
+countries = ['CAN', 'USA', 'GBR', 'FRA', 'DEU', 'ITA', 'JPN'] # 'CHN' is not available in OECD, but it is in OECDadditional
 
-country = 'CAN' # 'USA', 'GBR', 'FRA', 'DEU', 'ITA', 'JPN'
 
 currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 
 
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
-
+country = 'CAN'
 for year in [year_range[0], year_range[-1]]:
     PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
     # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
@@ -131,14 +138,148 @@ for year in [year_range[0], year_range[-1]]:
     output      = OECD.loc['OUTPUT', simple_II_labels]
 
     sec_output = sector_values(output, sector_groups)
-    print(year)
-    print(sec_output)
+    sec_GDP = sector_values(GDP, sector_groups)
 
 
 
+data_by_country = {}
+for country in countries:
+    data_by_years = {}
+    for year in year_range:
+        PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
+        # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
+        #II = OECD.loc[simple_II_labels, simple_II_labels]
+        #household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
+        #final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
+        #other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
+        GDP         = OECD.loc['VALU', simple_II_labels]
+        output      = OECD.loc['OUTPUT', simple_II_labels]
+
+        sec_output = sector_values(output, sector_groups)
+        sec_GDP = sector_values(GDP, sector_groups)
+        data_by_years[year] = sec_output
+
+    data_cagr = pd.DataFrame.from_dict(data_by_years, orient='index')
+    first_last_cagr = clc_CAGR(data_cagr) #this takes data_CAGR and calculates CAGR by first and last year
+    data_by_country[country] = first_last_cagr
+    
+
+
+# Example input (you'll replace this with your actual data_by_country)
+# data_by_country = {
+#   'CAN': pd.Series({'ICT - Manufacturing': -0.042131, 'ICT - Wholesaling': -0.010365}),
+#   'USA': pd.Series({'ICT - Manufacturing': 0.019417, 'ICT - Wholesaling': 0.018540}),
+#   # ... add other countries
+# }
+
+# Convert the dict of Series to a DataFrame, with groups as rows, countries as columns
+df = pd.DataFrame(data_by_country).T  # transpose so countries are columns, groups are index
+df = df.T  # finally: index=groups, columns=countries
+
+# Now df looks like:
+#                         CAN       USA       GBR       FRA       DEU       ITA       JPN
+# ICT - Manufacturing   -0.042131  0.019417  -0.027567 -0.016571  0.002590 -0.028523 -0.060363
+# ICT - Wholesaling     -0.010365  0.018540  -0.014376 -0.032212 -0.016800 -0.049010 -0.012034
+# ...
+
+groups = df.index.tolist()
+countries = df.columns.tolist()
+
+# Plot grouped bars
+x = np.arange(len(groups))  # label locations
+width = 0.1  # width of each bar, adjust if you have many countries
+
+fig, ax = plt.subplots(figsize=(12, 6))
+
+# For each country, plot its bars shifted by an offset
+for i, country in enumerate(countries):
+    ax.bar(x + i*width, df[country], width, label=country)
+
+ax.set_xticks(x + width*(len(countries)-1)/2)
+ax.set_xticklabels(groups, rotation=45, ha='right')
+
+ax.set_ylabel('Value')
+ax.set_title('Grouped Bar Plot by Group and Country')
+ax.legend(title='Country')
+
+plt.tight_layout()
+plt.show()
+
+
+
+#plot 2
+# Prepare the DataFrame
+df = pd.DataFrame(data_by_country).T
+df = df.T
+
+# Select the first 4 groups (or specify your 4 groups)
+groups = df.index.tolist()[:4]  # or explicitly list them: ['ICT - Manufacturing', 'ICT - Wholesaling', ...]
+
+countries = df.columns.tolist()
+x = np.arange(len(countries))
+width = 0.6  # wider bars, since only one bar per country per subplot
+
+fig, axs = plt.subplots(2, 2, figsize=(14, 10))  # 4 panels in 2x2 grid
+axs = axs.flatten()  # make it easier to loop
+
+for i, group in enumerate(groups):
+    ax = axs[i]
+    values = df.loc[group]
+    bars = ax.bar(x, values, width, color=plt.cm.tab10.colors)  # automatic color cycle
+
+    # Add percentage labels
+    for bar in bars:
+        height = bar.get_height()
+        pct_text = f'{height*100:.1f}%'
+        if height >= 0:
+            ax.text(
+                bar.get_x() + bar.get_width()/2,
+                height + 0.005,
+                pct_text,
+                ha='center',
+                va='bottom',
+                fontsize=8
+            )
+        else:
+            ax.text(
+                bar.get_x() + bar.get_width()/2,
+                height - 0.01,
+                pct_text,
+                ha='center',
+                va='top',
+                fontsize=8
+            )
+
+    ax.set_title(group)
+    ax.set_xticks(x)
+    ax.set_xticklabels(countries, rotation=45, ha='right')
+    ax.set_ylim(min(df.min())*1.2, max(df.max())*1.2)  # uniform y-axis across panels
+
+    ax.set_ylabel('Value')
+
+plt.tight_layout()
+plt.show()
 
 
 '''
+
+
+
+
+fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex=True)
+sectors = sec_output.columns.tolist()
+
+for ax, sector in zip(axs.flatten(), sectors):
+    ax.plot(df.index, df[sector], marker='o')
+    ax.set_title(sector)
+    ax.set_xlabel('Year')
+    ax.set_ylabel('Output [million USD]')
+    ax.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+
 additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
                                 'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
 
