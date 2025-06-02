@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 
 OECD_PATH = '../Data/' # windows style: r".\\"
 
-def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM'):
+def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', country = 'CAN'):
 
     start_time = time.time()
     if table_type == 'DOM':
-        input_filename = f'{OECD_PATH}NATIO{table_type}IMP/CAN{year}{table_type.lower()}.csv' # windows style: r".\\"
+        input_filename = f'{OECD_PATH}NATIO{table_type}IMP/{country}{year}{table_type.lower()}.csv' # windows style: r".\\"
     elif table_type == 'TTL':
-        input_filename = f'{OECD_PATH}NATIO{table_type}/CAN{year}{table_type.lower()}.csv'
+        input_filename = f'{OECD_PATH}NATIO{table_type}/{country}{year}{table_type.lower()}.csv'
 
     print("working directory of func_data_upload_OECD_salaries3.py is: ",os.getcwd())  # Print the current working directory
 
@@ -33,7 +33,7 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM'):
     PPP_cols_to_load = ['LOCATION', 'TIME_PERIOD', 'INDICATOR', 'OBS_VALUE']
     PPP_rough = pd.read_csv(file_path, usecols=PPP_cols_to_load)
     PPP_filtered = PPP_rough[
-        (PPP_rough['LOCATION'] == 'CAN') &
+        (PPP_rough['LOCATION'] == country) &
         (PPP_rough['TIME_PERIOD'] == int(year)) &
         (PPP_rough['INDICATOR'] == currency_exchange_type) ]
     PPP_or_exch = PPP_filtered['OBS_VALUE'].iloc[0]

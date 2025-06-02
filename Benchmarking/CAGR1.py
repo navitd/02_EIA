@@ -28,6 +28,15 @@ from func_safe_divide import safe_divide, safe_divide_vector
 
 
 
+def sector_values(pandas_series: pd.Series, sector_groups: dict) -> dict:
+    result = {}
+    for group, sectors in sector_groups.items():
+        if isinstance(sectors, str):
+            sectors = [sectors]
+        # Sum the output values for all listed sectors, using 0 if sector is missing
+        total = sum(pandas_series.get(sector, 0) for sector in sectors)
+        result[group] = total
+    return result
 
 
 
@@ -85,10 +94,6 @@ def plot_real_vs_predicted(output_real, output_pred,
 start_time = time.time()
 print("working directory of print2xls3.py is: ",os.getcwd())  # Print the current working directory
 
-
-
-year = '2015'
-year2 = '2015'
 table_type = 'TTL' #or'DOM'   
 OECD_path = "../Data/" # windows style: r".\\"
 if table_type == 'DOM':
@@ -96,31 +101,46 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-report_title = f'ICT sectors, {year}'
+first_year = '2011'
+last_year = '2020'
+year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
+report_title = f'ICT sectors, {last_year}'
 sector_groups = {'ICT - Manufacturing': 'C26',
                     'ICT - Wholesaling': 'G',
                     'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
                     'ICT - Communications services': 'J61'}
 
+countries = ['Canada', 'The United States', 'Great Britain', 'France', 'Germany', 'Italiy', 'Japan']
+
+country = 'CAN' # 'USA', 'GBR', 'FRA', 'DEU', 'ITA', 'JPN'
+
+currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
+
 
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
-currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
-PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type)
-print(f'PPP_or_exch {PPP_or_exch}')
 
+for year in [year_range[0], year_range[-1]]:
+    PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
+    # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
+    #II = OECD.loc[simple_II_labels, simple_II_labels]
+    #household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
+    #final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
+    #other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
+    GDP         = OECD.loc['VALU', simple_II_labels]
+    output      = OECD.loc['OUTPUT', simple_II_labels]
+
+    sec_output = sector_values(output, sector_groups)
+    print(year)
+    print(sec_output)
+
+
+
+
+
+'''
 additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
                                 'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
-
-# the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
-II = OECD.loc[simple_II_labels, simple_II_labels]
-household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
-other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
-GDP         = OECD.loc['VALU', simple_II_labels]
-output      = OECD.loc['OUTPUT', simple_II_labels]
-#I don't need to worry about household_expenditure of GDP or output - they are both 0
-# but output of GDP is given and should be marked independently
 
 #single values in OECD:
 #GDP_of_household_expenditure = OECD.loc['VALU', 'HFCE']
@@ -258,9 +278,7 @@ temp = multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total output im
 
 
 
-
-
-
+'''
 
 
 
