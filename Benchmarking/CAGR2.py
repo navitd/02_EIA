@@ -23,8 +23,7 @@ from func_data_upload_OECD_salaries import data_upload_OECD_salaries
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
 from func_safe_divide import safe_divide, safe_divide_vector
-
-
+from func_plot_CAGR1 import plot_CAGR1_sum_sectors
 
 
 
@@ -99,7 +98,7 @@ def plot_real_vs_predicted(output_real, output_pred,
  
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
-print("working directory of print2xls3.py is: ",os.getcwd())  # Print the current working directory
+print("working directory of CARG2.py is: ",os.getcwd())  # Print the current working directory
 
 table_type = 'TTL' #or'DOM'   
 OECD_path = "../Data/" # windows style: r".\\"
@@ -126,25 +125,10 @@ currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
-country = 'CAN'
-for year in [year_range[0], year_range[-1]]:
-    PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
-    # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
-    #II = OECD.loc[simple_II_labels, simple_II_labels]
-    #household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-    #final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
-    #other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
-    GDP         = OECD.loc['VALU', simple_II_labels]
-    output      = OECD.loc['OUTPUT', simple_II_labels]
 
-    sec_output = sector_values(output, sector_groups)
-    sec_GDP = sector_values(GDP, sector_groups)
-
-
-
-data_by_country = {}
+outputcagr_by_country = {}
 for country in countries:
-    data_by_years = {}
+    output_by_years = {}
     for year in year_range:
         PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
         # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
@@ -156,26 +140,26 @@ for country in countries:
         output      = OECD.loc['OUTPUT', simple_II_labels]
 
         sec_output = sector_values(output, sector_groups)
-        sec_GDP = sector_values(GDP, sector_groups)
-        data_by_years[year] = sec_output
+        sec_GDP    = sector_values(GDP, sector_groups)
+        output_by_years[year] = sec_output
 
-    data_cagr = pd.DataFrame.from_dict(data_by_years, orient='index')
-    first_last_cagr = clc_CAGR(data_cagr) #this takes data_CAGR and calculates CAGR by first and last year
-    data_by_country[country] = first_last_cagr
+    output_cagr = pd.DataFrame.from_dict(output_by_years, orient='index')
+    first_last_output_cagr = clc_CAGR(output_cagr) #this takes data_CAGR and calculates CAGR by first and last year
+    outputcagr_by_country[country] = first_last_output_cagr
     
 
 
+print('Fig 1')
+# fig 1: CAGR by country for ICT sectors combined
+ICTcagr = plot_CAGR1_sum_sectors(outputcagr_by_country, f'ICT sector {first_year}-{last_year} CAGR by country')
+
 
 # Convert the dict of Series to a DataFrame, with groups as rows, countries as columns
-df = pd.DataFrame(data_by_country).T  # transpose so countries are columns, groups are index
+df = pd.DataFrame(outputcagr_by_country).T  # transpose so countries are columns, groups are index
 df = df.T  # finally: index=groups, columns=countries
 
-# Prepare the DataFrame
-df = pd.DataFrame(data_by_country).T
-df = df.T
-
-# Select the first 4 groups (or specify your 4 groups)
-groups = df.index.tolist()[:4]  # or explicitly list them: ['ICT - Manufacturing', 'ICT - Wholesaling', ...]
+groups = df.index.tolist()
+panel_titles = [[x,sector_groups[x]] for x in df.index.tolist()]
 
 countries = df.columns.tolist()
 x = np.arange(len(countries))
@@ -212,7 +196,7 @@ for i, group in enumerate(groups):
                 fontsize=8
             )
 
-    ax.set_title(group)
+    ax.set_title(panel_titles[i])
     ax.set_xticks(x)
     ax.set_xticklabels(countries, rotation=45, ha='right')
     ax.set_ylim(min(df.min())*1.2, max(df.max())*1.2)  # uniform y-axis across panels
