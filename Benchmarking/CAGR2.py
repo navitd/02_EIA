@@ -187,7 +187,7 @@ ICT_cagr.index = [country_map[c] for c in ICT_cagr.index]
 fig, ax = plt.subplots(figsize=(10, 6))
 x = np.arange(len(ICT_cagr))
 bars = ax.bar(x, ICT_cagr.values, color=[
-    'green' if name == 'Canada' else 'blue' for name in ICT_cagr.index
+    'green' if country_map.get(code, code) == 'Canada' else 'blue' for code in ICT_cagr.index
 ])
 
 # Add labels
@@ -198,9 +198,9 @@ for i, bar in enumerate(bars):
 
 # Formatting
 ax.set_xticks(x)
-ax.set_xticklabels(ICT_cagr.index, rotation=45, ha='right')
-ax.set_ylabel('Sum of CAGR [%]')
-ax.set_title(f'Sum of CAGR for ICT sectors ({first_year}–{last_year})')
+ax.set_xticklabels([country_map.get(code, code) for code in ICT_cagr.index], rotation=45, ha='right')
+ax.set_ylabel('Average CAGR [%]')
+ax.set_title(f'Average CAGR for ICT sectors ({first_year}–{last_year})')
 
 plt.tight_layout()
 plt.show()
