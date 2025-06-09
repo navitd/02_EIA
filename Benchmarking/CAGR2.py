@@ -110,10 +110,11 @@ sector_groups = {'ICT - Manufacturing': 'C26',
                 'ICT - Wholesaling': 'G',
                 'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
                 'ICT - Communications services': 'J61'}
+ICTsectors = ['C26', 'G', 'J58T60', 'J62_63', 'M', 'J61']
 
 country_names = ['Canada', 'The United States', 'Great Britain', 'France', 'Germany', 'Italiy', 'Japan']
 countries = ['CAN', 'USA', 'GBR', 'FRA', 'DEU', 'ITA', 'JPN'] # 'CHN' is not available in OECD, but it is in OECDadditional
-
+country_map = dict(zip(countries, country_names))
 
 currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 
@@ -157,6 +158,7 @@ for country in countries:
 
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
 # fig 1: CAGR by country and sector 2011-2020
+# TODO: put the following in a function so I can use it for output or GDP
 # pivoting is a great idea there's no groupby. there's just taking first_year and last_year, then pivoting to ahve each row isolate an equation, then we manipulate numbers in each row
 df_filtered = dfoutput[dfoutput['year'].isin([str(first_year), str(last_year)])]
 pivot_df = df_filtered.pivot_table(
@@ -171,6 +173,39 @@ pivot_df['CAGR'] = np.where(
     np.nan
 )
 #plotting - take all the ICT sectors and average CAGR, then plot.
+ICT_cagr = (
+    pivot_df[pivot_df['sector'].isin(ICTsectors)]   # Filter for ICT sectors
+    .groupby('country')['CAGR']                     # group by country
+    .mean()                                         # calculate mean CAGR for each country                   
+    .sort_values(ascending=False)
+)
+
+# Rename for plotting
+ICT_cagr.index = [country_map[c] for c in ICT_cagr.index]
+
+# Plot
+fig, ax = plt.subplots(figsize=(10, 6))
+x = np.arange(len(ICT_cagr))
+bars = ax.bar(x, ICT_cagr.values, color=[
+    'green' if name == 'Canada' else 'blue' for name in ICT_cagr.index
+])
+
+# Add labels
+for i, bar in enumerate(bars):
+    height = bar.get_height()
+    ax.text(bar.get_x() + bar.get_width()/2, height + 0.002,
+            f'{height*100:.1f}%', ha='center', va='bottom', fontsize=9)
+
+# Formatting
+ax.set_xticks(x)
+ax.set_xticklabels(ICT_cagr.index, rotation=45, ha='right')
+ax.set_ylabel('Sum of CAGR [%]')
+ax.set_title(f'Sum of CAGR for ICT sectors ({first_year}–{last_year})')
+
+plt.tight_layout()
+plt.show()
+
+
 
 print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
 # fig 2: average ICT sector share in total output 2010-2020
