@@ -37,13 +37,8 @@ def sector_values(pandas_series: pd.Series, sector_groups: dict) -> dict:
         result[group] = total
     return result
 
-def clc_CAGR(data_CAGR):
-    """
-    Calculate the Compound Annual Growth Rate (CAGR) for each sector in the DataFrame.
-    """
-    years = data_CAGR.index
-    cagr = ((data_CAGR.iloc[-1] / data_CAGR.iloc[0]) ** (1 / (len(years) - 1))) - 1
-    return cagr
+
+
 
 
 ##################################################             old functions               ######################################################
@@ -125,10 +120,12 @@ currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
-
+dftemp = pd.DataFrame()
+dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
+dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 outputcagr_by_country = {}
 for country in countries:
-    output_by_years = {}
+    output_by_year = {}
     for year in year_range:
         PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
         # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
@@ -138,20 +135,53 @@ for country in countries:
         #other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
         GDP         = OECD.loc['VALU', simple_II_labels]
         output      = OECD.loc['OUTPUT', simple_II_labels]
-
+        #
         sec_output = sector_values(output, sector_groups)
         sec_GDP    = sector_values(GDP, sector_groups)
-        output_by_years[year] = sec_output
+        output_by_year[year] = sec_output
+        #
+        dftemp = output.reset_index()
+        dftemp.columns = ['sector', 'output']
+        dftemp['country'] = country
+        dftemp['year'] = year
+        dftemp = dftemp[['country', 'year', 'sector', 'output']]
+        dfoutput = pd.concat([dfoutput, dftemp], ignore_index=True)
 
-    output_cagr = pd.DataFrame.from_dict(output_by_years, orient='index')
-    first_last_output_cagr = clc_CAGR(output_cagr) #this takes data_CAGR and calculates CAGR by first and last year
-    outputcagr_by_country[country] = first_last_output_cagr
+        dftempg = GDP.reset_index()
+        dftempg.columns = ['sector', 'GDP']
+        dftempg['country'] = country
+        dftempg['year'] = year
+        dftempg = dftempg[['country', 'year', 'sector', 'GDP']]
+        dfGDP = pd.concat([dfGDP, dftempg], ignore_index=True)
     
 
+print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
+# fig 1: CAGR by country and sector 2011-2020
+# pivoting is a great idea there's no groupby. there's just taking first_year and last_year, then pivoting to ahve each row isolate an equation, then we manipulate numbers in each row
+df_filtered = dfoutput[dfoutput['year'].isin([str(first_year), str(last_year)])]
+pivot_df = df_filtered.pivot_table(
+    index=['country', 'sector'],
+    columns='year',
+    values='output'
+).reset_index()
+#np.where is actually an if statement np.where(condition, value_if_true, value_if_false)
+pivot_df['CAGR'] = np.where(
+    (pivot_df[str(first_year)] != 0) & (pivot_df[str(first_year)].notna()) & (pivot_df[str(last_year)].notna()),
+    (pivot_df[str(last_year)] / pivot_df[str(first_year)]) ** (1 / (int(last_year) - int(first_year))) - 1,
+    np.nan
+)
+#plotting - take all the ICT sectors and average CAGR, then plot.
 
-print('Fig 1')
-# fig 1: CAGR by country for ICT sectors combined
-ICTcagr = plot_CAGR1_sum_sectors(outputcagr_by_country, f'ICT sector {first_year}-{last_year} CAGR by country')
+print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
+# fig 2: average ICT sector share in total output 2010-2020
+    
+
+print()
+
+
+
+
+
 
 
 # Convert the dict of Series to a DataFrame, with groups as rows, countries as columns
@@ -205,6 +235,12 @@ for i, group in enumerate(groups):
 
 plt.tight_layout()
 plt.show()
+
+
+
+
+
+
 
 
 '''
