@@ -66,6 +66,40 @@ def get_share(dfoutput, first_year, last_year, ICTsectors):
 
     return ICT_shares
 
+# plot fig 2: output share
+def plot_output_share(ICT_shares, title):
+    # Group by country and sort
+    country_avg = ICT_shares.groupby('country')['average_output_share'].mean().sort_values(ascending=False)
+
+    # Define colors
+    colors = ['green' if country == 'CAN' else 'blue' for country in country_avg.index]
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    bars = plt.bar(country_avg.index, country_avg.values, color=colors)
+
+    # Adjust y-axis limit for label space
+    max_height = country_avg.max()
+    plt.ylim(0, max_height * 1.15)
+
+    # Add percentage labels
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            height + max_height * 0.015,
+            f'{height * 100:.1f}%',
+            ha='center',
+            va='bottom',
+            fontsize=9
+        )
+
+    plt.ylabel('Average ICT Output Share (%)')
+    plt.title(title)
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+
 
 
 
@@ -234,38 +268,9 @@ plt.show()
 print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
 # fig 2: average ICT sector share in total output 2010-2020
 # data manipulation for figure 2: output share of ICT sectors
-ICT_shares = get_share(dfoutput, first_year, last_year, ICTsectors)
-# Group by country and sort
-country_avg = ICT_shares.groupby('country')['average_output_share'].mean().sort_values(ascending=False)
+ICT_output_shares = get_share(dfoutput, first_year, last_year, ICTsectors)
+plot_output_share(ICT_output_shares, f'Average ICT Output Share by Country, {first_year}-{last_year}')
 
-# Define colors
-colors = ['green' if country == 'CAN' else 'blue' for country in country_avg.index]
-
-# Plot
-plt.figure(figsize=(10, 6))
-bars = plt.bar(country_avg.index, country_avg.values, color=colors)
-
-# Adjust y-axis limit for label space
-max_height = country_avg.max()
-plt.ylim(0, max_height * 1.15)
-
-# Add percentage labels
-for bar in bars:
-    height = bar.get_height()
-    plt.text(
-        bar.get_x() + bar.get_width() / 2,
-        height + max_height * 0.015,
-        f'{height * 100:.1f}%',
-        ha='center',
-        va='bottom',
-        fontsize=9
-    )
-
-plt.ylabel('Average ICT Output Share (%)')
-plt.title('Average ICT Output Share by Country')
-plt.xticks(rotation=45, ha='right')
-plt.tight_layout()
-plt.show()
 
 
 print()
