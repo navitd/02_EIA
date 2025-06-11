@@ -25,6 +25,56 @@ from func_clc_L import clc_L
 from func_safe_divide import safe_divide, safe_divide_vector
 from func_plot_CAGR1 import plot_CAGR1_sum_sectors
 
+#Fig 1: CAGR data manipulation
+def clc_cagr(dfoutput, first_year, last_year):
+    # pivoting is a great idea there's no groupby. there's just taking first_year and last_year, then pivoting to ahve each row isolate an equation, then we manipulate numbers in each row
+    df_filtered = dfoutput[dfoutput['year'].isin([str(first_year), str(last_year)])]
+    pivot_df = df_filtered.pivot_table(
+        index=['country', 'sector'],
+        columns='year',
+        values='output'
+    ).reset_index()
+    #np.where is actually an if statement np.where(condition, value_if_true, value_if_false)
+    pivot_df['CAGR'] = np.where(
+        (pivot_df[str(first_year)] != 0) & (pivot_df[str(first_year)].notna()) & (pivot_df[str(last_year)].notna()),
+        (pivot_df[str(last_year)] / pivot_df[str(first_year)]) ** (1 / (int(last_year) - int(first_year))) - 1,
+        np.nan
+    )
+    #plotting - take all the ICT sectors and average CAGR, then plot.
+    ICT_cagr = (
+        pivot_df[pivot_df['sector'].isin(ICTsectors)]   # Filter for ICT sectors
+        .groupby('country')['CAGR']                     # group by country
+        .mean()                                         # calculate mean CAGR for each country                   
+        .sort_values(ascending=False)
+    )
+    return ICT_cagr
+
+# fig 1: plot CAGR
+def plot_cagr(ICT_cagr, title):
+        # Rename for plotting
+    ICT_cagr.index = [country_map[c] for c in ICT_cagr.index]
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+    x = np.arange(len(ICT_cagr))
+    bars = ax.bar(x, ICT_cagr.values, color=[
+        'green' if country_map.get(code, code) == 'Canada' else 'blue' for code in ICT_cagr.index
+    ])
+
+    # Add labels
+    for i, bar in enumerate(bars):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2, height + 0.002,
+                f'{height*100:.1f}%', ha='center', va='bottom', fontsize=9)
+
+    # Formatting
+    ax.set_xticks(x)
+    ax.set_xticklabels([country_map.get(code, code) for code in ICT_cagr.index], rotation=45, ha='right')
+    ax.set_ylabel('Average CAGR [%]')
+    ax.set_title(title)
+
+    plt.tight_layout()
+    plt.show()
 
 
 # Fig 2: output share data manipulation
@@ -64,7 +114,7 @@ def get_share(dfoutput, first_year, last_year, ICTsectors):
 
     ICT_shares = output_shares[output_shares['sector'].isin(ICTsectors)][['country', 'sector', 'average_output_share']].copy()
 
-    return ICT_shares
+    return output_shares, ICT_shares
 
 # plot fig 2: output share
 def plot_output_share(ICT_shares, title):
@@ -215,62 +265,20 @@ for country in countries:
     
 
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
-# fig 1: CAGR by country and sector 2011-2020
-# TODO: put the following in a function so I can use it for output or GDP
-# pivoting is a great idea there's no groupby. there's just taking first_year and last_year, then pivoting to ahve each row isolate an equation, then we manipulate numbers in each row
-df_filtered = dfoutput[dfoutput['year'].isin([str(first_year), str(last_year)])]
-pivot_df = df_filtered.pivot_table(
-    index=['country', 'sector'],
-    columns='year',
-    values='output'
-).reset_index()
-#np.where is actually an if statement np.where(condition, value_if_true, value_if_false)
-pivot_df['CAGR'] = np.where(
-    (pivot_df[str(first_year)] != 0) & (pivot_df[str(first_year)].notna()) & (pivot_df[str(last_year)].notna()),
-    (pivot_df[str(last_year)] / pivot_df[str(first_year)]) ** (1 / (int(last_year) - int(first_year))) - 1,
-    np.nan
-)
-#plotting - take all the ICT sectors and average CAGR, then plot.
-ICT_cagr = (
-    pivot_df[pivot_df['sector'].isin(ICTsectors)]   # Filter for ICT sectors
-    .groupby('country')['CAGR']                     # group by country
-    .mean()                                         # calculate mean CAGR for each country                   
-    .sort_values(ascending=False)
-)
-
-# Rename for plotting
-ICT_cagr.index = [country_map[c] for c in ICT_cagr.index]
-
-# Plot
-fig, ax = plt.subplots(figsize=(10, 6))
-x = np.arange(len(ICT_cagr))
-bars = ax.bar(x, ICT_cagr.values, color=[
-    'green' if country_map.get(code, code) == 'Canada' else 'blue' for code in ICT_cagr.index
-])
-
-# Add labels
-for i, bar in enumerate(bars):
-    height = bar.get_height()
-    ax.text(bar.get_x() + bar.get_width()/2, height + 0.002,
-            f'{height*100:.1f}%', ha='center', va='bottom', fontsize=9)
-
-# Formatting
-ax.set_xticks(x)
-ax.set_xticklabels([country_map.get(code, code) for code in ICT_cagr.index], rotation=45, ha='right')
-ax.set_ylabel('Average CAGR [%]')
-ax.set_title(f'Average CAGR for ICT sectors ({first_year}–{last_year})')
-
-plt.tight_layout()
-plt.show()
+# fig 1: output CAGR 
+ICT_cagr = clc_cagr(dfoutput, first_year, last_year)
+# fig1B: plot output CAGR
+plot_cagr(ICT_cagr, f'Average CAGR for ICT sectors ({first_year}–{last_year})')
 
 
 
 print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
 # fig 2: average ICT sector share in total output 2010-2020
 # data manipulation for figure 2: output share of ICT sectors
-ICT_output_shares = get_share(dfoutput, first_year, last_year, ICTsectors)
+output_shares, ICT_output_shares = get_share(dfoutput, first_year, last_year, ICTsectors)
 plot_output_share(ICT_output_shares, f'Average ICT Output Share by Country, {first_year}-{last_year}')
 
+# fig2B: stacked output share
 
 
 print()
