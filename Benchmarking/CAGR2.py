@@ -209,7 +209,75 @@ plt.show()
 
 print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
 # fig 2: average ICT sector share in total output 2010-2020
-    
+# the output row from OECD is the output needed according to Tanveer - it includes import and HFCE etc. I checked.
+df_filtered2 = dfoutput.pivot_table(
+    index=['country', 'sector'],
+    columns='year',
+    values='output'
+).reset_index()
+
+yearly_output = dfoutput.groupby(['country', 'year'])['output'].sum().reset_index()
+yearly_output = yearly_output.rename(columns={'output': 'total yearly output'})
+
+for year in range(int(first_year), int(last_year) + 1):
+    # merge yearly_output with df_filtered2 to get total output for each country and year
+    df_filtered2 = df_filtered2.merge(
+        yearly_output[yearly_output['year'] == str(year)][['country', f'total yearly output']],
+        on='country',
+        how='left'
+    )
+    df_filtered2 = df_filtered2.rename(columns={'total yearly output': f'total yearly output {year}'})
+
+    df_filtered2[f'output share {year}'] = df_filtered2[str(year)] / df_filtered2[f'total yearly output {year}']
+
+# Define the years
+years = list(range(int(first_year), int(last_year) + 1))
+
+# Build the list of output share columns
+output_share_cols = [f'output share {year}' for year in years]
+
+# Slice the DataFrame
+output_shares = df_filtered2[['country', 'sector'] + output_share_cols].copy()
+
+# Calculate the average share across the selected years
+output_shares['average_output_share'] = output_shares[output_share_cols].mean(axis=1)
+
+ICT_shares = output_shares[output_shares['sector'].isin(ICTsectors)][['country', 'sector', 'average_output_share']].copy()
+
+import matplotlib.pyplot as plt
+
+# Group by country and sort
+country_avg = ICT_shares.groupby('country')['average_output_share'].mean().sort_values(ascending=False)
+
+# Define colors
+colors = ['green' if country == 'CAN' else 'blue' for country in country_avg.index]
+
+# Plot
+plt.figure(figsize=(10, 6))
+bars = plt.bar(country_avg.index, country_avg.values, color=colors)
+
+# Adjust y-axis limit for label space
+max_height = country_avg.max()
+plt.ylim(0, max_height * 1.15)
+
+# Add percentage labels
+for bar in bars:
+    height = bar.get_height()
+    plt.text(
+        bar.get_x() + bar.get_width() / 2,
+        height + max_height * 0.015,
+        f'{height * 100:.1f}%',
+        ha='center',
+        va='bottom',
+        fontsize=9
+    )
+
+plt.ylabel('Average ICT Output Share (%)')
+plt.title('Average ICT Output Share by Country')
+plt.xticks(rotation=45, ha='right')
+plt.tight_layout()
+plt.show()
+
 
 print()
 
