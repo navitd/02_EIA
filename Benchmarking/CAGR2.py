@@ -150,6 +150,73 @@ def plot_output_share(ICT_shares, title):
     plt.tight_layout()
     plt.show()
 
+# fig2B: plot stacked output share
+#def plot_stacked_output_shares(output_shares, ICT_factors, title):
+def plot_stacked_output_shares(shares, ICT_factors, title):
+
+    # Invert dictionary ICT_factors
+    sector_to_category = {}
+    for category, sectors in ICT_factors.items():
+        if isinstance(sectors, list):
+            for sector in sectors:
+                sector_to_category[sector] = category
+        else:
+            sector_to_category[sectors] = category
+
+    # Filter for ICT sectors
+    ICTsectors = list(sector_to_category.keys())
+    ICT_shares = shares.loc[shares['sector'].isin(ICTsectors), ['country', 'sector', 'average_output_share']].copy()
+
+    # Map to ICT category
+    ICT_shares['ICT_category'] = ICT_shares['sector'].map(sector_to_category)
+
+    # Group by country and ICT_category, sum average_output_share
+    grouped = ICT_shares.groupby(['country', 'ICT_category'])['average_output_share'].sum().unstack(fill_value=0)
+                                                                                            # country and ICT_category are the index. unstack will create columns for each ICT_category
+                                                                                            # fill_value=0 will fill NaN with 0
+    # Reorder columns for consistent stacking: bottom to top
+    desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services']
+
+    # Sum across ICT categories to get total ICT share per country, then sort descending
+    grouped['total'] = grouped.sum(axis=1)
+    grouped = grouped.sort_values('total', ascending=False).drop(columns='total')
+
+    # Now `countries` is updated to match the new order
+    countries = grouped.index.tolist()
+
+    # Continue with plotting as before
+    colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0']  # distinct colors
+    bottom = np.zeros(len(countries))
+    plt.figure(figsize=(10, 6))
+
+    for idx, category in enumerate(desired_order):
+        values = grouped[category].values
+        #bars = plt.bar(countries, values, bottom=bottom, color=colors[idx], label=category)
+        bars = plt.bar(countries, values * 100, bottom=bottom * 100, color=colors[idx], label=category)
+        bottom += values
+        
+    # Add % labels on top
+    for i, total in enumerate(bottom):
+        plt.text(i, total * 100 + 0.2, f"{total * 100:.1f}%", ha='center', va='bottom', fontsize=9)
+
+    #plt.ylabel('Average ICT Output Share')
+    plt.ylabel('Average ICT Output Share (%)')
+    plt.title(title)
+    plt.xticks(rotation=45, ha='right')
+    plt.legend(title="ICT Category", bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -265,11 +332,12 @@ for country in countries:
     
 
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
+'''
 # fig 1: output CAGR 
 ICT_cagr = clc_cagr(dfoutput, first_year, last_year)
 # fig1: plot output CAGR
 plot_cagr(ICT_cagr, f'Average CAGR for ICT sectors ({first_year}–{last_year})')
-
+'''
 
 print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
 # fig 2: average ICT sector share in total output 2010-2020
@@ -277,8 +345,15 @@ print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{
 output_shares, ICT_output_shares = get_share(dfoutput, first_year, last_year, ICTsectors)
 # TODO: I'm not sure if ICT_output_shares should be in data manipulation or plotting
 plot_output_share(ICT_output_shares, f'Average ICT Output Share by Country, {first_year}-{last_year}')
+#the above is average of average - average over the 6 ICT sectorsa as well as over the years
 
 # fig2B: stacked output share
+#this is the average of each category (factor) - stacked. 
+plot_stacked_output_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year}-{last_year}')
+
+
+do the same as above for GDP
+
 
 
 print()
