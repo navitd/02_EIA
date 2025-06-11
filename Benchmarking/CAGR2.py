@@ -27,16 +27,44 @@ from func_plot_CAGR1 import plot_CAGR1_sum_sectors
 
 
 
-def sector_values(pandas_series: pd.Series, sector_groups: dict) -> dict:
-    result = {}
-    for group, sectors in sector_groups.items():
-        if isinstance(sectors, str):
-            sectors = [sectors]
-        # Sum the output values for all listed sectors, using 0 if sector is missing
-        total = sum(pandas_series.get(sector, 0) for sector in sectors)
-        result[group] = total
-    return result
+# Fig 2: output share data manipulation
+def get_share(dfoutput, first_year, last_year, ICTsectors):
+    #the output row from OECD is the output needed according to Tanveer - it includes import and HFCE etc. I checked.
+    df_filtered2 = dfoutput.pivot_table(
+    index=['country', 'sector'],
+    columns='year',
+    values='output'
+    ).reset_index()
 
+    yearly_output = dfoutput.groupby(['country', 'year'])['output'].sum().reset_index()
+    yearly_output = yearly_output.rename(columns={'output': 'total yearly output'})
+
+    for year in range(int(first_year), int(last_year) + 1):
+        # merge yearly_output with df_filtered2 to get total output for each country and year
+        df_filtered2 = df_filtered2.merge(
+            yearly_output[yearly_output['year'] == str(year)][['country', f'total yearly output']],
+            on='country',
+            how='left'
+        )
+        df_filtered2 = df_filtered2.rename(columns={'total yearly output': f'total yearly output {year}'})
+
+        df_filtered2[f'output share {year}'] = df_filtered2[str(year)] / df_filtered2[f'total yearly output {year}']
+
+    # Define the years
+    years = list(range(int(first_year), int(last_year) + 1))
+
+    # Build the list of output share columns
+    output_share_cols = [f'output share {year}' for year in years]
+
+    # Slice the DataFrame
+    output_shares = df_filtered2[['country', 'sector'] + output_share_cols].copy()
+
+    # Calculate the average share across the selected years
+    output_shares['average_output_share'] = output_shares[output_share_cols].mean(axis=1)
+
+    ICT_shares = output_shares[output_shares['sector'].isin(ICTsectors)][['country', 'sector', 'average_output_share']].copy()
+
+    return ICT_shares
 
 
 
@@ -136,11 +164,7 @@ for country in countries:
         #other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
         GDP         = OECD.loc['VALU', simple_II_labels]
         output      = OECD.loc['OUTPUT', simple_II_labels]
-        #
-        sec_output = sector_values(output, sector_groups)
-        sec_GDP    = sector_values(GDP, sector_groups)
-        output_by_year[year] = sec_output
-        #
+        
         dftemp = output.reset_index()
         dftemp.columns = ['sector', 'output']
         dftemp['country'] = country
@@ -209,43 +233,8 @@ plt.show()
 
 print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
 # fig 2: average ICT sector share in total output 2010-2020
-# the output row from OECD is the output needed according to Tanveer - it includes import and HFCE etc. I checked.
-df_filtered2 = dfoutput.pivot_table(
-    index=['country', 'sector'],
-    columns='year',
-    values='output'
-).reset_index()
-
-yearly_output = dfoutput.groupby(['country', 'year'])['output'].sum().reset_index()
-yearly_output = yearly_output.rename(columns={'output': 'total yearly output'})
-
-for year in range(int(first_year), int(last_year) + 1):
-    # merge yearly_output with df_filtered2 to get total output for each country and year
-    df_filtered2 = df_filtered2.merge(
-        yearly_output[yearly_output['year'] == str(year)][['country', f'total yearly output']],
-        on='country',
-        how='left'
-    )
-    df_filtered2 = df_filtered2.rename(columns={'total yearly output': f'total yearly output {year}'})
-
-    df_filtered2[f'output share {year}'] = df_filtered2[str(year)] / df_filtered2[f'total yearly output {year}']
-
-# Define the years
-years = list(range(int(first_year), int(last_year) + 1))
-
-# Build the list of output share columns
-output_share_cols = [f'output share {year}' for year in years]
-
-# Slice the DataFrame
-output_shares = df_filtered2[['country', 'sector'] + output_share_cols].copy()
-
-# Calculate the average share across the selected years
-output_shares['average_output_share'] = output_shares[output_share_cols].mean(axis=1)
-
-ICT_shares = output_shares[output_shares['sector'].isin(ICTsectors)][['country', 'sector', 'average_output_share']].copy()
-
-import matplotlib.pyplot as plt
-
+# data manipulation for figure 2: output share of ICT sectors
+ICT_shares = get_share(dfoutput, first_year, last_year, ICTsectors)
 # Group by country and sort
 country_avg = ICT_shares.groupby('country')['average_output_share'].mean().sort_values(ascending=False)
 
