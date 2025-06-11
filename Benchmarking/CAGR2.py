@@ -104,17 +104,17 @@ def get_share(dfoutput, first_year, last_year, ICTsectors):
     years = list(range(int(first_year), int(last_year) + 1))
 
     # Build the list of output share columns
-    output_share_cols = [f'output share {year}' for year in years]
+    share_cols = [f'output share {year}' for year in years]
 
     # Slice the DataFrame
-    output_shares = df_filtered2[['country', 'sector'] + output_share_cols].copy()
+    shares = df_filtered2[['country', 'sector'] + share_cols].copy()
 
     # Calculate the average share across the selected years
-    output_shares['average_output_share'] = output_shares[output_share_cols].mean(axis=1)
+    shares['average_output_share'] = shares[share_cols].mean(axis=1)
 
-    ICT_shares = output_shares[output_shares['sector'].isin(ICTsectors)][['country', 'sector', 'average_output_share']].copy()
+    ICT_shares = shares[shares['sector'].isin(ICTsectors)][['country', 'sector', 'average_output_share']].copy()
 
-    return output_shares, ICT_shares
+    return shares, ICT_shares
 
 # plot fig 2: output share
 def plot_output_share(ICT_shares, title):
@@ -218,7 +218,7 @@ first_year = '2011'
 last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 report_title = f'ICT sectors, {last_year}'
-sector_groups = {'ICT - Manufacturing': 'C26',
+ICT_factors = {'ICT - Manufacturing': 'C26',
                 'ICT - Wholesaling': 'G',
                 'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
                 'ICT - Communications services': 'J61'}
@@ -267,15 +267,15 @@ for country in countries:
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
 # fig 1: output CAGR 
 ICT_cagr = clc_cagr(dfoutput, first_year, last_year)
-# fig1B: plot output CAGR
+# fig1: plot output CAGR
 plot_cagr(ICT_cagr, f'Average CAGR for ICT sectors ({first_year}–{last_year})')
-
 
 
 print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
 # fig 2: average ICT sector share in total output 2010-2020
 # data manipulation for figure 2: output share of ICT sectors
 output_shares, ICT_output_shares = get_share(dfoutput, first_year, last_year, ICTsectors)
+# TODO: I'm not sure if ICT_output_shares should be in data manipulation or plotting
 plot_output_share(ICT_output_shares, f'Average ICT Output Share by Country, {first_year}-{last_year}')
 
 # fig2B: stacked output share
@@ -294,7 +294,7 @@ df = pd.DataFrame(outputcagr_by_country).T  # transpose so countries are columns
 df = df.T  # finally: index=groups, columns=countries
 
 groups = df.index.tolist()
-panel_titles = [[x,sector_groups[x]] for x in df.index.tolist()]
+panel_titles = [[x,ICT_factors[x]] for x in df.index.tolist()]
 
 countries = df.columns.tolist()
 x = np.arange(len(countries))
