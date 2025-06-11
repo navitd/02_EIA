@@ -26,13 +26,13 @@ from func_safe_divide import safe_divide, safe_divide_vector
 from func_plot_CAGR1 import plot_CAGR1_sum_sectors
 
 #Fig 1: CAGR data manipulation
-def clc_cagr(dfoutput, first_year, last_year):
+def clc_cagr(dfoutput, first_year, last_year, value_column):
     # pivoting is a great idea there's no groupby. there's just taking first_year and last_year, then pivoting to ahve each row isolate an equation, then we manipulate numbers in each row
     df_filtered = dfoutput[dfoutput['year'].isin([str(first_year), str(last_year)])]
     pivot_df = df_filtered.pivot_table(
         index=['country', 'sector'],
         columns='year',
-        values='output'
+        values=value_column
     ).reset_index()
     #np.where is actually an if statement np.where(condition, value_if_true, value_if_false)
     pivot_df['CAGR'] = np.where(
@@ -78,48 +78,48 @@ def plot_cagr(ICT_cagr, title):
 
 
 # Fig 2: output share data manipulation
-def get_share(dfoutput, first_year, last_year, ICTsectors):
+def get_share(dfoutput, first_year, last_year, ICTsectors, value_column):
     #the output row from OECD is the output needed according to Tanveer - it includes import and HFCE etc. I checked.
     df_filtered2 = dfoutput.pivot_table(
     index=['country', 'sector'],
     columns='year',
-    values='output'
+    values=value_column
     ).reset_index()
 
-    yearly_output = dfoutput.groupby(['country', 'year'])['output'].sum().reset_index()
-    yearly_output = yearly_output.rename(columns={'output': 'total yearly output'})
+    yearly_output = dfoutput.groupby(['country', 'year'])[value_column].sum().reset_index()
+    yearly_output = yearly_output.rename(columns={value_column: f'total yearly {value_column}'})
 
     for year in range(int(first_year), int(last_year) + 1):
         # merge yearly_output with df_filtered2 to get total output for each country and year
         df_filtered2 = df_filtered2.merge(
-            yearly_output[yearly_output['year'] == str(year)][['country', f'total yearly output']],
+            yearly_output[yearly_output['year'] == str(year)][['country', f'total yearly {value_column}']],
             on='country',
             how='left'
         )
-        df_filtered2 = df_filtered2.rename(columns={'total yearly output': f'total yearly output {year}'})
+        df_filtered2 = df_filtered2.rename(columns={f'total yearly {value_column}': f'total yearly {value_column} {year}'})
 
-        df_filtered2[f'output share {year}'] = df_filtered2[str(year)] / df_filtered2[f'total yearly output {year}']
+        df_filtered2[f'{value_column} share {year}'] = df_filtered2[str(year)] / df_filtered2[f'total yearly {value_column} {year}']
 
     # Define the years
     years = list(range(int(first_year), int(last_year) + 1))
 
     # Build the list of output share columns
-    share_cols = [f'output share {year}' for year in years]
+    share_cols = [f'{value_column} share {year}' for year in years]
 
     # Slice the DataFrame
     shares = df_filtered2[['country', 'sector'] + share_cols].copy()
 
     # Calculate the average share across the selected years
-    shares['average_output_share'] = shares[share_cols].mean(axis=1)
+    shares[f'average_{value_column}_share'] = shares[share_cols].mean(axis=1)
 
-    ICT_shares = shares[shares['sector'].isin(ICTsectors)][['country', 'sector', 'average_output_share']].copy()
+    ICT_shares = shares[shares['sector'].isin(ICTsectors)][['country', 'sector', f'average_{value_column}_share']].copy()
 
     return shares, ICT_shares
 
 # plot fig 2: output share
-def plot_output_share(ICT_shares, title):
+def plot_share(ICT_shares, title,value_column):
     # Group by country and sort
-    country_avg = ICT_shares.groupby('country')['average_output_share'].mean().sort_values(ascending=False)
+    country_avg = ICT_shares.groupby('country')[f'average_{value_column}_share'].mean().sort_values(ascending=False)
 
     # Define colors
     colors = ['green' if country == 'CAN' else 'blue' for country in country_avg.index]
@@ -144,7 +144,7 @@ def plot_output_share(ICT_shares, title):
             fontsize=9
         )
 
-    plt.ylabel('Average ICT Output Share (%)')
+    plt.ylabel(f'Average ICT {value_column} Share (%)')
     plt.title(title)
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
@@ -152,7 +152,7 @@ def plot_output_share(ICT_shares, title):
 
 # fig2B: plot stacked output share
 #def plot_stacked_output_shares(output_shares, ICT_factors, title):
-def plot_stacked_output_shares(shares, ICT_factors, title):
+def plot_stacked_shares(shares, ICT_factors, title, value_column):
 
     # Invert dictionary ICT_factors
     sector_to_category = {}
@@ -165,13 +165,13 @@ def plot_stacked_output_shares(shares, ICT_factors, title):
 
     # Filter for ICT sectors
     ICTsectors = list(sector_to_category.keys())
-    ICT_shares = shares.loc[shares['sector'].isin(ICTsectors), ['country', 'sector', 'average_output_share']].copy()
+    ICT_shares = shares.loc[shares['sector'].isin(ICTsectors), ['country', 'sector', f'average_{value_column}_share']].copy()
 
     # Map to ICT category
     ICT_shares['ICT_category'] = ICT_shares['sector'].map(sector_to_category)
 
     # Group by country and ICT_category, sum average_output_share
-    grouped = ICT_shares.groupby(['country', 'ICT_category'])['average_output_share'].sum().unstack(fill_value=0)
+    grouped = ICT_shares.groupby(['country', 'ICT_category'])[f'average_{value_column}_share'].sum().unstack(fill_value=0)
                                                                                             # country and ICT_category are the index. unstack will create columns for each ICT_category
                                                                                             # fill_value=0 will fill NaN with 0
     # Reorder columns for consistent stacking: bottom to top
@@ -200,7 +200,7 @@ def plot_stacked_output_shares(shares, ICT_factors, title):
         plt.text(i, total * 100 + 0.2, f"{total * 100:.1f}%", ha='center', va='bottom', fontsize=9)
 
     #plt.ylabel('Average ICT Output Share')
-    plt.ylabel('Average ICT Output Share (%)')
+    plt.ylabel(f'Average ICT {value_column} Share (%)')
     plt.title(title)
     plt.xticks(rotation=45, ha='right')
     plt.legend(title="ICT Category", bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -333,111 +333,50 @@ for country in countries:
 
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
 '''
-# fig 1: output CAGR 
-ICT_cagr = clc_cagr(dfoutput, first_year, last_year)
-# fig1: plot output CAGR
-plot_cagr(ICT_cagr, f'Average CAGR for ICT sectors ({first_year}–{last_year})')
+if 0:
+    # fig 1: output CAGR 
+    ICT_cagr = clc_cagr(dfoutput, first_year, last_year,'output')
+    # fig1: plot output CAGR
+    plot_cagr(ICT_cagr, f'Average CAGR for ICT sectors ({first_year}–{last_year})')
+
+
+    print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
+    # fig 2: average ICT sector share in total output 2010-2020
+    # data manipulation for figure 2: output share of ICT sectors
+    output_shares, ICT_output_shares = get_share(dfoutput, first_year, last_year, ICTsectors,'output')
+    # TODO: I'm not sure if ICT_output_shares should be in data manipulation or plotting
+    plot_share(ICT_output_shares, f'Average ICT Output Share by Country, {first_year}-{last_year}','output')
+    #the above is average of average - average over the 6 ICT sectorsa as well as over the years
+
+    # fig2B: stacked output share
+    #this is the average of each category (factor) - stacked. 
+    plot_stacked_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year}-{last_year}','output')
 '''
 
-print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
-# fig 2: average ICT sector share in total output 2010-2020
-# data manipulation for figure 2: output share of ICT sectors
-output_shares, ICT_output_shares = get_share(dfoutput, first_year, last_year, ICTsectors)
-# TODO: I'm not sure if ICT_output_shares should be in data manipulation or plotting
-plot_output_share(ICT_output_shares, f'Average ICT Output Share by Country, {first_year}-{last_year}')
-#the above is average of average - average over the 6 ICT sectorsa as well as over the years
+# graphs 1 and 2 for GDP
+if 0:
+    # fig 1: output CAGR 
+    ICT_GDP_cagr = clc_cagr(dfGDP, first_year, last_year,'GDP') 
+    # fig1: plot output CAGR
+    plot_cagr(ICT_GDP_cagr, f'Average GDP CAGR for ICT sectors ({first_year}–{last_year})')
 
-# fig2B: stacked output share
-#this is the average of each category (factor) - stacked. 
-plot_stacked_output_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year}-{last_year}')
+    # fig 2: average ICT sector share in GDP 2011-2020
+    GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
+    plot_share(ICT_GDP_shares, f'Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
 
-
-do the same as above for GDP
-
-
-
-print()
+    # fig2B: stacked output share
+    #this is the average of each category (factor) - stacked. 
+    plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
 
 
 
 
+print('graphs 1 and 2 are done')
 
 
+I don't have upload of the data, the OECD for all the years...
+from now on it is not compiling
 
-# Convert the dict of Series to a DataFrame, with groups as rows, countries as columns
-df = pd.DataFrame(outputcagr_by_country).T  # transpose so countries are columns, groups are index
-df = df.T  # finally: index=groups, columns=countries
-
-groups = df.index.tolist()
-panel_titles = [[x,ICT_factors[x]] for x in df.index.tolist()]
-
-countries = df.columns.tolist()
-x = np.arange(len(countries))
-width = 0.6  # wider bars, since only one bar per country per subplot
-
-fig, axs = plt.subplots(2, 2, figsize=(14, 10))  # 4 panels in 2x2 grid
-axs = axs.flatten()  # make it easier to loop
-
-for i, group in enumerate(groups):
-    ax = axs[i]
-    values = df.loc[group]
-    bars = ax.bar(x, values, width, color=plt.cm.tab10.colors)  # automatic color cycle
-
-    # Add percentage labels
-    for bar in bars:
-        height = bar.get_height()
-        pct_text = f'{height*100:.1f}%'
-        if height >= 0:
-            ax.text(
-                bar.get_x() + bar.get_width()/2,
-                height + 0.005,
-                pct_text,
-                ha='center',
-                va='bottom',
-                fontsize=8
-            )
-        else:
-            ax.text(
-                bar.get_x() + bar.get_width()/2,
-                height - 0.01,
-                pct_text,
-                ha='center',
-                va='top',
-                fontsize=8
-            )
-
-    ax.set_title(panel_titles[i])
-    ax.set_xticks(x)
-    ax.set_xticklabels(countries, rotation=45, ha='right')
-    ax.set_ylim(min(df.min())*1.2, max(df.max())*1.2)  # uniform y-axis across panels
-
-    ax.set_ylabel('Value')
-
-plt.tight_layout()
-plt.show()
-
-
-
-
-
-
-
-
-'''
-
-
-fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex=True)
-sectors = sec_output.columns.tolist()
-
-for ax, sector in zip(axs.flatten(), sectors):
-    ax.plot(df.index, df[sector], marker='o')
-    ax.set_title(sector)
-    ax.set_xlabel('Year')
-    ax.set_ylabel('Output [million USD]')
-    ax.grid(True)
-
-plt.tight_layout()
-plt.show()
 
 
 additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
@@ -545,6 +484,9 @@ induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
 
 
 
+
+
+'''
 # predict output, income and GDP
 #################################
 #year2 = '2015'
@@ -579,21 +521,18 @@ temp = multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total output im
 
 
 
+
+
+
+
+
+
 '''
-
-
-
 
 
 ##############################              plotting          #############################
 
                        
-   
-
-
-
-
-
 # bar graphs of direct, indirect and induced
 '''
 ICT_sectors = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services',
