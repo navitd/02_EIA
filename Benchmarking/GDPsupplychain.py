@@ -442,25 +442,23 @@ for country in countries:
         predicted_GDP = multipliers2prediction(s2s_mg, fdf, 'Predicted_GDP') 
         predicted_GDPc = multipliers2prediction(s2s_mgc, fcdf, 'Predicted_GDP') 
         
+        TODO
+        remove predictions
+        put impacts in dataframe so that in the end I have impacts per country per year
 
-        #def multipliers_by_f(M, fcdf_year2, title):
-        #    fcdf_year2 = fcdf_year2.values.reshape(-1, 1) if isinstance(fcdf_year2, pd.Series) else fcdf_year2
-        #    result = M.values @ fcdf_year2
-        #    result_df = pd.DataFrame(result, index=M.index, columns=[title])
-        #    return result_df
-
+        # impacts
         multipliers_by_f(direct_o, fcdf_year2[:-1], 'Direct output impact'), 
-                       multipliers_by_f(indirect_o, fcdf_year2[:-1], 'Indirect output impact'),
-                       multipliers_by_f(induced_o, fcdf_year2[:-1], 'Induced output impact'),  
-                       multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total output impact'),
-                       multipliers_by_f(direct_h, fcdf_year2[:-1], 'Direct income impact'), 
-                       multipliers_by_f(indirect_h, fcdf_year2[:-1], 'Indirect income impact'),
-                       multipliers_by_f(induced_h, fcdf_year2[:-1], 'Induced income impact'),  
-                       multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total income impact'),
-                       multipliers_by_f(direct_g, fcdf_year2[:-1], 'Direct GDP impact'), 
-                       multipliers_by_f(indirect_g, fcdf_year2[:-1], 'Indirect GDP impact'),
-                       multipliers_by_f(induced_g, fcdf_year2[:-1], 'Induced GDP impact'),  
-                       multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total GDP impact'),  
+        multipliers_by_f(indirect_o, fcdf_year2[:-1], 'Indirect output impact'),
+        multipliers_by_f(induced_o, fcdf_year2[:-1], 'Induced output impact'),  
+        multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total output impact'),
+        multipliers_by_f(direct_h, fcdf_year2[:-1], 'Direct income impact'), 
+        multipliers_by_f(indirect_h, fcdf_year2[:-1], 'Indirect income impact'),
+        multipliers_by_f(induced_h, fcdf_year2[:-1], 'Induced income impact'),  
+        multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total income impact'),
+        multipliers_by_f(direct_g, fcdf_year2[:-1], 'Direct GDP impact'), 
+        multipliers_by_f(indirect_g, fcdf_year2[:-1], 'Indirect GDP impact'),
+        multipliers_by_f(induced_g, fcdf_year2[:-1], 'Induced GDP impact'),  
+        multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total GDP impact'),  
         print('')
 
 
