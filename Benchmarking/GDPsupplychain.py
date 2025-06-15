@@ -435,44 +435,31 @@ for country in countries:
         fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
         fcdf.loc['employees_compensation'] = 0
 
-        predicted_output = multipliers2prediction(s2s_mo, fdf, 'Predicted_Output')
-        predicted_outputc = multipliers2prediction(s2s_moc, fcdf, 'Predicted_Output')
-        predicted_income = multipliers2prediction(s2s_mh, fdf, 'Predicted_Income')  
-        predicted_incomec = multipliers2prediction(s2s_mhc, fcdf, 'Predicted_Income') 
-        predicted_GDP = multipliers2prediction(s2s_mg, fdf, 'Predicted_GDP') 
-        predicted_GDPc = multipliers2prediction(s2s_mgc, fcdf, 'Predicted_GDP') 
-
-        plot_real_vs_predicted(output_year2, predicted_output_year2,
-                       income_year2, predicted_income_year2,
-                       GDP_year2, predicted_GDP_year2,  
-                       year, year2,'Simple Model')
-
-
-
-        plot_real_vs_predicted(output_year2, predicted_outputc_year2.iloc[:-1],
-                       income_year2, predicted_incomec_year2.iloc[:-1],
-                       GDP_year2, predicted_GDPc_year2.iloc[:-1],  
-                       year, year2,'Closed Model')
-
-
-
-        #TODO
-        #remove predictions
-        #put impacts in dataframe so that in the end I have impacts per country per year
-
         # impacts
-        multipliers_by_f(direct_o, fcdf_year2[:-1], 'Direct output impact'), 
-        multipliers_by_f(indirect_o, fcdf_year2[:-1], 'Indirect output impact'),
-        multipliers_by_f(induced_o, fcdf_year2[:-1], 'Induced output impact'),  
-        multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total output impact'),
-        multipliers_by_f(direct_h, fcdf_year2[:-1], 'Direct income impact'), 
-        multipliers_by_f(indirect_h, fcdf_year2[:-1], 'Indirect income impact'),
-        multipliers_by_f(induced_h, fcdf_year2[:-1], 'Induced income impact'),  
-        multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total income impact'),
-        multipliers_by_f(direct_g, fcdf_year2[:-1], 'Direct GDP impact'), 
-        multipliers_by_f(indirect_g, fcdf_year2[:-1], 'Indirect GDP impact'),
-        multipliers_by_f(induced_g, fcdf_year2[:-1], 'Induced GDP impact'),  
-        multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total GDP impact'),  
+        x = multipliers_by_f(direct_o, fcdf[:-1], 'Direct output impact') 
+        multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
+        multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
+        multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
+        multipliers_by_f(direct_h, fcdf[:-1], 'Direct income impact'), 
+        multipliers_by_f(indirect_h, fcdf[:-1], 'Indirect income impact'),
+        multipliers_by_f(induced_h, fcdf[:-1], 'Induced income impact'),  
+        multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf[:-1], 'Total income impact'),
+        multipliers_by_f(direct_g, fcdf[:-1], 'Direct GDP impact'), 
+        multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
+        multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
+        multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
+
+
+
+        dftemp = pd.DataFrame()
+        dftemp = GDP.reset_index()
+        dftemp.columns = ['buying sector', 'selling sector', 'GDP']
+        dftemp['country'] = country
+        dftemp['year'] = year
+        dftemp = dftemp[['country', 'year', 'buying sector', 'selling sector', 'GDP impact direct', 'GDP impact indirect', 'GDP impact induced', 'GDP impact total']]
+        dfGDPimpact = pd.concat([dfGDPimpact, dftemp], ignore_index=True)
+
+
         print('')
 
 
@@ -526,17 +513,32 @@ print('graphs 1 and 2 are done')
 
 
 
+##############################  calculating and plotting predictions  ################################
+'''
+        predicted_output = multipliers2prediction(s2s_mo, fdf, 'Predicted_Output')
+        predicted_outputc = multipliers2prediction(s2s_moc, fcdf, 'Predicted_Output')
+        predicted_income = multipliers2prediction(s2s_mh, fdf, 'Predicted_Income')  
+        predicted_incomec = multipliers2prediction(s2s_mhc, fcdf, 'Predicted_Income') 
+        predicted_GDP = multipliers2prediction(s2s_mg, fdf, 'Predicted_GDP') 
+        predicted_GDPc = multipliers2prediction(s2s_mgc, fcdf, 'Predicted_GDP') 
+
+        plot_real_vs_predicted(output, predicted_output,
+                       OECDadditional['employees_compensation'], predicted_income,
+                       GDP, predicted_GDP,  
+                       year, year,'Simple Model')
+
+        plot_real_vs_predicted(output, predicted_outputc.iloc[:-1],
+                       OECDadditional['employees_compensation'], predicted_incomec.iloc[:-1],
+                       GDP, predicted_GDPc.iloc[:-1],  
+                       year, year,'Closed Model')
+'''
 
 
 
 
 
 
-
-
-##############################              ICT old         #############################
-
-                       
+##############################              ICT old         #############################                      
 # bar graphs of direct, indirect and induced
 '''
 ICT_sectors = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services',
