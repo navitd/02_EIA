@@ -24,7 +24,7 @@ from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
 from func_safe_divide import safe_divide, safe_divide_vector
 from func_multipliers_by_f import multipliers_by_f
-
+from func_plot_real_vs_predicted import plot_real_vs_predicted
 
 #Fig 1: CAGR data manipulation
 def clc_cagr(dfoutput, first_year, last_year, value_column):
@@ -222,7 +222,7 @@ def multipliers2prediction(s2s_mo, fdf_year2, column_name):
     
     return predicted_output_year2
 
-
+'''
 def plot_real_vs_predicted(output_real, output_pred, 
                            income_real, income_pred, 
                            gdp_real, gdp_pred, 
@@ -260,7 +260,7 @@ def plot_real_vs_predicted(output_real, output_pred,
 
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show()
-
+'''
 
  
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -441,10 +441,24 @@ for country in countries:
         predicted_incomec = multipliers2prediction(s2s_mhc, fcdf, 'Predicted_Income') 
         predicted_GDP = multipliers2prediction(s2s_mg, fdf, 'Predicted_GDP') 
         predicted_GDPc = multipliers2prediction(s2s_mgc, fcdf, 'Predicted_GDP') 
-        
-        TODO
-        remove predictions
-        put impacts in dataframe so that in the end I have impacts per country per year
+
+        plot_real_vs_predicted(output_year2, predicted_output_year2,
+                       income_year2, predicted_income_year2,
+                       GDP_year2, predicted_GDP_year2,  
+                       year, year2,'Simple Model')
+
+
+
+        plot_real_vs_predicted(output_year2, predicted_outputc_year2.iloc[:-1],
+                       income_year2, predicted_incomec_year2.iloc[:-1],
+                       GDP_year2, predicted_GDPc_year2.iloc[:-1],  
+                       year, year2,'Closed Model')
+
+
+
+        #TODO
+        #remove predictions
+        #put impacts in dataframe so that in the end I have impacts per country per year
 
         # impacts
         multipliers_by_f(direct_o, fcdf_year2[:-1], 'Direct output impact'), 
@@ -460,6 +474,9 @@ for country in countries:
         multipliers_by_f(induced_g, fcdf_year2[:-1], 'Induced GDP impact'),  
         multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf_year2[:-1], 'Total GDP impact'),  
         print('')
+
+
+
 
 
 ##########################################             Benchmark  plots            ######################################################
@@ -505,13 +522,6 @@ if 0:
 
 
 print('graphs 1 and 2 are done')
-
-
-
-
-
-
-
 
 
 
