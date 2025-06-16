@@ -416,7 +416,7 @@ for country in countries:
 
         # impacts
         # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
-        m = scale_df_by_series(direct_o, fcdf[:-1]) # , 'Direct output impact' 
+        scale_df_by_series(direct_o, fcdf[:-1]) # , 'Direct output impact' 
         #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
         #multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
         #multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
@@ -451,9 +451,6 @@ for country in countries:
         dftemp2 = dftemp2[cols]
         dfGDPimpact = pd.concat([dfGDPimpact, dftemp2], ignore_index=True)
         print(country, year, 'done')
-
-
-        
 
 
 end_time = time.time()
@@ -499,10 +496,12 @@ if 0:
     #this is the average of each category (factor) - stacked. 
     plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
 
-
-
-
 print('graphs 1 and 2 are done')
+
+
+#print graph 3: GDP impact of ICT sectors total, 5 graphs
+
+
 
 
 
@@ -526,11 +525,6 @@ print('graphs 1 and 2 are done')
                        GDP, predicted_GDPc.iloc[:-1],  
                        year, year,'Closed Model')
 '''
-
-
-
-
-
 
 ##############################              ICT old         #############################                      
 # bar graphs of direct, indirect and induced

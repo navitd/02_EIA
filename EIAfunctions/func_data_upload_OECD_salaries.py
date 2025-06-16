@@ -28,7 +28,7 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', co
                                 )
     mapping_dict = dict(zip(codes_map['Detailed_Codes'], codes_map['OECD_Codes']))
 
-    # 2. Load the Excel file for OECD PPP table (OECD salaries are in CAD)
+    # 2. Load the Excel file for OECD PPP table (OECD salaries are in local currency)
     file_path = '/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/UTF-8OECD - XY Rates.csv'
     PPP_cols_to_load = ['LOCATION', 'TIME_PERIOD', 'INDICATOR', 'OBS_VALUE']
     PPP_rough = pd.read_csv(file_path, usecols=PPP_cols_to_load)
@@ -38,7 +38,7 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', co
         (PPP_rough['INDICATOR'] == currency_exchange_type) ]
     PPP_or_exch = PPP_filtered['OBS_VALUE'].iloc[0]
 
-  
+
     # 3. Loading OECD data
     OECD_rough = pd.read_csv(input_filename)
 
@@ -58,8 +58,8 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', co
     output      = OECD.loc['OUTPUT', simple_II_labels]
     #I don't need to worry bout household_expenditure of GDP or output - they are both 0
     # but output of GDP is given and should be marked independently
- 
-    
+
+
     # 4. Upload salaries from a different file of OECD UTF-8SUT 
 
     # WSL-compatible path
@@ -72,11 +72,13 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', co
     additional_data_rough = pd.read_csv(additional_filepath)
     # Keep only columns where there is more than one unique value
     data2 = additional_data_rough.loc[:, additional_data_rough.nunique() > 1]
-    data2 = data2.drop(columns=["TRANSACTION"]).rename(columns={"ACTIVITY": "detailed_sectors"})
+    data2 = data2[data2.REF_AREA == country] # keep only the rows for the country
+    data2 = data2.rename(columns={"ACTIVITY": "detailed_sectors"})
     # to look at the titles of the detailed sectors
-    data2_descriptions = data2[(data2["TIME_PERIOD"] ==int(year)) ].drop(columns=['TIME_PERIOD','Transaction','OBS_VALUE'])
+    data2_descriptions = data2[(data2["TIME_PERIOD"] ==int(year)) ] #.drop(columns=['Reference area','TIME_PERIOD','Transaction','OBS_VALUE','ACCOUNTING_ENTRY',
+                                                                    #            'OBS_STATUS','Currency'])
     sector_description = dict(zip(data2_descriptions['detailed_sectors'], data2_descriptions['Economic activity']))
-    
+
     #year = re.search(r'\d{4}', OECD_name).group() #this is a function and the year is an input variable
 
     # 4.2 putting data2 in OECD_additionaol_data
@@ -86,41 +88,45 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', co
     # TIME_PERIOD, OBS_VALUE = year and value
     # ACCOUNTING_ENTRY, Accounting entry - Expenditure, Balance (revenue minus expenditure), Revenue
 
-    transaction_names = ['Intermediate consumption', 'Mixed income, gross', 'Other taxes less other subsidies on production',
-                         'Operating surplus and mixed income, gross', 'Output', 'Wages and salaries', 'Compensation of employees',
-                         'Value added, gross']
-    column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
-                    'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
+    transaction_names = ['Value added, gross', 'Other taxes less other subsidies on production', 'Operating surplus and mixed income, net', 
+                        'Wages and salaries', 'Compensation of employees']
+    column_names = ['GDP', 'net_taxes_on_production', 'surplus_and_mixed_income_net', 
+                    'salaries', 'employees_compensation' ]
 
+    print(PPP_or_exch)
     OECDadditional = pd.DataFrame()
     for ix, name in enumerate(transaction_names):     
-        col_data2= data2[(data2["TIME_PERIOD"] == int(year)) & (data2["Transaction"] == name)].drop(columns=["Economic activity","TIME_PERIOD","Transaction"])
+        one_transaction_type= data2[(data2["TIME_PERIOD"] == int(year)) & (data2["Transaction"] == name)].drop(columns=["Economic activity","TIME_PERIOD","Transaction", 
+                                                                                                                        "TRANSACTION",
+                                                                                                                        'Reference area','TIME_PERIOD','Transaction','ACCOUNTING_ENTRY',
+                                                                                                                        'OBS_STATUS','Currency'])
         # now GSPstatcan is with detailed OECD codes and we need to translate it to known OECD codes
         # from A01 and A02 to A01_02
-        col_data2['OECD_codes'] = col_data2['detailed_sectors'].map(mapping_dict)
-        col_data2 = col_data2.sort_values(by="OECD_codes")
+        one_transaction_type['OECD_codes'] = one_transaction_type['detailed_sectors'].map(mapping_dict)
+        one_transaction_type = one_transaction_type.sort_values(by="OECD_codes")
 
         # sum A01 and A02 to A01_02
         # Group by OECD_codes and sum the OBS_VALUE column
-        col_data2_grouped = col_data2.groupby('OECD_codes', as_index=False)['OBS_VALUE'].sum()
+        one_transaction_type_grouped = one_transaction_type.groupby('OECD_codes', as_index=False)['OBS_VALUE'].sum()
         # GDPstatcan_grouped has OECD sectors but also other sectors. it has 95 rows. but the OECD sectors are correct (summed correctly)
         # I checked.
-
+        
         # convert CAD to USD by PPP_or_exch
-        col_data2_grouped['OBS_VALUE_USD'] = (col_data2_grouped['OBS_VALUE'] / PPP_or_exch).round(1)
-        col_data2_grouped.drop(columns=['OBS_VALUE'], inplace=True)
+        one_transaction_type_grouped['OBS_VALUE_USD'] = (one_transaction_type_grouped['OBS_VALUE'] / PPP_or_exch).round(1)
+        one_transaction_type_grouped.drop(columns=['OBS_VALUE'], inplace=True)
         
         # last step:
         # choose from it only codes that appear in OECD:
         if 'J' not in simple_II_labels:
             simple_II_labels_plus_J = simple_II_labels + ['J']
-        df = col_data2_grouped.set_index('OECD_codes').reindex(simple_II_labels_plus_J, fill_value=0).copy()   
-    
+        df = one_transaction_type_grouped.set_index('OECD_codes').reindex(simple_II_labels_plus_J, fill_value=0).copy()   
+
         # Add to statcan_data under the corresponding column name
         OECDadditional[column_names[ix]] = df['OBS_VALUE_USD']
 
     # from J to a correct value of J61
-    OECDadditional.loc["J61"] = OECDadditional.loc["J"] - OECDadditional.loc["J58T60"] - OECDadditional.loc["J62_63"]   
+    if "j61" not in OECDadditional.index:
+        OECDadditional.loc["J61"] = OECDadditional.loc["J"] - OECDadditional.loc["J58T60"] - OECDadditional.loc["J62_63"]   
     OECDadditional = OECDadditional.drop("J")
 
     return PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description
