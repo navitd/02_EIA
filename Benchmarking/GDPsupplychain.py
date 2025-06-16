@@ -268,8 +268,11 @@ countries = ['CAN', 'USA', 'GBR', 'FRA', 'DEU', 'ITA', 'JPN'] # 'CHN' is not ava
 country_map = dict(zip(countries, country_names))
 
 currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
-additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
-                                'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
+
+fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
+                 'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
+                  'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
+
 
 
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
@@ -303,6 +306,13 @@ for country in countries:
         
         # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
         PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
+        # presence of sectors
+        all_in_OECD = set(fixed_sectors).issubset(OECD.index)
+        all_in_OECDadditional = set(fixed_sectors).issubset(OECDadditional.index)
+        print(country, year)
+        print('all in OECD:', all_in_OECD)
+        print('all in OECDadditional:', all_in_OECDadditional)
+
         # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
         II = OECD.loc[simple_II_labels, simple_II_labels]
         household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
@@ -500,6 +510,8 @@ print('graphs 1 and 2 are done')
 
 
 #print graph 3: GDP impact of ICT sectors total, 5 graphs
+
+
 
 
 

@@ -93,7 +93,7 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', co
     column_names = ['GDP', 'net_taxes_on_production', 'surplus_and_mixed_income_net', 
                     'salaries', 'employees_compensation' ]
 
-    print(PPP_or_exch)
+    print('exchange rate:',PPP_or_exch)
     OECDadditional = pd.DataFrame()
     for ix, name in enumerate(transaction_names):     
         one_transaction_type= data2[(data2["TIME_PERIOD"] == int(year)) & (data2["Transaction"] == name)].drop(columns=["Economic activity","TIME_PERIOD","Transaction", 

@@ -12,7 +12,7 @@ OECD_PATH = '../Data/' # windows style: r".\\"
 year = '2011'
 currency_exchange_type = 'EXCH' 
 table_type = 'TTL'
-country = 'JPN'
+country = 'CAN'
 start_time = time.time()
 if table_type == 'DOM':
     input_filename = f'{OECD_PATH}NATIO{table_type}IMP/{country}{year}{table_type.lower()}.csv' # windows style: r".\\"
