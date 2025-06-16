@@ -26,6 +26,23 @@ from func_safe_divide import safe_divide, safe_divide_vector
 from func_multipliers_by_f import multipliers_by_f
 from func_plot_real_vs_predicted import plot_real_vs_predicted
 
+
+
+def scale_df_by_series(direct_o: pd.DataFrame, fcdf: pd.Series) -> pd.DataFrame:
+    
+    return direct_o[fcdf.index].mul(fcdf, axis=1)
+
+
+def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
+    return m.reset_index().melt(id_vars=m.index.name or 'index',
+                                var_name='buying sector',
+                                value_name=value).rename(columns={m.index.name or 'index': 'selling sector'})
+
+
+
+
+
+
 #Fig 1: CAGR data manipulation
 def clc_cagr(dfoutput, first_year, last_year, value_column):
     # pivoting is a great idea there's no groupby. there's just taking first_year and last_year, then pivoting to ahve each row isolate an equation, then we manipulate numbers in each row
@@ -222,50 +239,12 @@ def multipliers2prediction(s2s_mo, fdf_year2, column_name):
     
     return predicted_output_year2
 
-'''
-def plot_real_vs_predicted(output_real, output_pred, 
-                           income_real, income_pred, 
-                           gdp_real, gdp_pred, 
-                           year1, year2, title):
-    fig, axes = plt.subplots(3, 1, figsize=(6,8), sharex=True)
-    
-    fig.suptitle(title, fontsize=16)
 
-    # Panel 1: Output
-    axes[0].plot(output_real.index, output_real, label='Real Output', color='purple', marker='o')
-    axes[0].plot(output_pred.index, output_pred, label='Predicted Output', color='red', marker='o')
-    axes[0].set_title(f'Output {year2} Based on {year1}')
-    axes[0].set_xlabel('Sectors')
-    axes[0].set_ylabel('Million USD')
-    axes[0].legend()
-
-    # Panel 2: Income
-    axes[1].plot(income_real.index, income_real, label='Real Income', color='purple', marker='o')
-    axes[1].plot(income_pred.index, income_pred, label='Predicted Income', color='red', marker='o')
-    axes[1].set_title(f'Income {year2} Based on {year1}')
-    axes[1].set_xlabel('Sectors')
-    axes[1].set_ylabel('Million USD')
-    axes[1].legend()
-
-    # Panel 3: GDP
-    axes[2].plot(gdp_real.index, gdp_real, label='Real GDP', color='purple', marker='o')
-    axes[2].plot(gdp_pred.index, gdp_pred, label='Predicted GDP', color='red', marker='o')
-    axes[2].set_title(f'GDP {year2} Based on {year1}')
-    axes[2].set_xlabel('Sectors')
-    axes[2].set_ylabel('Million USD')
-    axes[2].legend()
-    for ax in axes:
-        ax.tick_params(axis='x', rotation=45)
-        ax.grid(True)
-
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-    plt.show()
-'''
 
  
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
-print("working directory of CARG2.py is: ",os.getcwd())  # Print the current working directory
+print("working directory of GDPsupplychain.py is: ",os.getcwd())  # Print the current working directory
 
 table_type = 'TTL' #or'DOM'   
 OECD_path = "../Data/" # windows style: r".\\"
@@ -436,34 +415,49 @@ for country in countries:
         fcdf.loc['employees_compensation'] = 0
 
         # impacts
-        x = multipliers_by_f(direct_o, fcdf[:-1], 'Direct output impact') 
-        multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
-        multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
-        multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
-        multipliers_by_f(direct_h, fcdf[:-1], 'Direct income impact'), 
-        multipliers_by_f(indirect_h, fcdf[:-1], 'Indirect income impact'),
-        multipliers_by_f(induced_h, fcdf[:-1], 'Induced income impact'),  
-        multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf[:-1], 'Total income impact'),
-        multipliers_by_f(direct_g, fcdf[:-1], 'Direct GDP impact'), 
-        multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
-        multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
-        multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
+        # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
+        m = scale_df_by_series(direct_o, fcdf[:-1]) # , 'Direct output impact' 
+        #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
+        #multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
+        #multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
+        #multipliers_by_f(direct_h, fcdf[:-1], 'Direct income impact'), 
+        #multipliers_by_f(indirect_h, fcdf[:-1], 'Indirect income impact'),
+        #multipliers_by_f(induced_h, fcdf[:-1], 'Induced income impact'),  
+        #multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf[:-1], 'Total income impact'),
+        #multipliers_by_f(direct_g, fcdf[:-1], 'Direct GDP impact'), 
+        #multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
+        #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
+        #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
 
 
+        GDPimpact_cols = ['GDP impact direct', 'GDP impact indirect', 'GDP impact induced', 'GDP impact total']
+        dftemp2 = None
+        for data, value in zip( [direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1, :-1]], GDPimpact_cols ):
+            m = scale_df_by_series(data, fcdf[:-1])       #this is the multiplication
+            dftemp1 = pivot_matrix_to_3_columns(m, value) #this is the matrix in 3 columns
+            if dftemp2 is None:
+                dftemp2 = dftemp1  # First iteration: just assign
+            else:
+                dftemp2 = pd.merge(
+                    dftemp2,
+                    dftemp1,
+                    on=["selling sector", "buying sector"],
+                    how="outer"
+                )
+        # dftemp2 contains 4 GDP impacts 
+        dftemp2['country'] = country
+        dftemp2['year'] = year
+        cols = ['country', 'year','buying sector', 'selling sector'] + GDPimpact_cols
+        dftemp2 = dftemp2[cols]
+        dfGDPimpact = pd.concat([dfGDPimpact, dftemp2], ignore_index=True)
+        print(country, year, 'done')
 
-        dftemp = pd.DataFrame()
-        dftemp = GDP.reset_index()
-        dftemp.columns = ['buying sector', 'selling sector', 'GDP']
-        dftemp['country'] = country
-        dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'buying sector', 'selling sector', 'GDP impact direct', 'GDP impact indirect', 'GDP impact induced', 'GDP impact total']]
-        dfGDPimpact = pd.concat([dfGDPimpact, dftemp], ignore_index=True)
+
+        
 
 
-        print('')
-
-
-
+end_time = time.time()
+print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 
 
 ##########################################             Benchmark  plots            ######################################################

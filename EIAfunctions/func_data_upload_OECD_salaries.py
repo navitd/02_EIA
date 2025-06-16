@@ -63,7 +63,12 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', co
     # 4. Upload salaries from a different file of OECD UTF-8SUT 
 
     # WSL-compatible path
-    additional_filepath = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/UTF-8SUT Use, Value added and its components by activity.csv"
+    #old file, only Canada: additional_filepath = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/UTF-8SUT Use, Value added and its components by activity.csv"
+    # link for additional OECD https://data-explorer.oecd.org/vis?df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_NASU%40DF_USEVA_T1600&df[ag]=
+    # OECD.SDD.NAD&df[vs]=1.0&hc[Transaction]=Output&pg=0&snb=53&tm=input-output&utm_source=chatgpt.com&dq=A.FRA%2BJPN%2BUSA%2BGBR%2BITA%2BDEU%2B
+    # CAN.B2A3G%2BB2A3N%2BD11%2BD1%2BD29X39%2BB3G%2BB1G%2BP2%2BP1._T%2BA%2BB%2BC%2BD%2BE%2BF%2BG%2BH%2BI%2BJ%2BK%2BL%2BM%2BN%2BO%2BP%2BQ%2BR%2BS%2BT%2BU%2B_
+    # X....V.&pd=2011%2C2022&to[TIME_PERIOD]=false&vw=tb
+    additional_filepath = "/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/additionalOECD.csv"
     additional_data_rough = pd.read_csv(additional_filepath)
     # Keep only columns where there is more than one unique value
     data2 = additional_data_rough.loc[:, additional_data_rough.nunique() > 1]
