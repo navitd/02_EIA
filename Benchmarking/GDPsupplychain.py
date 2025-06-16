@@ -264,7 +264,7 @@ ICT_factors = {'ICT - Manufacturing': 'C26',
 ICTsectors = ['C26', 'G', 'J58T60', 'J62_63', 'M', 'J61']
 
 country_names = ['Canada', 'The United States', 'Great Britain', 'France', 'Germany', 'Italiy', 'Japan']
-countries = ['CAN', 'USA', 'GBR', 'FRA', 'DEU', 'ITA', 'JPN'] # 'CHN' is not available in OECD, but it is in OECDadditional
+countries = ['JPN'] #['CAN', 'USA', 'GBR', 'FRA', 'DEU', 'ITA', 'JPN'] # 'CHN' is not available in OECD, but it is in OECDadditional
 country_map = dict(zip(countries, country_names))
 
 currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
@@ -306,13 +306,6 @@ for country in countries:
         
         # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
         PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
-        # presence of sectors
-        all_in_OECD = set(fixed_sectors).issubset(OECD.index)
-        all_in_OECDadditional = set(fixed_sectors).issubset(OECDadditional.index)
-        print(country, year)
-        print('all in OECD:', all_in_OECD)
-        print('all in OECDadditional:', all_in_OECDadditional)
-
         # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
         II = OECD.loc[simple_II_labels, simple_II_labels]
         household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
@@ -438,8 +431,7 @@ for country in countries:
         #multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
         #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
         #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
-
-
+        
         GDPimpact_cols = ['GDP impact direct', 'GDP impact indirect', 'GDP impact induced', 'GDP impact total']
         dftemp2 = None
         for data, value in zip( [direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1, :-1]], GDPimpact_cols ):
@@ -460,7 +452,8 @@ for country in countries:
         cols = ['country', 'year','buying sector', 'selling sector'] + GDPimpact_cols
         dftemp2 = dftemp2[cols]
         dfGDPimpact = pd.concat([dfGDPimpact, dftemp2], ignore_index=True)
-        print(country, year, 'done')
+        #print(country, year, 'done')
+        
 
 
 end_time = time.time()
