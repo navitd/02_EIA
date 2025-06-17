@@ -264,7 +264,7 @@ ICT_factors = {'ICT - Manufacturing': 'C26',
 ICTsectors = ['C26', 'G', 'J58T60', 'J62_63', 'M', 'J61']
 
 country_names = ['Canada', 'The United States', 'Great Britain', 'France', 'Germany', 'Italiy', 'Japan']
-countries = ['JPN'] #['CAN', 'USA', 'GBR', 'FRA', 'DEU', 'ITA', 'JPN'] # 'CHN' is not available in OECD, but it is in OECDadditional
+countries = ['CAN', 'USA', 'GBR', 'FRA', 'DEU', 'ITA', 'JPN'] # 'CHN' is not available in OECD, but it is in OECDadditional
 country_map = dict(zip(countries, country_names))
 
 currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
@@ -449,7 +449,8 @@ for country in countries:
         # dftemp2 contains 4 GDP impacts 
         dftemp2['country'] = country
         dftemp2['year'] = year
-        cols = ['country', 'year','buying sector', 'selling sector'] + GDPimpact_cols
+        dftemp2['national GDP'] = GDP.sum()
+        cols = ['country', 'year', 'buying sector', 'selling sector'] + GDPimpact_cols + ['national GDP']
         dftemp2 = dftemp2[cols]
         dfGDPimpact = pd.concat([dfGDPimpact, dftemp2], ignore_index=True)
         #print(country, year, 'done')
@@ -504,11 +505,32 @@ print('graphs 1 and 2 are done')
 
 #print graph 3: GDP impact of ICT sectors total, 5 graphs
 
+ICT_factors = {'ICT - Manufacturing': 'C26',
+                'ICT - Wholesaling': 'G',
+                'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
+                'ICT - Communications services': 'J61'}
+sector_list = ICTsectors
+
+# slice for year = first_year, valu column = GDP impact total and buying sector = ICT
+def get_one_year_value(df, year, forward_or_backward, sector_list, value_column):
+    if forward_or_backward == 'backward':
+        col = 'buying sector'
+    else:
+        col = 'selling sector'
+    one_year_impact = df[
+        (dfGDPimpact['year'] == year) & 
+        (dfGDPimpact[col].isin(sector_list))       
+    ][['country', 'year', 'selling sector', 'buying sector', value_column, 'national GDP']]
+    one_year_impact_grouped = one_year_impact.groupby(['country', 'year'])[value_column].sum().reset_index()
+    return one_year_impact_grouped
+
+grouped = get_one_year_value(dfGDPimpact, first_year,'backward', sector_list, 'GDP impact total')
 
 
 
 
 
+print('')
 
 
 ##############################  calculating and plotting predictions  ################################
