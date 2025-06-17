@@ -392,7 +392,7 @@ def plot_GDPimpact_top_bottom(
 
 
 
-# fig 3. for ICT categories
+# fig. 3 for ICT categories
 def plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, value_column, sector_label):
     #this function uses the plot function above to plot 4 different categories of the ICT sector
     # Extract data for backward and forward linkages
@@ -471,6 +471,113 @@ def plot_stacked_ict_impact(backward_df, forward_df, year, value_col, title):
     ax.grid(axis='y', linestyle='--', alpha=0.5)
     plt.tight_layout()
     plt.show()
+
+
+
+# fig. 5 GDP impact on Education and Health
+# fig. 5
+def get_one_year_imapct_on_sector(df, year, forward_or_backward, impacting_sectors, impacted_sectors, value_column):
+    if forward_or_backward == 'backward':
+        col = 'buying sector'
+    else:
+        col = 'selling sector'
+    #first slicing 
+    one_year_impact = df[
+        (df['year'] == year) & 
+        (df[col].isin(impacting_sectors))       
+    ][['country', 'year', 'selling sector', 'buying sector', value_column, 'national GDP']]
+    # division
+    one_year_impact[value_column] = ( one_year_impact[value_column] / one_year_impact['national GDP'] )
+    one_year_impact.drop(columns=['national GDP'], inplace=True)
+    one_year_impact = one_year_impact[one_year_impact['buying sector'].isin(impacted_sectors)]
+    # grouping
+    one_year_impact_grouped = one_year_impact.groupby(['country', 'year'], as_index=False)[value_column].sum()
+    one_year_impact_grouped = one_year_impact_grouped.sort_values(by='GDP impact total', ascending=False).reset_index(drop=True)
+    
+    return one_year_impact_grouped
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import matplotlib.gridspec as gridspec
+
+def plot_impact_with_table(df_first, df_last, value_column, graph_title):
+    # Extract and validate years
+    unique_years_first = df_first['year'].unique()
+    unique_years_last = df_last['year'].unique()
+
+    if len(unique_years_first) != 1:
+        raise ValueError(f"df_first contains multiple years: {unique_years_first}")
+    if len(unique_years_last) != 1:
+        raise ValueError(f"df_last contains multiple years: {unique_years_last}")
+
+    first_year = unique_years_first[0]
+    last_year = unique_years_last[0]
+
+    # Merge and sort
+    merged = df_last[['country', value_column]].merge(
+        df_first[['country', value_column]],
+        on='country',
+        suffixes=('_last', '_first')
+    )
+    merged = merged.sort_values(by=f'{value_column}_last', ascending=False).reset_index(drop=True)
+    merged['Rank'] = merged.index + 1
+
+    # Convert to percent
+    merged[f'{value_column}_first'] *= 100
+    merged[f'{value_column}_last'] *= 100
+
+    countries = merged['country']
+    values_first = merged[f'{value_column}_first']
+    values_last = merged[f'{value_column}_last']
+    x = np.arange(len(countries))
+    bar_width = 0.4
+
+    fig = plt.figure(figsize=(16, 6))
+    spec = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[1, 3], wspace=0.25)
+
+    # Table
+    ax_table = fig.add_subplot(spec[0])
+    table_data = merged[['Rank', 'country', f'{value_column}_first', f'{value_column}_last']].round(2)
+    table_vals = table_data.values.tolist()
+    column_labels = ['Rank', 'Country', str(first_year), str(last_year)]
+    table = ax_table.table(
+        cellText=table_vals,
+        colLabels=column_labels,
+        cellLoc='center',
+        loc='center'
+    )
+    ax_table.set_title('Education\nICT Forward GDP Impact Ranking', pad=30, fontsize=12)
+    ax_table.axis('off')
+
+    # Bar chart
+    ax_bar = fig.add_subplot(spec[1])
+    color_first = ['lightgreen' if c == 'CAN' else 'lightblue' for c in countries]
+    color_last = ['darkgreen' if c == 'CAN' else 'blue' for c in countries]
+
+    bars1 = ax_bar.bar(x - bar_width/2, values_first, width=bar_width, color=color_first, label=str(first_year))
+    bars2 = ax_bar.bar(x + bar_width/2, values_last, width=bar_width, color=color_last, label=str(last_year))
+
+    # Annotations
+    for i in range(len(countries)):
+        ax_bar.text(x[i] - bar_width/2, values_first[i] + 0.3, f'{values_first[i]:.2f}%', ha='center', va='bottom', fontsize=8)
+        ax_bar.text(x[i] + bar_width/2, values_last[i] + 0.3, f'{values_last[i]:.2f}%', ha='center', va='bottom', fontsize=8)
+
+    ax_bar.set_xticks(x)
+    ax_bar.set_xticklabels(countries, rotation=45, ha='right')
+    ax_bar.set_ylabel('GDP Impact (%)')
+    ax_bar.set_title(graph_title)
+
+    max_height = max(max(values_first), max(values_last))
+    ax_bar.set_ylim(0, max_height * 1.15)
+
+    dummy1 = plt.Rectangle((0,0),1,1,color='lightblue')
+    dummy2 = plt.Rectangle((0,0),1,1,color='blue')
+    ax_bar.legend([dummy1, dummy2], [str(first_year), str(last_year)], loc='upper right')
+
+    plt.tight_layout()
+    plt.show()
+
 
 
 ##################################################             old functions               ######################################################
@@ -763,15 +870,27 @@ if 0:
         # plot_GDPimpact_top_bottom is inside it
 
 # graph 4 GDP stacked backward forward
+if 0:
+    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
+    ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
+    ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
+    ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
+    plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'GDP impact total', 'ICT GDP Impact')
 
-ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
-ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
-ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
-ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
 
-plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'GDP impact total', 'ICT GDP Impact')
+# Education graphs
+# I want something similar to the function get_one_year_value, but I want the GDP impact on specific sectors and not on all sectors
 
 
+
+ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
+ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
+
+plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP impact total ICT sectors impact on Education')
+
+
+
+print(dfGDPimpact)
 
 
 
