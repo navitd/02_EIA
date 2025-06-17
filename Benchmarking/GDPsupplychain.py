@@ -10,12 +10,12 @@ import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import seaborn as sns
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
-import openpyxl
-import inspect
+
 from openpyxl.cell.cell import MergedCell
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
@@ -318,6 +318,8 @@ def plot_GDPimpact_side_by_side(
     plt.show()
 
 
+
+
 def plot_GDPimpact_top_bottom(
     first_year_backwards, last_year_backwards,
     first_year_forwards, last_year_forwards,
@@ -338,10 +340,8 @@ def plot_GDPimpact_top_bottom(
     colors_first = ['lightgreen' if c == 'CAN' else 'skyblue' for c in countries]
     colors_last = ['darkgreen' if c == 'CAN' else 'navy' for c in countries]
 
-    bars1 = ax.bar(x - width/2, first_year_backwards[value_column], width,
-                   label=f"{first_year_backwards['year'].iloc[0]}", color=colors_first)
-    bars2 = ax.bar(x + width/2, last_year_backwards[value_column], width,
-                   label=f"{last_year_backwards['year'].iloc[0]}", color=colors_last)
+    bars1 = ax.bar(x - width/2, first_year_backwards[value_column], width, color=colors_first)
+    bars2 = ax.bar(x + width/2, last_year_backwards[value_column], width, color=colors_last)
 
     for bar in bars1 + bars2:
         height = bar.get_height()
@@ -352,7 +352,13 @@ def plot_GDPimpact_top_bottom(
     ax.set_ylabel(value_column)
     ax.set_xticks(x)
     ax.set_xticklabels(countries, rotation=45)
-    ax.legend()
+
+    # Custom legend (light blue = first year, dark blue = last year)
+    custom_legend = [
+        Patch(facecolor='skyblue', label=str(first_year_backwards['year'].iloc[0])),
+        Patch(facecolor='navy', label=str(last_year_backwards['year'].iloc[0]))
+    ]
+    ax.legend(handles=custom_legend)
 
     # --- Panel 2: Forward Linkage ---
     ax = axes[1]
@@ -366,10 +372,8 @@ def plot_GDPimpact_top_bottom(
     colors_first = ['lightgreen' if c == 'CAN' else 'skyblue' for c in countries]
     colors_last = ['darkgreen' if c == 'CAN' else 'navy' for c in countries]
 
-    bars1 = ax.bar(x - width/2, first_year_forwards[value_column], width,
-                   label=f"{first_year_forwards['year'].iloc[0]}", color=colors_first)
-    bars2 = ax.bar(x + width/2, last_year_forwards[value_column], width,
-                   label=f"{last_year_forwards['year'].iloc[0]}", color=colors_last)
+    bars1 = ax.bar(x - width/2, first_year_forwards[value_column], width, color=colors_first)
+    bars2 = ax.bar(x + width/2, last_year_forwards[value_column], width, color=colors_last)
 
     for bar in bars1 + bars2:
         height = bar.get_height()
@@ -380,11 +384,13 @@ def plot_GDPimpact_top_bottom(
     ax.set_ylabel(value_column)
     ax.set_xticks(x)
     ax.set_xticklabels(countries, rotation=45)
-    ax.legend()
+    ax.legend(handles=custom_legend)
 
     fig.suptitle(f'{graph_title}, {value_column}: Comparison of {first_year_backwards["year"].iloc[0]} and {last_year_backwards["year"].iloc[0]}')
     plt.tight_layout()
     plt.show()
+
+
 
 
 def plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, value_column, sector_label):
