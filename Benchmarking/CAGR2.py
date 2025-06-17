@@ -332,12 +332,12 @@ for country in countries:
     
 
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
-'''
-if 0:
+
+if 1:
     # fig 1: output CAGR 
     ICT_cagr = clc_cagr(dfoutput, first_year, last_year,'output')
     # fig1: plot output CAGR
-    plot_cagr(ICT_cagr, f'Average CAGR for ICT sectors ({first_year}–{last_year})')
+    plot_cagr(ICT_cagr, f'Average Output CAGR for ICT sectors ({first_year}–{last_year})')
 
 
     print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
@@ -351,7 +351,7 @@ if 0:
     # fig2B: stacked output share
     #this is the average of each category (factor) - stacked. 
     plot_stacked_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year}-{last_year}','output')
-'''
+
 
 # graphs 1 and 2 for GDP
 if 0:
@@ -372,15 +372,9 @@ if 0:
 
 
 print('graphs 1 and 2 are done')
+# from now on it is not compiling
 
 
-I don't have upload of the data, the OECD for all the years...
-from now on it is not compiling
-
-
-
-additional_OECD_column_names = ['intermediate_consumption', 'mixed_income_gross', 'net_taxes_on_production',
-                                'surplus_and_mixed_income_gross', 'output', 'salaries', 'employees_compensation', 'GDP' ]
 
 #single values in OECD:
 #GDP_of_household_expenditure = OECD.loc['VALU', 'HFCE']

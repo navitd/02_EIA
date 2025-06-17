@@ -647,7 +647,7 @@ print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 ##########################################             Benchmark  plots            ######################################################
 
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
-'''
+# graph 1,2 for output
 if 0:
     # fig 1: output CAGR 
     ICT_cagr = clc_cagr(dfoutput, first_year, last_year,'output')
@@ -666,7 +666,7 @@ if 0:
     # fig2B: stacked output share
     #this is the average of each category (factor) - stacked. 
     plot_stacked_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year}-{last_year}','output')
-'''
+
 
 # graphs 1 and 2 for GDP
 if 0:
@@ -686,25 +686,107 @@ if 0:
 print('graphs 1 and 2 are done')
 
 
-#print graph 3: GDP impact of ICT sectors total, 5 graphs
-ICT_factors = {'ICT Manufacturing': 'C26',
-                'ICT Wholesaling': 'G',
-                'ICT Software and computer services': ['J58T60', 'J62_63', 'M'],  
-                'ICT Communications services': 'J61'}
+# graph 3: GDP impact of ICT sectors total, 5 graphs
+if 0:
+    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
+    ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
+    ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
+    ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
+    plot_GDPimpact_top_bottom( ICT_first_year_backward_impact, ICT_last_year_backward_impact,
+                            ICT_first_year_forward_impact, ICT_last_year_forward_impact,
+                            'GDP impact total','ICT' )
+
+    for sector_label, sector_list in ICT_factors.items():
+        if isinstance(sector_list, str):
+            sector_list = [sector_list]
+        plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, 'GDP impact total', sector_label)
+        # plot_GDPimpact_top_bottom is inside it
+
+# graph 4 GDP stacked backward forward
+
+ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
+ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
+ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
+ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+def plot_stacked_ict_impact(backward_df, forward_df, year, value_col, title):
+    """
+    Plot backward and forward ICT GDP impacts stacked by country for a given year,
+    using green bars for Canada and purple bars for others.
+
+    Parameters:
+        backward_df (pd.DataFrame): DataFrame with backward impact values.
+        forward_df (pd.DataFrame): DataFrame with forward impact values.
+        year (int or str): Year to filter by.
+        value_col (str): Name of the column holding the impact value.
+        title (str): Title for the plot.
+    """
+    # Filter for the given year and reindex
+    back = backward_df[backward_df['year'] == year][['country', value_col]].set_index('country')
+    fwd = forward_df[forward_df['year'] == year][['country', value_col]].set_index('country')
+
+    # Align and fill missing values
+    back, fwd = back.align(fwd, join='outer', fill_value=0)
+
+    # Sort by total impact
+    total = back[value_col] + fwd[value_col]
+    sorted_countries = total.sort_values(ascending=False).index
+
+    # Sort the data
+    back_sorted = back.loc[sorted_countries]
+    fwd_sorted = fwd.loc[sorted_countries]
+
+    # Create the bar plot
+    fig, ax = plt.subplots(figsize=(12, 6))
+    for i, country in enumerate(sorted_countries):
+        back_val = back_sorted.loc[country, value_col]
+        fwd_val = fwd_sorted.loc[country, value_col]
+        total_val = back_val + fwd_val
+
+        # Choose colors
+        if country == 'CAN':
+            back_color = 'forestgreen'
+            fwd_color = 'lightgreen'
+        else:
+            back_color = 'indigo'
+            fwd_color = 'orchid'
+
+        # Plot bars
+        ax.bar(i, back_val, color=back_color)
+        ax.bar(i, fwd_val, bottom=back_val, color=fwd_color)
+
+        # Add percentage label
+        ax.text(i, total_val + 0.01, f'{total_val * 100:.1f}%', ha='center', va='bottom', fontsize=9)
+
+    # Final plot settings
+    ax.set_title(f"{title} in {year}", fontsize=14)
+    ax.set_ylabel('GDP Impact')
+    ax.set_xlabel('Country')
+    ax.set_xticks(range(len(sorted_countries)))
+    ax.set_xticklabels(sorted_countries, rotation=45)
+
+    # Legend
+    from matplotlib.patches import Patch
+    legend_handles = [
+        Patch(color='indigo', label='Backward (others)'),
+        Patch(color='orchid', label='Forward (others)'),
+        Patch(color='forestgreen', label='Backward (CAN)'),
+        Patch(color='lightgreen', label='Forward (CAN)')
+    ]
+    ax.legend(handles=legend_handles)
+
+    ax.grid(axis='y', linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.show()
 
 
-#ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
-#ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
-#ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
-#ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
-#plot_GDPimpact_top_bottom( ICT_first_year_backward_impact, ICT_last_year_backward_impact,
-#                           ICT_first_year_forward_impact, ICT_last_year_forward_impact,
-#                           'GDP impact total','ICT' )
 
-for sector_label, sector_list in ICT_factors.items():
-    if isinstance(sector_list, str):
-        sector_list = [sector_list]
-    plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, 'GDP impact total', sector_label)
+plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'GDP impact total', 'ICT GDP Impact')
+
+
 
 
 
