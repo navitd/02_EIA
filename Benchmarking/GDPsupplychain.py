@@ -249,8 +249,7 @@ def get_one_year_value(df, year, forward_or_backward, sector_list, value_column)
 def plot_GDPimpact_side_by_side(
     first_year_backwards, last_year_backwards,
     first_year_forwards, last_year_forwards,
-    value_column='GDP impact total'
-):
+    value_column, graph_title):
     width = 0.35
     fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=True)
 
@@ -314,7 +313,7 @@ def plot_GDPimpact_side_by_side(
     ax.legend()
 
     fig.supylabel(value_column)
-    fig.suptitle(f'{value_column}: Comparison of {first_year_backwards["year"].iloc[0]} and {last_year_backwards["year"].iloc[0]}')
+    fig.suptitle(f'{graph_title}, {value_column}: Comparison of {first_year_backwards["year"].iloc[0]} and {last_year_backwards["year"].iloc[0]}')
     plt.tight_layout()
     plt.show()
 
@@ -322,8 +321,8 @@ def plot_GDPimpact_side_by_side(
 def plot_GDPimpact_top_bottom(
     first_year_backwards, last_year_backwards,
     first_year_forwards, last_year_forwards,
-    value_column='GDP impact total'
-):
+    value_column, graph_title):
+
     width = 0.35
     fig, axes = plt.subplots(2, 1, figsize=(12, 10), sharex=False)
 
@@ -383,9 +382,30 @@ def plot_GDPimpact_top_bottom(
     ax.set_xticklabels(countries, rotation=45)
     ax.legend()
 
-    fig.suptitle(f'{value_column}: Comparison of {first_year_backwards["year"].iloc[0]} and {last_year_backwards["year"].iloc[0]}')
+    fig.suptitle(f'{graph_title}, {value_column}: Comparison of {first_year_backwards["year"].iloc[0]} and {last_year_backwards["year"].iloc[0]}')
     plt.tight_layout()
     plt.show()
+
+
+def plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, value_column, sector_label):
+    #this function uses the plot function above to plot 4 different categories of the ICT sector
+    # Extract data for backward and forward linkages
+    first_year_backward = get_one_year_value(dfGDPimpact, first_year, 'backward', sector_list, value_column)
+    last_year_backward = get_one_year_value(dfGDPimpact, last_year, 'backward', sector_list, value_column)
+    first_year_forward = get_one_year_value(dfGDPimpact, first_year, 'forward', sector_list, value_column)
+    last_year_forward = get_one_year_value(dfGDPimpact, last_year, 'forward', sector_list, value_column)
+
+    # Plot using existing plotting function
+    plot_GDPimpact_top_bottom(first_year_backward, last_year_backward,
+                              first_year_forward, last_year_forward,
+                             'GDP impact total', sector_label)
+    # Optionally set a custom plot title
+    #plt.suptitle(f'{value_column} for {sector_label}', fontsize=14)
+    #plt.tight_layout()
+    #plt.show()
+
+
+
 
 ##################################################             old functions               ######################################################
 
@@ -661,24 +681,27 @@ print('graphs 1 and 2 are done')
 
 
 #print graph 3: GDP impact of ICT sectors total, 5 graphs
-
-ICT_factors = {'ICT - Manufacturing': 'C26',
-                'ICT - Wholesaling': 'G',
-                'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
-                'ICT - Communications services': 'J61'}
-
-
-first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
-last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
-first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
-last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
+ICT_factors = {'ICT Manufacturing': 'C26',
+                'ICT Wholesaling': 'G',
+                'ICT Software and computer services': ['J58T60', 'J62_63', 'M'],  
+                'ICT Communications services': 'J61'}
 
 
+#ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
+#ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
+#ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
+#ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
+#plot_GDPimpact_top_bottom( ICT_first_year_backward_impact, ICT_last_year_backward_impact,
+#                           ICT_first_year_forward_impact, ICT_last_year_forward_impact,
+#                           'GDP impact total','ICT' )
 
-plot_fig3( first_year_backward_impact, last_year_backward_impact,
-              first_year_forward_impact, last_year_forward_impact,
-                value_column='GDP impact total'
-)
+for sector_label, sector_list in ICT_factors.items():
+    if isinstance(sector_list, str):
+        sector_list = [sector_list]
+    plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, 'GDP impact total', sector_label)
+
+
+
 
 print('')
 
