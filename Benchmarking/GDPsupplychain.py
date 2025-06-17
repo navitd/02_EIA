@@ -226,9 +226,166 @@ def plot_stacked_shares(shares, ICT_factors, title, value_column):
     plt.show()
 
 
+# fig 3
+def get_one_year_value(df, year, forward_or_backward, sector_list, value_column):
+    if forward_or_backward == 'backward':
+        col = 'buying sector'
+    else:
+        col = 'selling sector'
+    #first slicing 
+    one_year_impact = df[
+        (df['year'] == year) & 
+        (df[col].isin(sector_list))       
+    ][['country', 'year', 'selling sector', 'buying sector', value_column, 'national GDP']]
+    # division
+    one_year_impact[value_column] = ( one_year_impact[value_column] / one_year_impact['national GDP'] )
+    one_year_impact.drop(columns=['national GDP'], inplace=True)
+
+    one_year_impact_grouped = one_year_impact.groupby(['country', 'year'], as_index=False)[value_column].sum()
+    one_year_impact_grouped = one_year_impact_grouped.sort_values(by='GDP impact total', ascending=False)
+    return one_year_impact_grouped
 
 
+def plot_GDPimpact_side_by_side(
+    first_year_backwards, last_year_backwards,
+    first_year_forwards, last_year_forwards,
+    value_column='GDP impact total'
+):
+    width = 0.35
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=True)
 
+    # --- Panel 1: Backward Linkage ---
+    ax = axes[0]
+    last_year_backwards = last_year_backwards.sort_values(by=value_column, ascending=False)
+    countries = last_year_backwards['country'].values
+
+    first_year_backwards = first_year_backwards.set_index('country').loc[countries].reset_index()
+    last_year_backwards = last_year_backwards.reset_index(drop=True)
+
+    x = np.arange(len(countries))
+
+    # Define colors
+    colors_first = ['lightgreen' if c == 'CAN' else 'skyblue' for c in countries]
+    colors_last = ['darkgreen' if c == 'CAN' else 'navy' for c in countries]
+
+    bars1 = ax.bar(x - width/2, first_year_backwards[value_column], width,
+                   label=f"{first_year_backwards['year'].iloc[0]}", color=colors_first)
+    bars2 = ax.bar(x + width/2, last_year_backwards[value_column], width,
+                   label=f"{last_year_backwards['year'].iloc[0]}", color=colors_last)
+
+    for bar in bars1 + bars2:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3), textcoords="offset points", ha='center', va='bottom', fontsize=8)
+
+    ax.set_title('Backward Linkage')
+    ax.set_xlabel('Country')
+    ax.set_xticks(x)
+    ax.set_xticklabels(countries, rotation=45)
+    ax.legend()
+
+    # --- Panel 2: Forward Linkage ---
+    ax = axes[1]
+    last_year_forwards = last_year_forwards.sort_values(by=value_column, ascending=False)
+    countries = last_year_forwards['country'].values
+
+    first_year_forwards = first_year_forwards.set_index('country').loc[countries].reset_index()
+    last_year_forwards = last_year_forwards.reset_index(drop=True)
+
+    x = np.arange(len(countries))
+
+    colors_first = ['lightgreen' if c == 'CAN' else 'skyblue' for c in countries]
+    colors_last = ['darkgreen' if c == 'CAN' else 'navy' for c in countries]
+
+    bars1 = ax.bar(x - width/2, first_year_forwards[value_column], width,
+                   label=f"{first_year_forwards['year'].iloc[0]}", color=colors_first)
+    bars2 = ax.bar(x + width/2, last_year_forwards[value_column], width,
+                   label=f"{last_year_forwards['year'].iloc[0]}", color=colors_last)
+
+    for bar in bars1 + bars2:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3), textcoords="offset points", ha='center', va='bottom', fontsize=8)
+
+    ax.set_title('Forward Linkage')
+    ax.set_xlabel('Country')
+    ax.set_xticks(x)
+    ax.set_xticklabels(countries, rotation=45)
+    ax.legend()
+
+    fig.supylabel(value_column)
+    fig.suptitle(f'{value_column}: Comparison of {first_year_backwards["year"].iloc[0]} and {last_year_backwards["year"].iloc[0]}')
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_GDPimpact_top_bottom(
+    first_year_backwards, last_year_backwards,
+    first_year_forwards, last_year_forwards,
+    value_column='GDP impact total'
+):
+    width = 0.35
+    fig, axes = plt.subplots(2, 1, figsize=(12, 10), sharex=False)
+
+    # --- Panel 1: Backward Linkage ---
+    ax = axes[0]
+    last_year_backwards = last_year_backwards.sort_values(by=value_column, ascending=False)
+    countries = last_year_backwards['country'].values
+
+    first_year_backwards = first_year_backwards.set_index('country').loc[countries].reset_index()
+    last_year_backwards = last_year_backwards.reset_index(drop=True)
+
+    x = np.arange(len(countries))
+    colors_first = ['lightgreen' if c == 'CAN' else 'skyblue' for c in countries]
+    colors_last = ['darkgreen' if c == 'CAN' else 'navy' for c in countries]
+
+    bars1 = ax.bar(x - width/2, first_year_backwards[value_column], width,
+                   label=f"{first_year_backwards['year'].iloc[0]}", color=colors_first)
+    bars2 = ax.bar(x + width/2, last_year_backwards[value_column], width,
+                   label=f"{last_year_backwards['year'].iloc[0]}", color=colors_last)
+
+    for bar in bars1 + bars2:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3), textcoords="offset points", ha='center', va='bottom', fontsize=8)
+
+    ax.set_title('Backward Linkage')
+    ax.set_ylabel(value_column)
+    ax.set_xticks(x)
+    ax.set_xticklabels(countries, rotation=45)
+    ax.legend()
+
+    # --- Panel 2: Forward Linkage ---
+    ax = axes[1]
+    last_year_forwards = last_year_forwards.sort_values(by=value_column, ascending=False)
+    countries = last_year_forwards['country'].values
+
+    first_year_forwards = first_year_forwards.set_index('country').loc[countries].reset_index()
+    last_year_forwards = last_year_forwards.reset_index(drop=True)
+
+    x = np.arange(len(countries))
+    colors_first = ['lightgreen' if c == 'CAN' else 'skyblue' for c in countries]
+    colors_last = ['darkgreen' if c == 'CAN' else 'navy' for c in countries]
+
+    bars1 = ax.bar(x - width/2, first_year_forwards[value_column], width,
+                   label=f"{first_year_forwards['year'].iloc[0]}", color=colors_first)
+    bars2 = ax.bar(x + width/2, last_year_forwards[value_column], width,
+                   label=f"{last_year_forwards['year'].iloc[0]}", color=colors_last)
+
+    for bar in bars1 + bars2:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3), textcoords="offset points", ha='center', va='bottom', fontsize=8)
+
+    ax.set_title('Forward Linkage')
+    ax.set_ylabel(value_column)
+    ax.set_xticks(x)
+    ax.set_xticklabels(countries, rotation=45)
+    ax.legend()
+
+    fig.suptitle(f'{value_column}: Comparison of {first_year_backwards["year"].iloc[0]} and {last_year_backwards["year"].iloc[0]}')
+    plt.tight_layout()
+    plt.show()
 
 ##################################################             old functions               ######################################################
 
@@ -509,26 +666,19 @@ ICT_factors = {'ICT - Manufacturing': 'C26',
                 'ICT - Wholesaling': 'G',
                 'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
                 'ICT - Communications services': 'J61'}
-sector_list = ICTsectors
 
-# slice for year = first_year, valu column = GDP impact total and buying sector = ICT
-def get_one_year_value(df, year, forward_or_backward, sector_list, value_column):
-    if forward_or_backward == 'backward':
-        col = 'buying sector'
-    else:
-        col = 'selling sector'
-    one_year_impact = df[
-        (dfGDPimpact['year'] == year) & 
-        (dfGDPimpact[col].isin(sector_list))       
-    ][['country', 'year', 'selling sector', 'buying sector', value_column, 'national GDP']]
-    one_year_impact_grouped = one_year_impact.groupby(['country', 'year'])[value_column].sum().reset_index()
-    return one_year_impact_grouped
 
-grouped = get_one_year_value(dfGDPimpact, first_year,'backward', sector_list, 'GDP impact total')
+first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
+last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
+first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
+last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
 
 
 
-
+plot_fig3( first_year_backward_impact, last_year_backward_impact,
+              first_year_forward_impact, last_year_forward_impact,
+                value_column='GDP impact total'
+)
 
 print('')
 
