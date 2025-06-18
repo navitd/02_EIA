@@ -527,20 +527,25 @@ def plot_impact_with_table(df_first, df_last, value_column, graph_title):
     merged[f'{value_column}_first'] *= 100
     merged[f'{value_column}_last'] *= 100
 
+    # Prepare table data with % symbols
+    table_data = merged[['Rank', 'country', f'{value_column}_first', f'{value_column}_last']].copy()
+    table_data[f'{value_column}_first'] = table_data[f'{value_column}_first'].map(lambda x: f'{x:.2f}%')
+    table_data[f'{value_column}_last'] = table_data[f'{value_column}_last'].map(lambda x: f'{x:.2f}%')
+    table_vals = table_data.values.tolist()
+
+    column_labels = ['Rank', 'Country', str(first_year), str(last_year)]
+
     countries = merged['country']
-    values_first = merged[f'{value_column}_first']
-    values_last = merged[f'{value_column}_last']
+    values_first = merged[f'{value_column}_first_raw'] = merged[f'{value_column}_first']
+    values_last = merged[f'{value_column}_last_raw'] = merged[f'{value_column}_last']
     x = np.arange(len(countries))
     bar_width = 0.4
 
     fig = plt.figure(figsize=(16, 6))
-    spec = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[1, 3], wspace=0.25)
+    spec = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[1, 3], wspace=0.3)
 
     # Table
     ax_table = fig.add_subplot(spec[0])
-    table_data = merged[['Rank', 'country', f'{value_column}_first', f'{value_column}_last']].round(2)
-    table_vals = table_data.values.tolist()
-    column_labels = ['Rank', 'Country', str(first_year), str(last_year)]
     table = ax_table.table(
         cellText=table_vals,
         colLabels=column_labels,
@@ -577,6 +582,7 @@ def plot_impact_with_table(df_first, df_last, value_column, graph_title):
 
     plt.tight_layout()
     plt.show()
+
 
 
 
@@ -878,15 +884,16 @@ if 0:
     plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'GDP impact total', 'ICT GDP Impact')
 
 
-# Education graphs
-# I want something similar to the function get_one_year_value, but I want the GDP impact on specific sectors and not on all sectors
-
-
-
+# fig 5. Education graphs
 ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
 ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
 
-plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP impact total ICT sectors impact on Education')
+plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Education')
+
+# fig 6. Health graphs
+ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
+ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
+plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Health')
 
 
 
