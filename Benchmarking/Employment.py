@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import matplotlib.gridspec as gridspec
+import matplotlib.colors as mcolors
 import seaborn as sns
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -805,10 +806,10 @@ for country in countries:
 
         dftemp = pd.DataFrame()
         dftemp = E.reset_index()
-        dftemp.columns = ['sector', 'E']
+        dftemp.columns = ['sector', 'Employment']
         dftemp['country'] = country
         dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', 'E']]
+        dftemp = dftemp[['country', 'year', 'sector', 'Employment']]
         dfE = pd.concat([dfE, dftemp], ignore_index=True)
 
         # 2. calculate L and Lc
@@ -917,6 +918,7 @@ for country in countries:
         
              
         dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
+        dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
         
         
 
@@ -965,7 +967,7 @@ if 0:
     plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
 
 #GDP share stacked, not average but comparison between 2011 and 2020
-if 1:
+if 0:
     GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
     plot_share_compare_frist_last_year(GDP_shares, first_year, last_year, 'GDP', f'ICT GDP {first_year} and {last_year} Share by Country')
 
@@ -997,21 +999,21 @@ if 0:
     ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
     plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'GDP impact total', 'ICT GDP Impact')
 
+if 0:
+    # fig 5. Education graphs
+    ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
+    ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
 
-# fig 5. Education graphs
-ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
-ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
+    plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Education')
 
-plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Education')
-
-# fig 6. Health graphs
-ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
-ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
-plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Health')
+    # fig 6. Health graphs
+    ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
+    ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
+    plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Health')
 
 
 
-print(dfGDPimpact)
+print(dfEimpact)
 
 
 
