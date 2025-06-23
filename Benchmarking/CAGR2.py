@@ -10,7 +10,8 @@ import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+from matplotlib.patches import Patch
+import matplotlib.colors as mcolors
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
@@ -208,13 +209,100 @@ def plot_stacked_shares(shares, ICT_factors, title, value_column):
     plt.show()
 
 
+def plot_share_compare_frist_last_year(shares, first_year, last_year, value_column, title):
 
+    # Invert dictionary ICT_factors
+    sector_to_category = {}
+    for category, sectors in ICT_factors.items():
+        if isinstance(sectors, list):
+            for sector in sectors:
+                sector_to_category[sector] = category
+        else:
+            sector_to_category[sectors] = category
 
+    # Filter for ICT sectors
+    ICTsectors = list(sector_to_category.keys())
+    ICT_shares_first_year = shares.loc[shares['sector'].isin(ICTsectors), ['country', 'sector', f'GDP share {first_year}']].copy()
+    ICT_shares_last_year = shares.loc[shares['sector'].isin(ICTsectors), ['country', 'sector', f'GDP share {last_year}']].copy()
+    # Map to ICT category
+    ICT_shares_first_year['ICT_category'] = ICT_shares_first_year['sector'].map(sector_to_category)
+    ICT_shares_last_year['ICT_category'] = ICT_shares_last_year['sector'].map(sector_to_category)
 
+    # Group by country and ICT_category, sum average_output_share
+    grouped_first_year = ICT_shares_first_year.groupby(['country', 'ICT_category'])[f'GDP share {first_year}'].sum().unstack(fill_value=0)
+    grouped_last_year = ICT_shares_last_year.groupby(['country', 'ICT_category'])[f'GDP share {last_year}'].sum().unstack(fill_value=0)
 
+                                                                                            # country and ICT_category are the index. unstack will create columns for each ICT_category
+                                                                                            # fill_value=0 will fill NaN with 0
+    # Reorder columns for consistent stacking: bottom to top
+    desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services']
 
+    # Sum across ICT categories to get total ICT share per country, then sort descending
+    grouped_first_year['total'] = grouped_first_year.sum(axis=1)
+    grouped_last_year['total'] = grouped_last_year.sum(axis=1)
+    grouped_first_year = grouped_first_year.sort_values('total', ascending=False).drop(columns='total')
+    grouped_last_year = grouped_last_year.sort_values('total', ascending=False).drop(columns='total')
 
+    # Now `countries` is updated to match the new order
+    countries = grouped_last_year.index.tolist()
 
+    # Setup
+    countries = grouped_first_year.index.tolist()
+    n_countries = len(countries)
+    x = np.arange(n_countries)  # X positions for the bars
+    bar_width = 0.35
+
+    # Colors
+    base_colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0']  # vivid for last_year
+
+    # Create faded colors for first_year
+    def fade_color(hex_color, blend=0.4):
+        rgb = np.array(mcolors.to_rgb(hex_color))
+        white = np.ones_like(rgb)
+        faded_rgb = rgb * (1 - blend) + white * blend
+        return faded_rgb
+
+    faded_colors = [fade_color(c) for c in base_colors]
+
+    # Plotting
+    fig, ax = plt.subplots(figsize=(12, 6))
+    bottom_first = np.zeros(n_countries)
+    bottom_last = np.zeros(n_countries)
+
+    for idx, category in enumerate(desired_order):
+        values_first = grouped_first_year[category].values
+        values_last = grouped_last_year[category].values
+
+        ax.bar(x - bar_width / 2, values_first * 100, bottom=bottom_first * 100,
+            color=faded_colors[idx], width=bar_width, label=f"{category} ({first_year})" if idx == 0 else "", alpha=0.8)
+
+        ax.bar(x + bar_width / 2, values_last * 100, bottom=bottom_last * 100,
+            color=base_colors[idx], width=bar_width, label=f"{category} ({last_year})" if idx == 0 else "")
+
+        bottom_first += values_first
+        bottom_last += values_last
+
+    # Add % labels above bars for total (optional)
+    for i in range(n_countries):
+        ax.text(x[i] - bar_width / 2, bottom_first[i] * 100 + 1, f"{bottom_first[i] * 100:.1f}%", ha='center', fontsize=8)
+        ax.text(x[i] + bar_width / 2, bottom_last[i] * 100 + 1, f"{bottom_last[i] * 100:.1f}%", ha='center', fontsize=8)
+
+    # Final plot setup
+    ax.set_ylabel(f'Average ICT {value_column} Share (%)')
+    ax.set_title(title)
+    ax.set_xticks(x)
+    ax.set_xticklabels(countries, rotation=45, ha='right')
+    # Add more space above the highest bar
+    max_height = max(np.max(bottom_first), np.max(bottom_last)) * 100
+    ax.set_ylim(top=max_height * 1.1)  # 10% extra space above tallest bar
+
+    # Custom legend (merged by category)
+    custom_legend = [Patch(color=faded_colors[i], label=f"{cat} ({first_year})") for i, cat in enumerate(desired_order)]
+    custom_legend += [Patch(color=base_colors[i], label=f"{cat} ({last_year})") for i, cat in enumerate(desired_order)]
+    ax.legend(handles=custom_legend, bbox_to_anchor=(1.05, 1), loc='upper left', title="ICT Category")
+
+    plt.tight_layout()
+    plt.show()
 
 
 
@@ -333,7 +421,7 @@ for country in countries:
 
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
 
-if 1:
+if 0:
     # fig 1: output CAGR 
     ICT_cagr = clc_cagr(dfoutput, first_year, last_year,'output')
     # fig1: plot output CAGR
@@ -353,6 +441,7 @@ if 1:
     plot_stacked_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year}-{last_year}','output')
 
 
+
 # graphs 1 and 2 for GDP
 if 0:
     # fig 1: output CAGR 
@@ -367,6 +456,11 @@ if 0:
     # fig2B: stacked output share
     #this is the average of each category (factor) - stacked. 
     plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
+
+#GDP share stacked, not average but comparison between 2011 and 2020
+if 1:
+    GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
+    plot_share_compare_frist_last_year(GDP_shares, first_year, last_year, 'GDP', f'ICT GDP {first_year} and {last_year} Share by Country')
 
 
 
