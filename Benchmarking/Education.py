@@ -11,11 +11,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+import matplotlib.gridspec as gridspec
 import seaborn as sns
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
-
 from openpyxl.cell.cell import MergedCell
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
@@ -26,6 +26,9 @@ from func_safe_divide import safe_divide, safe_divide_vector
 from func_multipliers_by_f import multipliers_by_f
 from func_plot_real_vs_predicted import plot_real_vs_predicted
 
+
+
+####################################################         functions that plot       ######################################################
 
 
 def scale_df_by_series(direct_o: pd.DataFrame, fcdf: pd.Series) -> pd.DataFrame:
@@ -225,7 +228,102 @@ def plot_stacked_shares(shares, ICT_factors, title, value_column):
     plt.tight_layout()
     plt.show()
 
+#fig 2C: plot ICT GDP stacked share, comparison of first and last year
 
+def plot_share_compare_frist_last_year(shares, first_year, last_year, value_column, title):
+
+    # Invert dictionary ICT_factors
+    sector_to_category = {}
+    for category, sectors in ICT_factors.items():
+        if isinstance(sectors, list):
+            for sector in sectors:
+                sector_to_category[sector] = category
+        else:
+            sector_to_category[sectors] = category
+
+    # Filter for ICT sectors
+    ICTsectors = list(sector_to_category.keys())
+    ICT_shares_first_year = shares.loc[shares['sector'].isin(ICTsectors), ['country', 'sector', f'GDP share {first_year}']].copy()
+    ICT_shares_last_year = shares.loc[shares['sector'].isin(ICTsectors), ['country', 'sector', f'GDP share {last_year}']].copy()
+    # Map to ICT category
+    ICT_shares_first_year['ICT_category'] = ICT_shares_first_year['sector'].map(sector_to_category)
+    ICT_shares_last_year['ICT_category'] = ICT_shares_last_year['sector'].map(sector_to_category)
+
+    # Group by country and ICT_category, sum average_output_share
+    grouped_first_year = ICT_shares_first_year.groupby(['country', 'ICT_category'])[f'GDP share {first_year}'].sum().unstack(fill_value=0)
+    grouped_last_year = ICT_shares_last_year.groupby(['country', 'ICT_category'])[f'GDP share {last_year}'].sum().unstack(fill_value=0)
+
+                                                                                            # country and ICT_category are the index. unstack will create columns for each ICT_category
+                                                                                            # fill_value=0 will fill NaN with 0
+    # Reorder columns for consistent stacking: bottom to top
+    desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services']
+
+    # Sum across ICT categories to get total ICT share per country, then sort descending
+    grouped_first_year['total'] = grouped_first_year.sum(axis=1)
+    grouped_last_year['total'] = grouped_last_year.sum(axis=1)
+    grouped_first_year = grouped_first_year.sort_values('total', ascending=False).drop(columns='total')
+    grouped_last_year = grouped_last_year.sort_values('total', ascending=False).drop(columns='total')
+
+    # Now `countries` is updated to match the new order
+    countries = grouped_last_year.index.tolist()
+
+    # Setup
+    countries = grouped_first_year.index.tolist()
+    n_countries = len(countries)
+    x = np.arange(n_countries)  # X positions for the bars
+    bar_width = 0.35
+
+    # Colors
+    base_colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0']  # vivid for last_year
+
+    # Create faded colors for first_year
+    def fade_color(hex_color, blend=0.4):
+        rgb = np.array(mcolors.to_rgb(hex_color))
+        white = np.ones_like(rgb)
+        faded_rgb = rgb * (1 - blend) + white * blend
+        return faded_rgb
+
+    faded_colors = [fade_color(c) for c in base_colors]
+
+    # Plotting
+    fig, ax = plt.subplots(figsize=(12, 6))
+    bottom_first = np.zeros(n_countries)
+    bottom_last = np.zeros(n_countries)
+
+    for idx, category in enumerate(desired_order):
+        values_first = grouped_first_year[category].values
+        values_last = grouped_last_year[category].values
+
+        ax.bar(x - bar_width / 2, values_first * 100, bottom=bottom_first * 100,
+            color=faded_colors[idx], width=bar_width, label=f"{category} ({first_year})" if idx == 0 else "", alpha=0.8)
+
+        ax.bar(x + bar_width / 2, values_last * 100, bottom=bottom_last * 100,
+            color=base_colors[idx], width=bar_width, label=f"{category} ({last_year})" if idx == 0 else "")
+
+        bottom_first += values_first
+        bottom_last += values_last
+
+    # Add % labels above bars for total (optional)
+    for i in range(n_countries):
+        ax.text(x[i] - bar_width / 2, bottom_first[i] * 100 + 1, f"{bottom_first[i] * 100:.1f}%", ha='center', fontsize=8)
+        ax.text(x[i] + bar_width / 2, bottom_last[i] * 100 + 1, f"{bottom_last[i] * 100:.1f}%", ha='center', fontsize=8)
+
+    # Final plot setup
+    ax.set_ylabel(f'Average ICT {value_column} Share (%)')
+    ax.set_title(title)
+    ax.set_xticks(x)
+    ax.set_xticklabels(countries, rotation=45, ha='right')
+    # Add more space above the highest bar
+    max_height = max(np.max(bottom_first), np.max(bottom_last)) * 100
+    ax.set_ylim(top=max_height * 1.1)  # 10% extra space above tallest bar
+
+    # Custom legend (merged by category)
+    custom_legend = [Patch(color=faded_colors[i], label=f"{cat} ({first_year})") for i, cat in enumerate(desired_order)]
+    custom_legend += [Patch(color=base_colors[i], label=f"{cat} ({last_year})") for i, cat in enumerate(desired_order)]
+    ax.legend(handles=custom_legend, bbox_to_anchor=(1.05, 1), loc='upper left', title="ICT Category")
+
+    plt.tight_layout()
+    plt.show()
 # fig 3
 def get_one_year_value(df, year, forward_or_backward, sector_list, value_column):
     if forward_or_backward == 'backward':
@@ -496,10 +594,7 @@ def get_one_year_imapct_on_sector(df, year, forward_or_backward, impacting_secto
     
     return one_year_impact_grouped
 
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
-import matplotlib.gridspec as gridspec
+
 
 def plot_impact_with_table(df_first, df_last, value_column, graph_title):
     # Extract and validate years
@@ -586,7 +681,7 @@ def plot_impact_with_table(df_first, df_last, value_column, graph_title):
 
 
 
-##################################################             old functions               ######################################################
+##################################################        functions that calculate        ######################################################
 
 def multipliers2prediction(s2s_mo, fdf_year2, column_name):
     predicted_output_year2_np  = np.round(s2s_mo.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
@@ -656,7 +751,8 @@ final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES',
 dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
 dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
-dftemp = pd.DataFrame()
+dfE = pd.DataFrame() # this will hold country, year, buying sector, selling sector, Eimpact
+dfEimpact = pd.DataFrame()
 for country in countries:
     for year in year_range:
         
@@ -665,10 +761,11 @@ for country in countries:
         # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
         II = OECD.loc[simple_II_labels, simple_II_labels]
         household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-        
+        E           = OECDadditional['employees_compensation'] 
         GDP         = OECD.loc['VALU', simple_II_labels]
         output      = OECD.loc['OUTPUT', simple_II_labels]
         
+        dftemp = pd.DataFrame()
         dftemp = output.reset_index()
         dftemp.columns = ['sector', 'output']
         dftemp['country'] = country
@@ -683,6 +780,14 @@ for country in countries:
         dftemp['year'] = year
         dftemp = dftemp[['country', 'year', 'sector', 'GDP']]
         dfGDP = pd.concat([dfGDP, dftemp], ignore_index=True)
+
+        dftemp = pd.DataFrame()
+        dftemp = E.reset_index()
+        dftemp.columns = ['sector', 'E']
+        dftemp['country'] = country
+        dftemp['year'] = year
+        dftemp = dftemp[['country', 'year', 'sector', 'E']]
+        dfE = pd.concat([dfE, dftemp], ignore_index=True)
 
         # 2. calculate L and Lc
         ##########################
@@ -855,6 +960,12 @@ if 0:
     # fig2B: stacked output share
     #this is the average of each category (factor) - stacked. 
     plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
+
+#GDP share stacked, not average but comparison between 2011 and 2020
+if 1:
+    GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
+    plot_share_compare_frist_last_year(GDP_shares, first_year, last_year, 'GDP', f'ICT GDP {first_year} and {last_year} Share by Country')
+
 
 print('graphs 1 and 2 are done')
 
