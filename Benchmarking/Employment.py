@@ -316,17 +316,19 @@ def get_one_year_value(df, year, forward_or_backward, sector_list, value_column)
         col = 'buying sector'
     else:
         col = 'selling sector'
+    name = value_column.split()[0]
+
     #first slicing 
     one_year_impact = df[
         (df['year'] == year) & 
         (df[col].isin(sector_list))       
-    ][['country', 'year', 'selling sector', 'buying sector', value_column, 'national GDP']]
+    ][['country', 'year', 'selling sector', 'buying sector', value_column, f'national {name}']]
     # division
-    one_year_impact[value_column] = ( one_year_impact[value_column] / one_year_impact['national GDP'] )
-    one_year_impact.drop(columns=['national GDP'], inplace=True)
+    one_year_impact[value_column] = ( one_year_impact[value_column] / one_year_impact[f'national {name}'] )
+    one_year_impact.drop(columns=[f'national {name}'], inplace=True)
 
     one_year_impact_grouped = one_year_impact.groupby(['country', 'year'], as_index=False)[value_column].sum()
-    one_year_impact_grouped = one_year_impact_grouped.sort_values(by='GDP impact total', ascending=False)
+    one_year_impact_grouped = one_year_impact_grouped.sort_values(by=f'{name} impact total', ascending=False)
     return one_year_impact_grouped
 
 
@@ -692,7 +694,7 @@ def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
 
 
 def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
-    impact_cols = [value_col+' impact direct', value_col+' impact indirect', value_col+' impact induced', 'GDP impact total']
+    impact_cols = [value_col+' impact direct', value_col+' impact indirect', value_col+' impact induced', value_col+' impact total']
     dftemp2 = None
     for data, value in zip( [mdirect, mindirect, minduced, ms2s], impact_cols ):
         m = scale_df_by_series(data, fcdf[:-1])       #this is the multiplication
@@ -1012,7 +1014,14 @@ if 0:
     plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Health')
 
 
+# fig 7: Employment stacked backward forward
+# graph 4 GDP stacked backward forward
+if 0:
+    ICT_last_year_backward_impact = get_one_year_value(dfEimpact, last_year,'backward', ICTsectors, 'Employment impact total')
+    ICT_last_year_forward_impact = get_one_year_value(dfEimpact, last_year,'forward', ICTsectors, 'Employment impact total')
+    plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'Employment impact total', 'ICT Employment Impact')
 
+Japan is missing 2020 Employment data (from the SUT file)
 print(dfEimpact)
 
 
