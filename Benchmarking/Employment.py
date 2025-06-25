@@ -1021,7 +1021,7 @@ if 0:
     ICT_last_year_forward_impact = get_one_year_value(dfEimpact, last_year,'forward', ICTsectors, 'Employment impact total')
     plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'Employment impact total', 'ICT Employment Impact')
 
-Japan is missing 2020 Employment data (from the SUT file)
+#Japan is missing 2020 Employment data (from the SUT file)
 print(dfEimpact)
 
 
