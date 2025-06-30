@@ -10,6 +10,7 @@ import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from matplotlib.patches import Patch
 import matplotlib.gridspec as gridspec
 import seaborn as sns
@@ -783,12 +784,22 @@ for country in countries:
 
         dftemp = pd.DataFrame()
         dftemp = E.reset_index()
-        dftemp.columns = ['sector', 'E']
+        dftemp.columns = ['sector', 'Employment']
         dftemp['country'] = country
         dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', 'E']]
+        dftemp = dftemp[['country', 'year', 'sector', 'Employment']]
         dfE = pd.concat([dfE, dftemp], ignore_index=True)
 
+        # prediction for 2020 Japan, and Great Britain 2020:
+        years_for_average = ['2017', '2018', '2019']
+        if ((year == '2020') & (country == 'JPN')):
+            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='JPN')].groupby('sector')['Employment'].mean()    
+            dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'sector'].map(avg_employment)
+          
+        if ((year == '2020') & (country == 'GBR')):
+            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='GBR')].groupby('sector')['Employment'].mean()    
+            dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'sector'].map(avg_employment)
+            
         # 2. calculate L and Lc
         ##########################
         T = safe_divide(II, output)
@@ -797,8 +808,20 @@ for country in countries:
         IIc = II.copy()
         IIc["HFCE"] = household_expenditure # added a column for closed model
         IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
+        
+        if ((year == '2020') & (country == 'JPN')):
+            temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
+            IIc.loc['employees_compensation'] = \
+            dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'JPN'), ['sector', 'Employment']]\
+            .set_index('sector').reindex(IIc.columns)['Employment']
+            
+        if ((year == '2020') & (country == 'GBR')):
+            temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment']
+            IIc.loc['employees_compensation'] = \
+            dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'GBR'), ['sector', 'Employment']]\
+            .set_index('sector').reindex(IIc.columns)['Employment']
+            
         IIc.loc['employees_compensation', 'HFCE'] = 0 
-
         outputc = output.copy()
         outputc['HFCE'] = OECDadditional['employees_compensation'].sum()
         Tc = safe_divide(IIc, outputc)

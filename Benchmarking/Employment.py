@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as mcolors
+import matplotlib.cm as cm
 import seaborn as sns
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -30,6 +31,31 @@ from func_plot_real_vs_predicted import plot_real_vs_predicted
 
 
 ####################################################         functions that plot       ######################################################
+
+
+
+def plot_E_line_graph(JPNE, col_name, title):
+    years = sorted(JPNE['year'].unique())
+    num_years = len(years)
+
+    # Generate colors from red to purple using the 'rainbow' colormap
+    colors = cm.rainbow(np.linspace(0, 1, num_years))
+
+    plt.figure(figsize=(14, 6))
+
+    for i, year in enumerate(years):
+        data = JPNE[JPNE['year'] == year]
+        plt.plot(data['sector'], data['Employment'], label=str(year), color=colors[i])
+
+    plt.xlabel('Sector')
+    plt.ylabel(col_name)
+    plt.title(title)
+    plt.xticks(rotation=90)
+    plt.legend(title='Year')
+    plt.tight_layout()
+    plt.show()
+
+
 
 
 #Fig 1: CAGR data manipulation
@@ -814,6 +840,20 @@ for country in countries:
         dftemp = dftemp[['country', 'year', 'sector', 'Employment']]
         dfE = pd.concat([dfE, dftemp], ignore_index=True)
 
+        # predictions before impacts
+        # prediction for 2020 Japan, and Great Britain 2020:
+        years_for_average = ['2017', '2018', '2019']
+        if ((year == '2020') & (country == 'JPN')):
+            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='JPN')].groupby('sector')['Employment'].mean()    
+            dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'sector'].map(avg_employment)
+           #plot_E_line_graph(dfE[dfE.country=='JPN'], 'Employment', 'Employment by Sector in Japan by Year')
+
+        if ((year == '2020') & (country == 'GBR')):
+            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='GBR')].groupby('sector')['Employment'].mean()    
+            dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'sector'].map(avg_employment)
+            #plot_E_line_graph(dfE[dfE.country=='GBR'], 'Employment', 'Employment by Sector in Great Britain by Year')
+
+
         # 2. calculate L and Lc
         ##########################
         T = safe_divide(II, output)
@@ -822,6 +862,19 @@ for country in countries:
         IIc = II.copy()
         IIc["HFCE"] = household_expenditure # added a column for closed model
         IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
+        
+        if ((year == '2020') & (country == 'JPN')):
+            temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
+            IIc.loc['employees_compensation'] = \
+            dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'JPN'), ['sector', 'Employment']]\
+            .set_index('sector').reindex(IIc.columns)['Employment']
+            
+        if ((year == '2020') & (country == 'GBR')):
+            temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment']
+            IIc.loc['employees_compensation'] = \
+            dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'GBR'), ['sector', 'Employment']]\
+            .set_index('sector').reindex(IIc.columns)['Employment']
+            
         IIc.loc['employees_compensation', 'HFCE'] = 0 
 
         outputc = output.copy()

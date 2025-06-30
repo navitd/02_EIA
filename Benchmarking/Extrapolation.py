@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as mcolors
-import seaborn as sns
+import matplotlib.cm as cm
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
@@ -85,7 +85,7 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 
 ################################################         functions that plot              ######################################################
 
-import matplotlib.cm as cm
+
 
 def plot_E_line_graph(JPNE, col_name, title):
     years = sorted(JPNE['year'].unique())
@@ -273,22 +273,20 @@ for country in countries:
         IIc = II.copy()
         IIc["HFCE"] = household_expenditure # added a column for closed model
         IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
-        IIc.loc['employees_compensation', 'HFCE'] = 0 
+        
         if ((year == '2020') & (country == 'JPN')):
             temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
             IIc.loc['employees_compensation'] = \
             dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'JPN'), ['sector', 'Employment']]\
             .set_index('sector').reindex(IIc.columns)['Employment']
-            #IIc.loc['employees_compensation'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
-            IIc.loc['employees_compensation', 'HFCE'] = 0
+            
         if ((year == '2020') & (country == 'GBR')):
             temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment']
             IIc.loc['employees_compensation'] = \
             dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'GBR'), ['sector', 'Employment']]\
             .set_index('sector').reindex(IIc.columns)['Employment']
-            #IIc.loc['employees_compensation'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
-            IIc.loc['employees_compensation', 'HFCE'] = 0 
-
+            
+        IIc.loc['employees_compensation', 'HFCE'] = 0 
         outputc = output.copy()
         outputc['HFCE'] = OECDadditional['employees_compensation'].sum()
         Tc = safe_divide(IIc, outputc)
