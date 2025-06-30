@@ -108,6 +108,68 @@ def plot_E_line_graph(JPNE, col_name, title):
     plt.tight_layout()
     plt.show()
 
+
+
+def plot_Tc(dfTc, plot_sec):
+
+    df_plot = dfTc[dfTc['buying_sector'] == plot_sec]
+
+    if df_plot.empty:
+        print(f"No data found for buying sector '{plot_sec}'.")
+        return
+
+    countries = sorted(df_plot['country'].unique())
+    n_countries = len(countries)
+
+    # Set up subplots: one row per country
+    fig, axes = plt.subplots(n_countries, 1, figsize=(12, 4 * n_countries), sharex=True)
+
+    if n_countries == 1:
+        axes = [axes]  # make axes iterable
+
+    for ax, country in zip(axes, countries):
+        df_country = df_plot[df_plot['country'] == country]
+        for year in sorted(df_country['year'].unique()):
+            data = df_country[df_country['year'] == year]
+            ax.plot(data['selling_sector'], data['Tc'], label=str(year))
+        
+        ax.set_title(f'{country}')
+        ax.set_ylabel('Tc Value')
+        ax.legend(title='Year')
+        ax.tick_params(axis='x', rotation=90)
+
+    axes[-1].set_xlabel('Selling Sector')  # label only bottom panel
+    fig.suptitle(f"Tc Values for Buying Sector '{plot_sec}'", fontsize=14)
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.show()
+
+
+
+def plot_vector_by_country(df, col_name, title=''):
+    
+    countries = ['CAN', 'FRA', 'DEU', 'ITA', 'JPN', 'GBR', 'USA']
+    fig, axes = plt.subplots(7, 1, figsize=(12, 14), sharex=True)
+
+    for i, country in enumerate(countries):
+        ax = axes[i]
+        df_country = df[df['country'] == country]
+        
+        for year in sorted(df_country['year'].unique()):
+            data = df_country[df_country['year'] == year]
+            ax.plot(data['sector'], data[col_name], label=str(year))
+        
+        ax.set_title(country, fontsize=10)
+        ax.set_ylabel(col_name)
+        ax.legend(title='Year', fontsize=8)
+        ax.tick_params(axis='x', rotation=90)
+
+    axes[-1].set_xlabel('Sector')
+    fig.suptitle(title or f'{col_name} by Sector in G7 Countries', fontsize=14)
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.show()
+
+
+
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
 print("working directory of GDPsupplychain.py is: ",os.getcwd())  # Print the current working directory
@@ -143,7 +205,7 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
-final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
+final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
 #other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
 
 dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
@@ -151,6 +213,8 @@ dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
 dfE = pd.DataFrame() # this will hold country, year, buying sector, selling sector, Eimpact
 dfEimpact = pd.DataFrame()
+dffc = pd.DataFrame()
+dfTc = pd.DataFrame()
 for country in countries:
     for year in year_range:
         
@@ -188,25 +252,17 @@ for country in countries:
         dfE = pd.concat([dfE, dftemp], ignore_index=True)
 
         # predictions before impacts
-        # prediction for 2020 Japan
+        # prediction for 2020 Japan, and Great Britain 2020:
         years_for_average = ['2017', '2018', '2019']
-        if year = '2020':
-            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='JPN')].groupby('sector')['Employment'].mean()
-            
+        if ((year == '2020') & (country == 'JPN')):
+            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='JPN')].groupby('sector')['Employment'].mean()    
             dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'sector'].map(avg_employment)
+           #plot_E_line_graph(dfE[dfE.country=='JPN'], 'Employment', 'Employment by Sector in Japan by Year')
 
-            plot_E_line_graph(dfE[dfE.country=='JPN'], 'Employment', 'Employment by Sector in Japan by Year')
-
-            print('')
-
-
-
-
-
-
-
-
-
+        if ((year == '2020') & (country == 'GBR')):
+            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='GBR')].groupby('sector')['Employment'].mean()    
+            dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'sector'].map(avg_employment)
+            plot_E_line_graph(dfE[dfE.country=='GBR'], 'Employment', 'Employment by Sector in Great Britain by Year')
 
 
         # 2. calculate L and Lc
@@ -218,12 +274,40 @@ for country in countries:
         IIc["HFCE"] = household_expenditure # added a column for closed model
         IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
         IIc.loc['employees_compensation', 'HFCE'] = 0 
+        if ((year == '2020') & (country == 'JPN')):
+            temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
+            IIc.loc['employees_compensation'] = \
+            dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'JPN'), ['sector', 'Employment']]\
+            .set_index('sector').reindex(IIc.columns)['Employment']
+            #IIc.loc['employees_compensation'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
+            IIc.loc['employees_compensation', 'HFCE'] = 0
+        if ((year == '2020') & (country == 'GBR')):
+            temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment']
+            IIc.loc['employees_compensation'] = \
+            dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'GBR'), ['sector', 'Employment']]\
+            .set_index('sector').reindex(IIc.columns)['Employment']
+            #IIc.loc['employees_compensation'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
+            IIc.loc['employees_compensation', 'HFCE'] = 0 
 
         outputc = output.copy()
         outputc['HFCE'] = OECDadditional['employees_compensation'].sum()
         Tc = safe_divide(IIc, outputc)
         Lcdf, Lc_minus_I = clc_L(Tc)
 
+        dftemp = pd.DataFrame()
+        dftemp = Tc.reset_index().melt(id_vars=Tc.index.name or 'index', 
+                                        var_name='buying_sector', 
+                                        value_name='Tc')
+
+        # Rename 'index' to 'selling_sector' if needed
+        dftemp.rename(columns={Tc.index.name or 'index': 'selling_sector'}, inplace=True)
+        # Add metadata
+        dftemp['country'] = country
+        dftemp['year'] = year
+        # Reorder columns
+        dftemp = dftemp[['country', 'year',  'selling_sector', 'buying_sector', 'Tc']]
+        # Append to the master DataFrame
+        dfTc = pd.concat([dfTc, dftemp], ignore_index=True)
 
         # 3. calculate multipliers
         #############################
@@ -283,7 +367,15 @@ for country in countries:
         fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
         fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
         fcdf.loc['employees_compensation'] = 0        
-             
+        
+        dftemp = pd.DataFrame()
+        dftemp = fcdf.reset_index()
+        dftemp.columns = ['sector', 'Employment']
+        dftemp['country'] = country
+        dftemp['year'] = year
+        dftemp = dftemp[['country', 'year', 'sector', 'Employment']]
+        dffc = pd.concat([dffc, dftemp], ignore_index=True)
+
         dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
         dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
         
@@ -293,15 +385,10 @@ for country in countries:
 end_time = time.time()
 print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 
-JPNE = dfE[dfE.country == 'JPN']
-predicted_year = '2020'
-years_to_average = ['2017', '2018', '2019']
-# Calculate average Employment for 2017–2019 by sector
-avg_employment = JPNE[JPNE['year'].isin(years_to_average)].groupby('sector')['Employment'].mean()
-# Update the 2020 Employment values in-place
-JPNE.loc[JPNE['year'] == predicted_year, 'Employment'] = JPNE.loc[JPNE['year'] == predicted_year, 'sector'].map(avg_employment)
-
-plot_E_line_graph(JPNE, 'Employment', 'Employment by Sector in Japan by Year')
+plot_Tc(dfTc, 'G') # Tc is very similar over the different years. I can use T of 2019
+#all I need is to infer final demand in order to get x
+#I also need to infer GDP
+plot_vector_by_country(dfGDP, 'GDP', title='GDP')
 
 
 
