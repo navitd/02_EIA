@@ -59,6 +59,7 @@ def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
 
 
 def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
+
     impact_cols = [value_col+' impact direct', value_col+' impact indirect', value_col+' impact induced', value_col+' impact total']
     dftemp2 = None
     for data, value in zip( [mdirect, mindirect, minduced, ms2s], impact_cols ):
@@ -85,8 +86,6 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 
 ################################################         functions that plot              ######################################################
 
-
-
 def plot_E_line_graph(JPNE, col_name, title):
     years = sorted(JPNE['year'].unique())
     num_years = len(years)
@@ -107,8 +106,6 @@ def plot_E_line_graph(JPNE, col_name, title):
     plt.legend(title='Year')
     plt.tight_layout()
     plt.show()
-
-
 
 def plot_Tc(dfTc, plot_sec):
 
@@ -143,8 +140,6 @@ def plot_Tc(dfTc, plot_sec):
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.show()
 
-
-
 def plot_vector_by_country(df, col_name, title=''):
     
     countries = ['CAN', 'FRA', 'DEU', 'ITA', 'JPN', 'GBR', 'USA']
@@ -167,8 +162,6 @@ def plot_vector_by_country(df, col_name, title=''):
     fig.suptitle(title or f'{col_name} by Sector in G7 Countries', fontsize=14)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.show()
-
-
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
@@ -262,7 +255,7 @@ for country in countries:
         if ((year == '2020') & (country == 'GBR')):
             avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='GBR')].groupby('sector')['Employment'].mean()    
             dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'sector'].map(avg_employment)
-            plot_E_line_graph(dfE[dfE.country=='GBR'], 'Employment', 'Employment by Sector in Great Britain by Year')
+            #plot_E_line_graph(dfE[dfE.country=='GBR'], 'Employment', 'Employment by Sector in Great Britain by Year')
 
 
         # 2. calculate L and Lc
