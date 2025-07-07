@@ -9,7 +9,9 @@ import os
 import time
 import pandas as pd
 import numpy as np
+import re
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from matplotlib.patches import Patch
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as mcolors
@@ -30,6 +32,56 @@ from func_plot_real_vs_predicted import plot_real_vs_predicted
 
 
 ####################################################         functions that Extrapolate       ######################################################
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+
+def extrapolate_linear(df, steps=5):
+    """
+    Linearly extrapolate each column of the DataFrame forward in time.
+
+    Parameters:
+        df (pd.DataFrame): First column is 'Time', remaining are numeric data columns.
+        steps (int): Number of years to extrapolate.
+
+    Returns:
+        pd.DataFrame: Original + extrapolated data.
+    """
+    df_ext = df.copy()
+    future_years = np.arange(df['Time'].iloc[-1] + 1, df['Time'].iloc[-1] + 1 + steps)
+
+    for col in df.columns[1:]:
+        model = LinearRegression()
+        model.fit(df[['Time']], df[col])
+        pred = model.predict(future_years.reshape(-1, 1))
+        df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: pred})], ignore_index=True)
+
+    return df_ext
+
+
+from numpy.polynomial.polynomial import Polynomial
+
+def extrapolate_polynomial(df, degree=3, steps=5):
+    """
+    Polynomially extrapolate each column of the DataFrame forward in time.
+
+    Parameters:
+        df (pd.DataFrame): First column is 'Time', remaining are numeric data columns.
+        degree (int): Degree of polynomial.
+        steps (int): Number of years to extrapolate.
+
+    Returns:
+        pd.DataFrame: Original + extrapolated data.
+    """
+    df_ext = df.copy()
+    future_years = np.arange(df['Time'].iloc[-1] + 1, df['Time'].iloc[-1] + 1 + steps)
+
+    for col in df.columns[1:]:
+        coefs = Polynomial.fit(df['Time'], df[col], degree).convert().coef
+        preds = sum(c * future_years**i for i, c in enumerate(coefs))
+        df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: preds})], ignore_index=True)
+
+    return df_ext
 
 
 
@@ -44,7 +96,6 @@ def multipliers2prediction(s2s_mo, fdf_year2, column_name):
     return predicted_output_year2
 
 
-
 def scale_df_by_series(direct_o: pd.DataFrame, fcdf: pd.Series) -> pd.DataFrame:
     
     return direct_o[fcdf.index].mul(fcdf, axis=1)
@@ -54,8 +105,6 @@ def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
     return m.reset_index().melt(id_vars=m.index.name or 'index',
                                 var_name='buying sector',
                                 value_name=value).rename(columns={m.index.name or 'index': 'selling sector'})
-
-
 
 
 def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
@@ -86,6 +135,26 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 
 ################################################         functions that plot              ######################################################
 
+
+
+def plot_gdp_panels(data, title='Nominal GDP by Country'):
+    
+    countries = data.columns[1:]  # assuming 'Time' is the first column
+    fig, axes = plt.subplots(nrows=7, ncols=1, figsize=(10, 14), sharex=True)
+
+    for i, country in enumerate(countries):
+        axes[i].plot(data['Time'], data[country], label=country, color='tab:blue')
+        axes[i].set_ylabel(country, rotation=0, labelpad=40)
+        axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))  # 2–3 ticks max
+        axes[i].grid(True)
+
+    axes[-1].set_xlabel('Year')
+    fig.suptitle(title, fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.show()
+
+
+#old:
 def plot_E_line_graph(JPNE, col_name, title):
     years = sorted(JPNE['year'].unique())
     num_years = len(years)
@@ -189,6 +258,20 @@ rough = pd.read_csv('/mnt/c/NavitComputer24/2024_NES/Economics/Data/World Bank G
 series_name = 'GDP (current US$)'
 
 data = rough[rough['Series Name'] == series_name].copy().drop(axis=1, labels=['Series Name', 'Series Code','Time Code'])
+
+data.columns = [re.search(r'\[(.*?)\]', col).group(1) if '[' in col else col for col in data.columns]
+data['Time'] = data['Time'].astype(int)
+
+#plot_gdp_panels(data, title='Nominal GDP by Country')
+
+# extrapolating
+df_linear = extrapolate_linear(data, steps=10)
+df_poly = extrapolate_polynomial(data, degree=4, steps=10)
+
+
+
+
+
 
 
 
