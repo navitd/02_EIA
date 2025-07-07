@@ -20,7 +20,7 @@ from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 from openpyxl.cell.cell import MergedCell
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
-from func_data_upload_OECD_salaries import data_upload_OECD_salaries
+from func_data_upload_WorldBank import data_upload_WorldBank
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
 from func_safe_divide import safe_divide, safe_divide_vector
@@ -167,21 +167,6 @@ def plot_vector_by_country(df, col_name, title=''):
 start_time = time.time()
 print("working directory of GDPsupplychain.py is: ",os.getcwd())  # Print the current working directory
 
-table_type = 'TTL' #or'DOM'   
-OECD_path = "../Data/" # windows style: r".\\"
-if table_type == 'DOM':
-    output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx'
-elif table_type == 'TTL':
-    output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
-
-first_year = '1995'
-last_year = '2019'
-year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
-report_title = f'ICT sectors, {last_year}'
-ICT_factors = {'ICT - Manufacturing': 'C26',
-                'ICT - Wholesaling': 'G',
-                'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
-                'ICT - Communications services': 'J61'}
 ICTsectors = ['C26', 'G', 'J58T60', 'J62_63', 'M', 'J61']
 
 country_names = ['Canada', 'The United States', 'Great Britain', 'France', 'Germany', 'Italiy', 'Japan']
@@ -195,9 +180,18 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 
 
-
-# 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
+# 1. Get data
 ##########################################################################################################################################   
+filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Data/World Bank G7 final demand and GDP/G7 final demand Data.csv'
+
+rough = pd.read_csv('/mnt/c/NavitComputer24/2024_NES/Economics/Data/World Bank G7 final demand and GDP/G7 final demand Data.csv')
+
+series_name = 'GDP (current US$)'
+
+data = rough[rough['Series Name'] == series_name].copy().drop(axis=1, labels=['Series Name', 'Series Code','Time Code'])
+
+
+
 final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
 #other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
 

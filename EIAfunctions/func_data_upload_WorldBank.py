@@ -8,39 +8,18 @@ import matplotlib.pyplot as plt
 
 OECD_PATH = '../Data/' # windows style: r".\\"
 
-def data_upload_WorldBank(year, currency_exchange_type, table_type='DOM', country = 'CAN'):
+def data_upload_WorldBank(filename, year, country, WorldBank_table_type='GDP', currency_exchange_type='PA_NUS_USD'):
 
     start_time = time.time()
-    if table_type == 'DOM':
-        input_filename = f'{OECD_PATH}NATIO{table_type}IMP/{country}{year}{table_type.lower()}.csv' # windows style: r".\\"
-    elif table_type == 'TTL':
-        input_filename = f'{OECD_PATH}NATIO{table_type}/{country}{year}{table_type.lower()}.csv'
+    print("working directory of func_data_upload_OECD_salaries3.py is: ",os.getcwd())  # Print the current working directory
 
-    #print("working directory of func_data_upload_OECD_salaries3.py is: ",os.getcwd())  # Print the current working directory
-
-    # 1. uploading the map from statcan sectors to OECD sectors:
-    codes_map = pd.read_excel(
-                                '/mnt/c/NavitComputer24/2024_NES/Economics/Data/Input_Codes_Map.xlsx', 
-                                usecols="A,C",      # Use Excel column letters directly
-                                header=None,        # Do not treat any row as the header
-                                names=['Detailed_Codes', 'OECD_Codes'],  # Assign these names to the columns
-                                skiprows=1          # Skip the first row (Excel is 1-based, so row 2 is index 1)
-                                )
-    mapping_dict = dict(zip(codes_map['Detailed_Codes'], codes_map['OECD_Codes']))
-
-    # 2. Load the Excel file for OECD PPP table (OECD salaries are in local currency)
-    file_path = '/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/UTF-8OECD - XY Rates.csv'
-    PPP_cols_to_load = ['LOCATION', 'TIME_PERIOD', 'INDICATOR', 'OBS_VALUE']
-    PPP_rough = pd.read_csv(file_path, usecols=PPP_cols_to_load)
-    PPP_filtered = PPP_rough[
-        (PPP_rough['LOCATION'] == country) &
-        (PPP_rough['TIME_PERIOD'] == int(year)) &
-        (PPP_rough['INDICATOR'] == currency_exchange_type) ]
-    PPP_or_exch = PPP_filtered['OBS_VALUE'].iloc[0]
+    # 1. Loading OECD data
+    rough = pd.read_csv(filename)
 
 
-    # 3. Loading OECD data
-    OECD_rough = pd.read_csv(input_filename)
+
+
+
 
     # Remove imports from matrix
     OECD_rough = OECD_rough.set_index(OECD_rough.columns[0])  # Set first column as index
