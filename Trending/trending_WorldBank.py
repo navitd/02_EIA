@@ -28,7 +28,8 @@ from func_clc_L import clc_L
 from func_safe_divide import safe_divide, safe_divide_vector
 from func_multipliers_by_f import multipliers_by_f
 from func_plot_real_vs_predicted import plot_real_vs_predicted
-
+#scikit-learn imports
+from numpy.polynomial.polynomial import Polynomial
 
 
 ####################################################         functions that Extrapolate       ######################################################
@@ -59,7 +60,7 @@ def extrapolate_linear(df, steps=5):
     return df_ext
 
 
-from numpy.polynomial.polynomial import Polynomial
+
 
 def extrapolate_polynomial(df, degree=3, steps=5):
     """
@@ -76,10 +77,14 @@ def extrapolate_polynomial(df, degree=3, steps=5):
     df_ext = df.copy()
     future_years = np.arange(df['Time'].iloc[-1] + 1, df['Time'].iloc[-1] + 1 + steps)
 
-    for col in df.columns[1:]:
+    df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
+
+    for col in [c for c in df.columns if c != 'Time']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
         coefs = Polynomial.fit(df['Time'], df[col], degree).convert().coef
         preds = sum(c * future_years**i for i, c in enumerate(coefs))
         df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: preds})], ignore_index=True)
+
 
     return df_ext
 
@@ -253,7 +258,7 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 ##########################################################################################################################################   
 filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Data/World Bank G7 final demand and GDP/G7 final demand Data.csv'
 
-rough = pd.read_csv('/mnt/c/NavitComputer24/2024_NES/Economics/Data/World Bank G7 final demand and GDP/G7 final demand Data.csv')
+rough = pd.read_csv('/mnt/c/NavitComputer24/2024_NES/Economics/Data/trending_data/World Bank G7 final demand and GDP/G7 final demand Data.csv')
 
 series_name = 'GDP (current US$)'
 
@@ -264,9 +269,25 @@ data['Time'] = data['Time'].astype(int)
 
 #plot_gdp_panels(data, title='Nominal GDP by Country')
 
+steps = 10
+#future_years = np.arange(data['Time'].iloc[-1] + 1, data['Time'].iloc[-1] + 1 + steps)
+future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
+
+df_ext = data.copy()
+for col in [c for c in data.columns if c != 'Time']:
+    data[col] = pd.to_numeric(data[col], errors='coerce')
+    model = LinearRegression()
+    model.fit(data[['Time']], data[col])
+    pred = model.predict(future_years.reshape(-1, 1))
+    df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: pred})], ignore_index=True)
+should fix the dimension of hte concatenation here
+
+plot_gdp_panels(df_ext, title='Linear Extrapolation GDP by Country')
+
+
 # extrapolating
-df_linear = extrapolate_linear(data, steps=10)
-df_poly = extrapolate_polynomial(data, degree=4, steps=10)
+#df_linear = extrapolate_linear(data, steps=10)
+#df_poly = extrapolate_polynomial(data, degree=4, steps=10)
 
 
 
