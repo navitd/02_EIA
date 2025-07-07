@@ -140,24 +140,18 @@ def plot_Tc(dfTc, plot_sec):
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.show()
 
-#import matplotlib.pyplot as plt
-#import matplotlib.cm as cm
-#import numpy as np
-
-def plot_vector_by_country(df, col_name, title=None):
+def plot_vector_by_country(df, col_name, title=''):
+    
     countries = df.country.unique()
     fig, axes = plt.subplots(7, 1, figsize=(12, 14), sharex=True)
 
     for i, country in enumerate(countries):
         ax = axes[i]
         df_country = df[df['country'] == country]
-        years = sorted(df_country['year'].unique())
         
-        cmap = cm.get_cmap('rainbow', len(years))  # Get rainbow colormap with n colors
-
-        for j, year in enumerate(years):
+        for year in sorted(df_country['year'].unique()):
             data = df_country[df_country['year'] == year]
-            ax.plot(data['sector'], data[col_name], label=str(year), color=cmap(j))
+            ax.plot(data['sector'], data[col_name], label=str(year))
         
         ax.set_title(country, fontsize=10)
         ax.set_ylabel(col_name)
@@ -168,7 +162,6 @@ def plot_vector_by_country(df, col_name, title=None):
     fig.suptitle(title or f'{col_name} by Sector in G7 Countries', fontsize=14)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.show()
-
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
@@ -181,8 +174,8 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '2011'
-last_year = '2020'
+first_year = '1995'
+last_year = '2019'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 report_title = f'ICT sectors, {last_year}'
 ICT_factors = {'ICT - Manufacturing': 'C26',
@@ -383,11 +376,11 @@ for country in countries:
 end_time = time.time()
 print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 
-#plot_Tc(dfTc, 'G') # Tc is very similar over the different years. I can use T of 2019
+plot_Tc(dfTc, 'G') # Tc is very similar over the different years. I can use T of 2019
 #all I need is to infer final demand in order to get x
 #I also need to infer GDP
-#plot_vector_by_country(dffc, 'final demand', title='final demand')
-plot_vector_by_country(dfGDP, 'GDP', title='GDP')
+plot_vector_by_country(dffc, 'final demand', title='final demand')
+
 
 
 print('')
