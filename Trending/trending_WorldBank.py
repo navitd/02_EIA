@@ -37,30 +37,6 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-def extrapolate_linear(df, steps=5):
-    """
-    Linearly extrapolate each column of the DataFrame forward in time.
-
-    Parameters:
-        df (pd.DataFrame): First column is 'Time', remaining are numeric data columns.
-        steps (int): Number of years to extrapolate.
-
-    Returns:
-        pd.DataFrame: Original + extrapolated data.
-    """
-    df_ext = df.copy()
-    future_years = np.arange(df['Time'].iloc[-1] + 1, df['Time'].iloc[-1] + 1 + steps)
-
-    for col in df.columns[1:]:
-        model = LinearRegression()
-        model.fit(df[['Time']], df[col])
-        pred = model.predict(future_years.reshape(-1, 1))
-        df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: pred})], ignore_index=True)
-
-    return df_ext
-
-
-
 
 def extrapolate_polynomial(df, degree=3, steps=5):
     """
@@ -142,21 +118,25 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 
 
 
-def plot_gdp_panels(data, title='Nominal GDP by Country'):
-    
-    countries = data.columns[1:]  # assuming 'Time' is the first column
-    fig, axes = plt.subplots(nrows=7, ncols=1, figsize=(10, 14), sharex=True)
 
-    for i, country in enumerate(countries):
+
+def plot_gdp_panels(data, title):
+    countries = data.drop('Time', axis=1)
+    fig, axes = plt.subplots(nrows=len(countries.columns), ncols=1, figsize=(10, 14), sharex=True)
+
+    for i, country in enumerate(countries.columns):
         axes[i].plot(data['Time'], data[country], label=country, color='tab:blue')
-        axes[i].set_ylabel(country, rotation=0, labelpad=40)
-        axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))  # 2–3 ticks max
+        axes[i].set_title(country, loc='left', fontsize=10, pad=5)
+        axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
+        axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
         axes[i].grid(True)
 
     axes[-1].set_xlabel('Year')
     fig.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show()
+
+
 
 
 #old:
@@ -269,20 +249,56 @@ data['Time'] = data['Time'].astype(int)
 
 #plot_gdp_panels(data, title='Nominal GDP by Country')
 
+# extrapolation
 steps = 10
 #future_years = np.arange(data['Time'].iloc[-1] + 1, data['Time'].iloc[-1] + 1 + steps)
 future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
+future_years = np.array(future_years).flatten()
+# Create a DataFrame with 'Time' column and other columns from df_ext, filled with NaN
+additional_rows = pd.DataFrame({
+    col: ([np.nan] * len(future_years)) if col != 'Time' else future_years
+    for col in data.columns
+})
+df_ext = pd.concat([data.copy(), additional_rows], ignore_index=True)
 
-df_ext = data.copy()
 for col in [c for c in data.columns if c != 'Time']:
     data[col] = pd.to_numeric(data[col], errors='coerce')
     model = LinearRegression()
     model.fit(data[['Time']], data[col])
     pred = model.predict(future_years.reshape(-1, 1))
-    df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: pred})], ignore_index=True)
-should fix the dimension of hte concatenation here
+    dfpred = pd.DataFrame({'Time': future_years, col: pred})
+    df_ext[col].iloc[-steps:] = dfpred[col].values
 
+df_ext = df_ext.apply(pd.to_numeric, errors='coerce')
+df_ext = df_ext.astype(int)
 plot_gdp_panels(df_ext, title='Linear Extrapolation GDP by Country')
+
+
+# polynomical extrapolation
+degree=4
+df_pext = pd.concat([data.copy(), additional_rows], ignore_index=True)
+
+for col in [c for c in data.columns if c != 'Time']:
+    data[col] = pd.to_numeric(data[col], errors='coerce')
+    coefs = Polynomial.fit(data['Time'], data[col], degree).convert().coef
+    dfpred = sum(c * future_years**i for i, c in enumerate(coefs))
+    dfpred = pd.DataFrame({'Time': future_years, col: dfpred})
+    df_pext[col].iloc[-steps:] = dfpred[col].values
+
+df_pext = df_pext.apply(pd.to_numeric, errors='coerce')
+df_pext = df_pext.astype(int)
+
+plot_gdp_panels(df_pext, title='Polinomial Extrapolation GDP by Country')
+ 
+
+
+
+
+
+
+
+
+
 
 
 # extrapolating

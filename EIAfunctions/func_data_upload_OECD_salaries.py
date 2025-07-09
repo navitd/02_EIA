@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 OECD_PATH = '../Data/' # windows style: r".\\"
 
-def data_upload_WorldBank(year, currency_exchange_type, table_type='DOM', country = 'CAN'):
+def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', country = 'CAN'):
 
     start_time = time.time()
     if table_type == 'DOM':
