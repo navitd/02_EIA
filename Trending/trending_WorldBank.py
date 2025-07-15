@@ -29,38 +29,35 @@ from func_safe_divide import safe_divide, safe_divide_vector
 from func_multipliers_by_f import multipliers_by_f
 from func_plot_real_vs_predicted import plot_real_vs_predicted
 #scikit-learn imports
+from sklearn.linear_model import LinearRegression
 from numpy.polynomial.polynomial import Polynomial
 
 
 ####################################################         functions that Extrapolate       ######################################################
-import numpy as np
-import pandas as pd
-from sklearn.linear_model import LinearRegression
-
 
 def extrapolate_polynomial(df, degree=3, steps=5):
-    """
-    Polynomially extrapolate each column of the DataFrame forward in time.
 
-    Parameters:
-        df (pd.DataFrame): First column is 'Time', remaining are numeric data columns.
-        degree (int): Degree of polynomial.
-        steps (int): Number of years to extrapolate.
-
-    Returns:
-        pd.DataFrame: Original + extrapolated data.
-    """
-    df_ext = df.copy()
     future_years = np.arange(df['Time'].iloc[-1] + 1, df['Time'].iloc[-1] + 1 + steps)
-
     df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
-
+    df_ext = df.copy()
     for col in [c for c in df.columns if c != 'Time']:
         df[col] = pd.to_numeric(df[col], errors='coerce')
         coefs = Polynomial.fit(df['Time'], df[col], degree).convert().coef
         preds = sum(c * future_years**i for i, c in enumerate(coefs))
         df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: preds})], ignore_index=True)
 
+    return df_ext
+
+def extrapolate2_polynomial(df, degree=3, steps=5):
+    
+    future_years = np.arange(df['Time'].iloc[-1] + 1, df['Time'].iloc[-1] + 1 + steps)
+    df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
+    df_ext = df.copy()
+    for col in [c for c in df.columns if c != 'Time']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+        coefs = Polynomial.fit(df['Time'], df[col], degree).convert().coef
+        preds = sum(c * future_years**i for i, c in enumerate(coefs))
+        df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: preds})], ignore_index=True)
 
     return df_ext
 
@@ -116,10 +113,6 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 
 ################################################         functions that plot              ######################################################
 
-
-
-
-
 def plot_gdp_panels(data, title):
     countries = data.drop('Time', axis=1)
     fig, axes = plt.subplots(nrows=len(countries.columns), ncols=1, figsize=(10, 14), sharex=True)
@@ -135,8 +128,6 @@ def plot_gdp_panels(data, title):
     fig.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show()
-
-
 
 
 #old:
@@ -274,7 +265,7 @@ df_ext = df_ext.astype(int)
 plot_gdp_panels(df_ext, title='Linear Extrapolation GDP by Country')
 
 
-# polynomical extrapolation
+# polynomial extrapolation
 degree=4
 df_pext = pd.concat([data.copy(), additional_rows], ignore_index=True)
 
@@ -291,24 +282,9 @@ df_pext = df_pext.astype(int)
 plot_gdp_panels(df_pext, title='Polinomial Extrapolation GDP by Country')
  
 
-
-
-
-
-
-
-
-
-
-
 # extrapolating
 #df_linear = extrapolate_linear(data, steps=10)
 #df_poly = extrapolate_polynomial(data, degree=4, steps=10)
-
-
-
-
-
 
 
 
