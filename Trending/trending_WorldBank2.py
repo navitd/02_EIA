@@ -31,6 +31,7 @@ from func_plot_real_vs_predicted import plot_real_vs_predicted
 #scikit-learn imports
 from sklearn.linear_model import LinearRegression
 from numpy.polynomial.polynomial import Polynomial
+from numpy.polynomial import Polynomial
 
 
 ####################################################         functions that Extrapolate       ######################################################
@@ -113,21 +114,53 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 
 ################################################         functions that plot              ######################################################
 
-def plot_gdp_panels(data, title):
-    countries = data.drop('Time', axis=1)
-    fig, axes = plt.subplots(nrows=len(countries.columns), ncols=1, figsize=(10, 14), sharex=True)
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.ticker import MaxNLocator
 
-    for i, country in enumerate(countries.columns):
-        axes[i].plot(data['Time'], data[country], label=country, color='tab:blue')
-        axes[i].set_title(country, loc='left', fontsize=10, pad=5)
-        axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
-        axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
-        axes[i].grid(True)
+def plot_gdp_panels(data, countries, title):
+    #countries = data.drop(['Time', 'prediction flag'], axis=1)
+    fig, axes = plt.subplots(nrows=len(countries), ncols=1, figsize=(10, 10), sharex=True)
+
+    if 'prediction flag' in data.columns:
+
+        for i, country in enumerate(countries):
+            
+            pred_mask = data['prediction flag'] == True
+
+            #plot original data in blue
+            axes[i].plot(data['Time'], data[country], 'o-', color='tab:blue')
+           
+            axes[i].plot(data['Time'][pred_mask], data[f'{country} prediction'][pred_mask], '^-', color='tab:red')
+
+            axes[i].set_title(country, loc='left', fontsize=10, pad=5)
+            axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
+            axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
+            axes[i].grid(True)
+
+    else:
+        for i, country in enumerate(countries.columns):
+            axes[i].plot(data['Time'], data[country], label=country, color='tab:blue')
+            axes[i].set_title(country, loc='left', fontsize=10, pad=5)
+            axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
+            axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
+            axes[i].grid(True)
 
     axes[-1].set_xlabel('Year')
     fig.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+    # Create custom legend handles
+    legend_handles = [
+        Line2D([0], [0], color='tab:blue', marker='o', linestyle='-', label='Actual'),
+        Line2D([0], [0], color='tab:red', marker='o', linestyle='-', label='Predicted')
+    ]
+
+    # Add a single legend for the whole figure
+    fig.legend(handles=legend_handles, loc='upper right', fontsize=10, frameon=False)
+
     plt.show()
+
 
 
 #old:
@@ -249,21 +282,19 @@ ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_
 
 # polynomial extrapolation
 degree=4
-data_and_predictions = data.copy()
-from numpy.polynomial import Polynomial
 for col in [c for c in data.columns if c != 'Time']:
     col = str(col)
     coefs = Polynomial.fit(Xtrain['Time'], ytrain[col], degree).convert().coef
     p_object = Polynomial(coefs)   # coefs are in ascending order here (c0 + c1 x + c2 x^2 ...)
     predictions = p_object(Xtest.to_numpy())
-    #data_and_predictions[f'{col} prediction'].iloc[Xtest] = predictions
     data.loc[Xtest.index, f'{col} prediction'] = predictions
-    data_and_predictions.loc[Xtest.index][col] = predictions
-    I want to add here a column that flaggs if it is a predction or not
+    
+data['prediction flag'] = False
+data.loc[split_index:, 'prediction flag'] = True
 
-print(data_and_predictions.tail())
+print(data.tail())
 
-plot_gdp_panels(df_pext, title='Polinomial Extrapolation GDP by Country')
+plot_gdp_panels(data, countries, title='Polinomial Extrapolation GDP by Country')
  
 
 
