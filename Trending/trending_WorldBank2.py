@@ -37,14 +37,22 @@ from numpy.polynomial import Polynomial
 
 
 ####################################################         functions that Extrapolate       ######################################################
-
+# this function is used in the next function, polynomial_extrapolation
 def polynomial_extrapolation_model(data, train_test_split, degree):
-    
-    split_index = int(data.shape[0] * train_test_split)
-    Xtrain, Xtest = data.iloc[:split_index][['Time']], data.iloc[split_index:][['Time']]
-    ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_index:].drop(columns=['Time'])
-    #note that index in ytest and Xtest are 40:49, not 0:9
-
+    if train_test_split < 1:
+        split_index = int(data.shape[0] * train_test_split)
+        Xtrain, Xtest = data.iloc[:split_index][['Time']], data.iloc[split_index:][['Time']]
+        ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_index:].drop(columns=['Time'])
+        #note that index in ytest and Xtest are 40:49, not 0:9
+    elif train_test_split == 1:
+        split_index = data.index[-1] + 1    
+        Xtrain, Xtest = data.iloc[:split_index][['Time']], data.iloc[split_index:][['Time']]
+        ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_index:].drop(columns=['Time'])
+        print(f'train_test_split is {train_test_split}, split_index is {split_index}')
+        print(f'Xtrain {Xtrain}')
+        print(f'Xtest {Xtest}')
+        print(f'Xest {Xtest}')
+              
     # polynomial extrapolation model
     dfp = pd.DataFrame()
     for col in [c for c in data.columns if c != 'Time']:
@@ -59,6 +67,29 @@ def polynomial_extrapolation_model(data, train_test_split, degree):
     data['prediction flag'] = False
     data.loc[split_index:, 'prediction flag'] = True
     return data, dfp
+
+
+def polynomial_extrapolation(data,train_test_split, degree):
+    #building the model - getting coefficients
+    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
+    # extrapolation
+    steps = 10 # how many years to extrapolate
+    future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
+    future_years = np.array(future_years).flatten()
+    # Create a DataFrame with 'Time' column and other columns from df_ext, filled with NaN
+    additional_rows = pd.DataFrame({
+        col: ([np.nan] * len(future_years)) if col != 'Time' else future_years
+        for col in data.columns
+    })
+    additional_rows['prediction flag'] = True  
+    data = pd.concat([data.copy(), additional_rows], ignore_index=True)
+
+    for col in [c for c in countries]:
+        p_object = Polynomial(dfp[col])  
+        predictions = p_object(future_years)
+        data.loc[ data['Time'].isin(future_years), f'{col} prediction'] = predictions
+    return data
+
 
 ##################################################        functions that calculate        ######################################################
 
@@ -110,8 +141,10 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 ################################################         functions that plot              ######################################################
 
 
-
+#used for extrapolation and for looking at the data
 def plot_gdp_panels(data, countries, title):
+    plotstr1 = 'o-'
+    plotstr2 = '^-'
     #countries = data.drop(['Time', 'prediction flag'], axis=1)
     fig, axes = plt.subplots(nrows=len(countries), ncols=1, figsize=(10, 10), sharex=True)
 
@@ -122,9 +155,9 @@ def plot_gdp_panels(data, countries, title):
             pred_mask = data['prediction flag'] == True
 
             #plot original data in blue
-            axes[i].plot(data['Time'], data[country], 'o-', color='tab:blue')
+            axes[i].plot(data['Time'], data[country], plotstr1, color='tab:blue')
            
-            axes[i].plot(data['Time'][pred_mask], data[f'{country} prediction'][pred_mask], '^-', color='tab:red')
+            axes[i].plot(data['Time'][pred_mask], data[f'{country} prediction'][pred_mask], plotstr2, color='tab:red')
 
             axes[i].set_title(country, loc='left', fontsize=10, pad=5)
             axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
@@ -133,7 +166,7 @@ def plot_gdp_panels(data, countries, title):
 
     else:
         for i, country in enumerate(countries.columns):
-            axes[i].plot(data['Time'], data[country], label=country, color='tab:blue')
+            axes[i].plot(data['Time'], data[country], plotstr1, label=country, color='tab:blue')
             axes[i].set_title(country, loc='left', fontsize=10, pad=5)
             axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
             axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
@@ -145,9 +178,9 @@ def plot_gdp_panels(data, countries, title):
 
     # Create custom legend handles
     legend_handles = [
-        Line2D([0], [0], color='tab:blue', marker='o', linestyle='-', label='Actual'),
-        Line2D([0], [0], color='tab:red', marker='^', linestyle='-', label='Predicted')
-    ]
+    Line2D([0], [0], color='tab:blue', marker=plotstr1[0], linestyle='-', label='Data'),
+    Line2D([0], [0], color='tab:red', marker=plotstr2[0], linestyle='-', label='Prediction')
+        ]
 
     # Add a single legend for the whole figure
     fig.legend(handles=legend_handles, loc='upper right', fontsize=10, frameon=False)
@@ -264,37 +297,21 @@ data = rough[rough['Series Name'] == series_name].copy().drop(axis=1, labels=['S
 data.columns = [re.search(r'\[(.*?)\]', col).group(1) if '[' in col else col for col in data.columns]
 data = data.apply(pd.to_numeric, errors='coerce')
 
-
-
 #Parameter searching for an extrapolation model
 train_test_split = 0.8
-degree=1
-data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
-# extrapolation
-steps = 10 # how many years to extrapolate
-future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
-future_years = np.array(future_years).flatten()
-# Create a DataFrame with 'Time' column and other columns from df_ext, filled with NaN
-additional_rows = pd.DataFrame({
-    col: ([np.nan] * len(future_years)) if col != 'Time' else future_years
-    for col in data.columns
-})
-additional_rows['prediction flag'] = True  
-data = pd.concat([data.copy(), additional_rows], ignore_index=True)
+degree = 2
+data_and_prediction = polynomial_extrapolation(data.copy(), train_test_split, degree)
+plot_gdp_panels(data_and_prediction, countries, title=f'Polinomial Extrapolation GDP, degree={degree}')
 
-for col in [c for c in countries]:
-    p_object = Polynomial(dfp[col])  
-    predictions = p_object(future_years)
-    data.loc[ data['Time'].isin(future_years), f'{col} prediction'] = predictions
-
-print(data)
-plot_gdp_panels(data, countries, title=f'Polinomial Extrapolation GDP, degree={degree}')
-
-
-
+#actual extrapolation
+train_test_split = 1
+data_and_prediction2 = polynomial_extrapolation(data.copy(), train_test_split, degree)
+plot_gdp_panels(data_and_prediction2, countries, title=f'Polinomial Extrapolation GDP, degree={degree}')
 
 '''
 This is not done yet
+the problem is that the extrapolation starts from 0.8 of the data and not 100% of the data. so I need to do it again, with the degree chosen above, and show the extrapolation graph
+change the above so the model chosen is either linear regression or polynomial regression
 what I would like to add: linear Regression in a graph, perhaps the same graph, pleay with normalization
 predict with weak connections to other countries
 remove unneeded code from this
