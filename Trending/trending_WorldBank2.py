@@ -286,7 +286,6 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 
 # 1. Get data
 ##########################################################################################################################################   
-filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Data/World Bank G7 final demand and GDP/G7 final demand Data.csv'
 
 rough = pd.read_csv('/mnt/c/NavitComputer24/2024_NES/Economics/Data/trending_data/World Bank G7 final demand and GDP/G7 final demand Data.csv')
 
@@ -309,10 +308,7 @@ data_and_prediction2 = polynomial_extrapolation(data.copy(), train_test_split, d
 plot_gdp_panels(data_and_prediction2, countries, title=f'Polinomial Extrapolation GDP, degree={degree}')
 
 '''
-This is not done yet
-the problem is that the extrapolation starts from 0.8 of the data and not 100% of the data. so I need to do it again, with the degree chosen above, and show the extrapolation graph
-change the above so the model chosen is either linear regression or polynomial regression
-what I would like to add: linear Regression in a graph, perhaps the same graph, pleay with normalization
+ normalization
 predict with weak connections to other countries
 remove unneeded code from this
 new file: ARIMA/time series techniques
@@ -328,7 +324,7 @@ publish on github
 
 
 
-
+'''
 # extrapolation
 steps = 10
 #future_years = np.arange(data['Time'].iloc[-1] + 1, data['Time'].iloc[-1] + 1 + steps)
@@ -354,26 +350,7 @@ df_ext = df_ext.astype(int)
 plot_gdp_panels(df_ext, title='Linear Extrapolation GDP by Country')
 
 
-# polynomial extrapolation
-degree=4
-df_pext = pd.concat([data.copy(), additional_rows], ignore_index=True)
-
-for col in [c for c in data.columns if c != 'Time']:
-    data[col] = pd.to_numeric(data[col], errors='coerce')
-    coefs = Polynomial.fit(data['Time'], data[col], degree).convert().coef
-    dfpred = sum(c * future_years**i for i, c in enumerate(coefs))
-    dfpred = pd.DataFrame({'Time': future_years, col: dfpred})
-    df_pext[col].iloc[-steps:] = dfpred[col].values
-
-df_pext = df_pext.apply(pd.to_numeric, errors='coerce')
-df_pext = df_pext.astype(int)
-
-plot_gdp_panels(df_pext, title='Polinomial Extrapolation GDP by Country')
  
-
-# extrapolating
-#df_linear = extrapolate_linear(data, steps=10)
-#df_poly = extrapolate_polynomial(data, degree=4, steps=10)
 
 
 
@@ -565,5 +542,5 @@ plot_vector_by_country(dffc, 'final demand', title='final demand')
 print('')
 
 
-
+'''
 
