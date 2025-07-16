@@ -13,6 +13,8 @@ import re
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
+from matplotlib.ticker import MaxNLocator
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as mcolors
 import matplotlib.cm as cm
@@ -36,34 +38,27 @@ from numpy.polynomial import Polynomial
 
 ####################################################         functions that Extrapolate       ######################################################
 
-def extrapolate_polynomial(df, degree=3, steps=5):
-
-    future_years = np.arange(df['Time'].iloc[-1] + 1, df['Time'].iloc[-1] + 1 + steps)
-    df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
-    df_ext = df.copy()
-    for col in [c for c in df.columns if c != 'Time']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-        coefs = Polynomial.fit(df['Time'], df[col], degree).convert().coef
-        preds = sum(c * future_years**i for i, c in enumerate(coefs))
-        df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: preds})], ignore_index=True)
-
-    return df_ext
-
-def extrapolate2_polynomial(df, max_degree=5, steps=10):
+def polynomial_extrapolation_model(data, train_test_split, degree):
     
-    future_years = np.arange(df['Time'].iloc[-1] + 1, df['Time'].iloc[-1] + 1 + steps)
-    df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
-    df_ext = df.copy()
-    for col in [c for c in df.columns if c != 'Time']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-        coefs = Polynomial.fit(df['Time'], df[col], degree).convert().coef
-        preds = sum(c * future_years**i for i, c in enumerate(coefs))
-        df_ext = pd.concat([df_ext, pd.DataFrame({'Time': future_years, col: preds})], ignore_index=True)
+    split_index = int(data.shape[0] * train_test_split)
+    Xtrain, Xtest = data.iloc[:split_index][['Time']], data.iloc[split_index:][['Time']]
+    ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_index:].drop(columns=['Time'])
+    #note that index in ytest and Xtest are 40:49, not 0:9
 
-    return df_ext
-
-
-
+    # polynomial extrapolation model
+    dfp = pd.DataFrame()
+    for col in [c for c in data.columns if c != 'Time']:
+        col = str(col)
+        coefs = Polynomial.fit(Xtrain['Time'], ytrain[col], degree).convert().coef
+        p_object = Polynomial(coefs)   # coefs are in ascending order here (c0 + c1 x + c2 x^2 ...)
+        #save p_object, these are the models
+        dfp[col] = coefs #p_object
+        predictions = p_object(Xtest.to_numpy())
+        data.loc[Xtest.index, f'{col} prediction'] = predictions
+        
+    data['prediction flag'] = False
+    data.loc[split_index:, 'prediction flag'] = True
+    return data, dfp
 
 ##################################################        functions that calculate        ######################################################
 
@@ -114,9 +109,7 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 
 ################################################         functions that plot              ######################################################
 
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-from matplotlib.ticker import MaxNLocator
+
 
 def plot_gdp_panels(data, countries, title):
     #countries = data.drop(['Time', 'prediction flag'], axis=1)
@@ -153,7 +146,7 @@ def plot_gdp_panels(data, countries, title):
     # Create custom legend handles
     legend_handles = [
         Line2D([0], [0], color='tab:blue', marker='o', linestyle='-', label='Actual'),
-        Line2D([0], [0], color='tab:red', marker='o', linestyle='-', label='Predicted')
+        Line2D([0], [0], color='tab:red', marker='^', linestyle='-', label='Predicted')
     ]
 
     # Add a single legend for the whole figure
@@ -273,33 +266,42 @@ data = data.apply(pd.to_numeric, errors='coerce')
 
 
 
-#Parameter searching for extrapolation
+#Parameter searching for an extrapolation model
 train_test_split = 0.8
-split_index = int(data.shape[0] * train_test_split)
-Xtrain, Xtest = data.iloc[:split_index][['Time']], data.iloc[split_index:][['Time']]
-ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_index:].drop(columns=['Time'])
-#note that index in ytest and Xtest are 40:49, not 0:9
+degree=1
+data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
+# extrapolation
+steps = 10 # how many years to extrapolate
+future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
+future_years = np.array(future_years).flatten()
+# Create a DataFrame with 'Time' column and other columns from df_ext, filled with NaN
+additional_rows = pd.DataFrame({
+    col: ([np.nan] * len(future_years)) if col != 'Time' else future_years
+    for col in data.columns
+})
+additional_rows['prediction flag'] = True  
+data = pd.concat([data.copy(), additional_rows], ignore_index=True)
 
-# polynomial extrapolation
-degree=4
-for col in [c for c in data.columns if c != 'Time']:
-    col = str(col)
-    coefs = Polynomial.fit(Xtrain['Time'], ytrain[col], degree).convert().coef
-    p_object = Polynomial(coefs)   # coefs are in ascending order here (c0 + c1 x + c2 x^2 ...)
-    predictions = p_object(Xtest.to_numpy())
-    data.loc[Xtest.index, f'{col} prediction'] = predictions
-    
-data['prediction flag'] = False
-data.loc[split_index:, 'prediction flag'] = True
+for col in [c for c in countries]:
+    p_object = Polynomial(dfp[col])  
+    predictions = p_object(future_years)
+    data.loc[ data['Time'].isin(future_years), f'{col} prediction'] = predictions
 
-print(data.tail())
-
-plot_gdp_panels(data, countries, title='Polinomial Extrapolation GDP by Country')
- 
-
-
+print(data)
+plot_gdp_panels(data, countries, title=f'Polinomial Extrapolation GDP, degree={degree}')
 
 
+
+
+'''
+This is not done yet
+what I would like to add: linear Regression in a graph, perhaps the same graph, pleay with normalization
+predict with weak connections to other countries
+remove unneeded code from this
+new file: ARIMA/time series techniques
+explanations
+publish on github
+'''
 
 
 
