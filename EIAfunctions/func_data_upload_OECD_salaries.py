@@ -6,7 +6,7 @@ import time
 import re
 import matplotlib.pyplot as plt
 
-OECD_PATH = '../Data/' # windows style: r".\\"
+OECD_PATH = '../../Data/' # windows style: r".\\"
 
 def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', country = 'CAN'):
 
