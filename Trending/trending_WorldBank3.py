@@ -320,7 +320,7 @@ publish on github
 
 
 '''
-output information since 1995: C:\NavitComputer24\2024_NES\Economics\Data\NATIOTTL input-output tables
+#output information since 1995: C:\NavitComputer24\2024_NES\Economics\Data\NATIOTTL input-output tables
 steps = 10
 #future_years = np.arange(data['Time'].iloc[-1] + 1, data['Time'].iloc[-1] + 1 + steps)
 future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
