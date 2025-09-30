@@ -27,6 +27,7 @@ from func_safe_divide import safe_divide, safe_divide_vector
 from func_multipliers_by_f import multipliers_by_f
 from func_plot_real_vs_predicted import plot_real_vs_predicted
 
+#there isn't E information 1995-2010 on the OECD site. but Tanveer still wants report 1995-2024
 
 
 ####################################################         functions that Extrapolate       ######################################################
@@ -97,6 +98,15 @@ def collecting_year_country_data_matrix(country, year, dfm, m, matrix_name):
             dfm = pd.concat([dfm, dftemp], ignore_index=True)
             return dfm
 
+def collecting_year_country_data_vector(country, year, dfv, v, vector_name):
+            dftemp = pd.DataFrame()
+            dftemp = v.reset_index()
+            dftemp.columns = ['sector', vector_name]
+            dftemp['country'] = country
+            dftemp['year'] = year
+            dftemp = dftemp[['country', 'year', 'sector', vector_name]]
+            dfv = pd.concat([dfv, dftemp], ignore_index=True)
+            return dfv
 ################################################         functions that plot              ######################################################
 
 def plot_E_line_graph(JPNE, col_name, title):
@@ -153,9 +163,7 @@ def plot_Tc(dfTc, plot_sec):
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     plt.show()
 
-#import matplotlib.pyplot as plt
-#import matplotlib.cm as cm
-#import numpy as np
+
 
 def plot_vector_by_country(df, col_name, title=None):
     countries = df.country.unique()
@@ -194,7 +202,7 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '1995'
+first_year = '2011'
 last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 report_title = f'ICT sectors, {last_year}'
@@ -233,6 +241,7 @@ for country in countries:
         
         # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
         PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
+        
         # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
         II = OECD.loc[simple_II_labels, simple_II_labels]
         household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
@@ -240,31 +249,14 @@ for country in countries:
         E           = OECDadditional['employees_compensation'] 
         GDP         = OECD.loc['VALU', simple_II_labels]
         output      = OECD.loc['OUTPUT', simple_II_labels]
-        
-        dftemp = pd.DataFrame()
-        dftemp = output.reset_index()
-        dftemp.columns = ['sector', 'output']
-        dftemp['country'] = country
-        dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', 'output']]
-        dfoutput = pd.concat([dfoutput, dftemp], ignore_index=True)
 
-        dftemp = pd.DataFrame()
-        dftemp = GDP.reset_index()
-        dftemp.columns = ['sector', 'GDP']
-        dftemp['country'] = country
-        dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', 'GDP']]
-        dfGDP = pd.concat([dfGDP, dftemp], ignore_index=True)
+        #dfother_final_demand = collecting_year_country_data_matrix(country, year, dfother_final_demand, other_final_demand , 'other_final_demand')
+    
+        dfoutput = collecting_year_country_data_vector(country, year, dfoutput, output, 'output')   
+        dfGDP    = collecting_year_country_data_vector(country, year, dfGDP,    GDP, 'GDP')
+        dfE = collecting_year_country_data_vector(country, year, dfE, E, 'Employment')
 
-        dftemp = pd.DataFrame()
-        dftemp = E.reset_index()
-        dftemp.columns = ['sector', 'Employment']
-        dftemp['country'] = country
-        dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', 'Employment']]
-        dfE = pd.concat([dfE, dftemp], ignore_index=True)
-
+    
         # predictions before impacts
         # prediction for 2020 Japan, and Great Britain 2020:
         years_for_average = ['2017', '2018', '2019']
@@ -306,27 +298,10 @@ for country in countries:
         Tc = safe_divide(IIc, outputc)
         Lcdf, Lc_minus_I = clc_L(Tc)
 
-        dftemp = pd.DataFrame()
-        dftemp = Tc.reset_index().melt(id_vars=Tc.index.name or 'index', 
-                                        var_name='buying_sector', 
-                                        value_name='Tc')
-
-        # Rename 'index' to 'selling_sector'
-        dftemp.rename(columns={Tc.index.name or 'index': 'selling_sector'}, inplace=True)
-        # Add metadata
-        dftemp['country'] = country
-        dftemp['year'] = year
-        # Reorder columns
-        dftemp = dftemp[['country', 'year',  'selling_sector', 'buying_sector', 'Tc']]
-        # Append to the master DataFrame
-        dfTc = pd.concat([dfTc, dftemp], ignore_index=True)
-
-        # 25 09 29
-        dfTc2 = pd.DataFrame()
-        
-
+              
         dfTc = collecting_year_country_data_matrix(country, year, dfTc, Tc, 'Tc')
 
+        
         # 3. calculate multipliers
         #############################
         mo = Ldf.sum(axis=0)                       #dollar's worth of outcome per 1 dollar's worth of new final demand
@@ -407,7 +382,19 @@ print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 #all I need is to infer final demand in order to get x
 #I also need to infer GDP
 #plot_vector_by_country(dffc, 'final demand', title='final demand')
-plot_vector_by_country(dfGDP, 'GDP', title='GDP')
+#plot_vector_by_country(dfE, 'Employment', title='Employment')
+
+#Employment extrapolation
+# add total employment per (country, year)
+dfE["Total_E"] = dfE.groupby(["country", "year"])["Employment"].transform("sum")
+
+# ratio of sector employment to total
+dfE["E_sector_ratio"] = dfE["Employment"] / dfE["Total_E"]
+
+#plot_vector_by_country(dfE, 'E_sector_ratio', title='Employment')
+
+#Extrapolation of Total Employment
+dfEtotal = dfE[["country", "year", "Total_E"]].drop_duplicates()
 
 
 print('')
