@@ -491,15 +491,18 @@ print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 #plot_vector_by_country(dfE, 'Employment', title='Employment')
 
 #Employment extrapolation
+#dfEict
+dfEict = (
+    dfE[dfE['sector'].isin(ICTsectors)]
+    .groupby(['country', 'year'], as_index=False)['Employment']
+    .sum()
+    .rename(columns={'Employment': 'Etotal'})
+)
+#dfEtotal
 # add total employment per (country, year)
 dfE["Etotal"] = dfE.groupby(["country", "year"])["Employment"].transform("sum")
-
 # ratio of sector employment to total
 dfE["E_sector_ratio"] = dfE["Employment"] / dfE["Etotal"]
-
-#plot_vector_by_country(dfE, 'E_sector_ratio', title='Employment')
-
-#Extrapolation of Total Employment
 dfEtotal = dfE[["country", "year", "Etotal"]].drop_duplicates()
 
 
@@ -509,7 +512,7 @@ print('')
 # 10. Extrapolation model
 ####################################################
 # Pivot the dataframe
-data_for_extrap = dfEtotal.pivot(index="year", columns="country", values="Etotal")
+data_for_extrap = dfEict.pivot(index="year", columns="country", values="Etotal")
 # Reset index and rename year -> time
 data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
 
@@ -545,9 +548,6 @@ def polynomial_extrapolation_v_with_backwards(data, train_test_split, degree, st
 
 
 
-from matplotlib.ticker import MaxNLocator
-from matplotlib.lines import Line2D
-import matplotlib.pyplot as plt
 
 def plot_extrapolation_v_with_backwards(data, countries, title):
     plotstr_data = 'o-'
@@ -592,9 +592,52 @@ def plot_extrapolation_v_with_backwards(data, countries, title):
 
     plt.show()
 
+def plot_extrapolation_v_with_backwards(data, countries, title):
+    plotstr_data = 'o-'   # blue dots + line
+    plotstr_pred = '^'    # red triangles
+    
+    fig, axes = plt.subplots(nrows=len(countries), ncols=1, figsize=(10, 10), sharex=True)
+    
+    mask = data['prediction flag'].astype(bool)
+    
+    for i, country in enumerate(countries):
+        # Original data
+        axes[i].plot(data['Time'][~mask], data[country][~mask], plotstr_data, color='tab:blue')
+        
+        # Backward predictions
+        backward_mask = mask & (data['Time'] < data['Time'][~mask].min())
+        if backward_mask.any():
+            axes[i].plot(data['Time'][backward_mask], data[f'{country} prediction'][backward_mask],
+                         plotstr_pred, color='tab:red', linestyle='-')
+        
+        # Forward predictions
+        forward_mask = mask & (data['Time'] > data['Time'][~mask].max())
+        if forward_mask.any():
+            axes[i].plot(data['Time'][forward_mask], data[f'{country} prediction'][forward_mask],
+                         plotstr_pred, color='tab:red', linestyle='-')
+        
+        axes[i].set_title(country, loc='left', fontsize=10, pad=5)
+        axes[i].set_ylabel('Value', rotation=0, labelpad=30)
+        axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
+        axes[i].grid(True)
+    
+    axes[-1].set_xlabel('Year')
+    fig.suptitle(title, fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    
+    # Legend
+    legend_handles = [
+        Line2D([0], [0], color='tab:blue', marker='o', linestyle='-', label='Data'),
+        Line2D([0], [0], color='tab:red', marker='^', linestyle='-', label='Prediction')
+    ]
+    fig.legend(handles=legend_handles, loc='upper right', fontsize=10, frameon=False)
+    
+    plt.show()
+
 
 train_test_split = 0.7
-degree = 2
+degree = 1
 steps = 6 # how many years to extrapolate
+steps_back=4
 data_and_prediction = polynomial_extrapolation_v_with_backwards(data_for_extrap.copy(), train_test_split, degree, steps, steps_back=4)
-plot_extrapolation_v_with_backwards(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
+plot_extrapolation_v_with_backwards(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment ICT sector, degree={degree}')
