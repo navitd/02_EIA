@@ -68,7 +68,7 @@ def polynomial_extrapolation_model(data, train_test_split, degree):
     data.loc[split_index:, 'prediction flag'] = True
     return data, dfp
 
-
+# this function is used int the next function
 def polynomial_extrapolation(data,train_test_split, degree, steps):
     #building the model - getting coefficients
     data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
@@ -97,18 +97,19 @@ def package_extrapolation_forward(v, col_name, train_test_split, degree, steps):
     # Reset index and rename year -> time
     data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
 
-    #plotting the data points and the predictions one over the other
+    # plotting the data points and the predictions one over the other
     data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
     plot_extrapolation_v(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
 
-    # 11. actual extrapolation (all data points)
-    ##########################
+    # actual extrapolation (all data points)
     train_test_split = 1
     data_and_prediction2 = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
     plot_extrapolation_v(data_and_prediction2, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
     return data_and_prediction, data_and_prediction2
 
+# all three functions above are used in forawrd extrapolation
 
+# for backwards and forward extrapolation together:
 
 ##################################################        functions that calculate        ######################################################
 
@@ -508,59 +509,29 @@ print(f"\n Elapsed time: {(end_time - start_time)/60:.1f} minutes \n")
 
 
 
+###########################
+#10. Employment extrapolation
+###########################
 
-#Employment extrapolation
-#dfEict
 dfEict = (
     dfE[dfE['sector'].isin(ICTsectors)]
     .groupby(['country', 'year'], as_index=False)['Employment']
     .sum()
     .rename(columns={'Employment': 'Etotal'})
 )
-#dfEtotal
 # add total employment per (country, year)
 dfE["Etotal"] = dfE.groupby(["country", "year"])["Employment"].transform("sum")
 # ratio of sector employment to total
 dfE["E_sector_ratio"] = dfE["Employment"] / dfE["Etotal"]
 dfEtotal = dfE[["country", "year", "Etotal"]].drop_duplicates()
 
-
-#forward extrapoplation GDP
-dfGDP["GDPtotal"] = dfGDP.groupby(["country", "year"])["GDP"].transform("sum")
-
-_,_ = package_extrapolation_forward(dfGDP, 'GDP', 0.8, 2, 5)
+# forward extrapolation
 # forward extrapoplation Etotal
 # _,_ = package_extrapolation_forward(dfEtotal, 'Etotal', 0.8, 2, 5)
-# forward extrapolation Eict
 
-
-
-
-
-print('')
-
-
-# 10. Extrapolation model
-####################################################
-# Pivot the dataframe
-data_for_extrap = dfEict.pivot(index="year", columns="country", values="Etotal")
-# Reset index and rename year -> time
-data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
-
-
-'''
-train_test_split = 0.7
-degree = 2
-steps = 4 # how many years to extrapolate
-data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
-plot_extrapolation_v(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
-
-# 11. actual extrapolation
-##########################
-train_test_split = 1
-data_and_prediction2 = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
-plot_extrapolation_v(data_and_prediction2, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
-'''
+ #12. extrapolation forwards
+I want to amke polynomial_extrapolation be good for both backwards and forward plot_extrapolation_v
+    I will practice it in the file backwards_extrapolation and then copy here.
 
 # 12. extrapolation backwards
 def polynomial_extrapolation_v_with_backwards(data, train_test_split, degree, steps, steps_back=4):
@@ -579,6 +550,11 @@ def polynomial_extrapolation_v_with_backwards(data, train_test_split, degree, st
 
 
 
+
+
+
+
+############################### plotting ############################
 
 #def plot_extrapolation_v_with_backwards(data, countries, title):
     plotstr_data = 'o-'
