@@ -90,7 +90,23 @@ def polynomial_extrapolation(data,train_test_split, degree, steps):
         data.loc[ data['Time'].isin(future_years), f'{col} prediction'] = predictions
     return data
 
+#the following packages together the pivoting, extrapolation and plotting. two plots - one for test and train and one for teh whoel data points
+def package_extrapolation_forward(v, col_name, train_test_split, degree, steps):
+    # Pivot the dataframe
+    data_for_extrap = v.pivot(index="year", columns="country", values=col_name)
+    # Reset index and rename year -> time
+    data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
 
+    #plotting the data points and the predictions one over the other
+    data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
+    plot_extrapolation_v(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
+
+    # 11. actual extrapolation (all data points)
+    ##########################
+    train_test_split = 1
+    data_and_prediction2 = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
+    plot_extrapolation_v(data_and_prediction2, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
+    return data_and_prediction, data_and_prediction2
 
 
 
@@ -482,13 +498,16 @@ for country in countries:
 
 
 end_time = time.time()
-print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
+print(f"\n Elapsed time: {(end_time - start_time)/60:.1f} minutes \n")
 
 #plot_Tc(dfTc, 'G') # Tc is very similar over the different years. I can use T of 2019
 #all I need is to infer final demand in order to get x
 #I also need to infer GDP
 #plot_vector_by_country(dffc, 'final demand', title='final demand')
 #plot_vector_by_country(dfE, 'Employment', title='Employment')
+
+
+
 
 #Employment extrapolation
 #dfEict
@@ -504,6 +523,18 @@ dfE["Etotal"] = dfE.groupby(["country", "year"])["Employment"].transform("sum")
 # ratio of sector employment to total
 dfE["E_sector_ratio"] = dfE["Employment"] / dfE["Etotal"]
 dfEtotal = dfE[["country", "year", "Etotal"]].drop_duplicates()
+
+
+#forward extrapoplation GDP
+dfGDP["GDPtotal"] = dfGDP.groupby(["country", "year"])["GDP"].transform("sum")
+
+_,_ = package_extrapolation_forward(dfGDP, 'GDP', 0.8, 2, 5)
+# forward extrapoplation Etotal
+# _,_ = package_extrapolation_forward(dfEtotal, 'Etotal', 0.8, 2, 5)
+# forward extrapolation Eict
+
+
+
 
 
 print('')
@@ -549,7 +580,7 @@ def polynomial_extrapolation_v_with_backwards(data, train_test_split, degree, st
 
 
 
-def plot_extrapolation_v_with_backwards(data, countries, title):
+#def plot_extrapolation_v_with_backwards(data, countries, title):
     plotstr_data = 'o-'
     plotstr_pred = '^'  # red triangles for predictions
     
@@ -594,7 +625,7 @@ def plot_extrapolation_v_with_backwards(data, countries, title):
 
 def plot_extrapolation_v_with_backwards(data, countries, title):
     plotstr_data = 'o-'   # blue dots + line
-    plotstr_pred = '^'    # red triangles
+    plotstr_pred = '^-'    # red triangles
     
     fig, axes = plt.subplots(nrows=len(countries), ncols=1, figsize=(10, 10), sharex=True)
     
