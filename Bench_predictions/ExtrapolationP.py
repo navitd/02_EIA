@@ -14,10 +14,17 @@ from matplotlib.patches import Patch
 import matplotlib.gridspec as gridspec
 import matplotlib.colors as mcolors
 import matplotlib.cm as cm
-from openpyxl import load_workbook, Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
-from openpyxl.cell.cell import MergedCell
+from matplotlib.ticker import MaxNLocator
+from matplotlib.lines import Line2D
+
+#from openpyxl import load_workbook, Workbook
+#from openpyxl.utils.dataframe import dataframe_to_rows
+#from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
+#from openpyxl.cell.cell import MergedCell
+
+#scikit-learn imports
+from numpy.polynomial import Polynomial
+
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
 from func_data_upload_OECD_salaries import data_upload_OECD_salaries
@@ -30,7 +37,59 @@ from func_plot_real_vs_predicted import plot_real_vs_predicted
 #there isn't E information 1995-2010 on the OECD site. but Tanveer still wants report 1995-2024
 
 
-####################################################         functions that Extrapolate       ######################################################
+
+
+####################################################         functions that Extrapolate       ##################################################
+# this function is used in the next function, polynomial_extrapolation
+def polynomial_extrapolation_model(data, train_test_split, degree):
+    data = data.astype(float)
+    if train_test_split < 1:
+        split_index = int(data.shape[0] * train_test_split)
+        Xtrain, Xtest = data.iloc[:split_index][['Time']], data.iloc[split_index:][['Time']]
+        ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_index:].drop(columns=['Time'])
+        #note that index in ytest and Xtest are 40:49, not 0:9
+    elif train_test_split == 1:
+        split_index = data.index[-1] + 1    
+        Xtrain, Xtest = data.iloc[:split_index][['Time']], data.iloc[split_index:][['Time']]
+        ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_index:].drop(columns=['Time'])
+              
+    # polynomial extrapolation model
+    dfp = pd.DataFrame()
+    for col in [c for c in data.columns if c != 'Time']:
+        col = str(col)
+        coefs = Polynomial.fit(Xtrain['Time'], ytrain[col], degree).convert().coef
+        p_object = Polynomial(coefs)   # coefs are in ascending order here (c0 + c1 x + c2 x^2 ...)
+        #save p_object, these are the models
+        dfp[col] = coefs #p_object
+        predictions = p_object(Xtest.to_numpy())
+        data.loc[Xtest.index, f'{col} prediction'] = predictions
+        
+    data['prediction flag'] = False
+    data.loc[split_index:, 'prediction flag'] = True
+    return data, dfp
+
+
+def polynomial_extrapolation(data,train_test_split, degree, steps):
+    #building the model - getting coefficients
+    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
+    # extrapolation
+    
+    future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
+    future_years = np.array(future_years).flatten()
+    # Create a DataFrame with 'Time' column and other columns from df_ext, filled with NaN
+    additional_rows = pd.DataFrame({
+        col: ([np.nan] * len(future_years)) if col != 'Time' else future_years
+        for col in data.columns
+    })
+    additional_rows['prediction flag'] = True  
+    data = pd.concat([data.copy(), additional_rows], ignore_index=True)
+
+    for col in [c for c in countries]:
+        p_object = Polynomial(dfp[col])  
+        predictions = p_object(future_years)
+        data.loc[ data['Time'].isin(future_years), f'{col} prediction'] = predictions
+    return data
+
 
 
 
@@ -164,7 +223,6 @@ def plot_Tc(dfTc, plot_sec):
     plt.show()
 
 
-
 def plot_vector_by_country(df, col_name, title=None):
     countries = df.country.unique()
     fig, axes = plt.subplots(7, 1, figsize=(12, 14), sharex=True)
@@ -191,6 +249,54 @@ def plot_vector_by_country(df, col_name, title=None):
     plt.show()
 
 
+#used for extrapolation and for looking at the data
+def plot_extrapolation_v(data, countries, title):
+    plotstr1 = 'o-'
+    plotstr2 = '^-'
+    #countries = data.drop(['Time', 'prediction flag'], axis=1)
+    fig, axes = plt.subplots(nrows=len(countries), ncols=1, figsize=(10, 10), sharex=True)
+
+    if 'prediction flag' in data.columns:
+
+        for i, country in enumerate(countries):
+            
+            pred_mask = data['prediction flag'] == True
+
+            #plot original data in blue
+            axes[i].plot(data['Time'], data[country], plotstr1, color='tab:blue')
+           
+            axes[i].plot(data['Time'][pred_mask], data[f'{country} prediction'][pred_mask], plotstr2, color='tab:red')
+
+            axes[i].set_title(country, loc='left', fontsize=10, pad=5)
+            axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
+            axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
+            axes[i].grid(True)
+
+    else:
+        for i, country in enumerate(countries.columns):
+            axes[i].plot(data['Time'], data[country], plotstr1, label=country, color='tab:blue')
+            axes[i].set_title(country, loc='left', fontsize=10, pad=5)
+            axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
+            axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
+            axes[i].grid(True)
+
+    axes[-1].set_xlabel('Year')
+    fig.suptitle(title, fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+    # Create custom legend handles
+    legend_handles = [
+    Line2D([0], [0], color='tab:blue', marker=plotstr1[0], linestyle='-', label='Data'),
+    Line2D([0], [0], color='tab:red', marker=plotstr2[0], linestyle='-', label='Prediction')
+        ]
+
+    # Add a single legend for the whole figure
+    fig.legend(handles=legend_handles, loc='upper right', fontsize=10, frameon=False)
+
+    plt.show()
+
+
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 start_time = time.time()
 print("working directory of GDPsupplychain.py is: ",os.getcwd())  # Print the current working directory
@@ -386,19 +492,109 @@ print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 
 #Employment extrapolation
 # add total employment per (country, year)
-dfE["Total_E"] = dfE.groupby(["country", "year"])["Employment"].transform("sum")
+dfE["Etotal"] = dfE.groupby(["country", "year"])["Employment"].transform("sum")
 
 # ratio of sector employment to total
-dfE["E_sector_ratio"] = dfE["Employment"] / dfE["Total_E"]
+dfE["E_sector_ratio"] = dfE["Employment"] / dfE["Etotal"]
 
 #plot_vector_by_country(dfE, 'E_sector_ratio', title='Employment')
 
 #Extrapolation of Total Employment
-dfEtotal = dfE[["country", "year", "Total_E"]].drop_duplicates()
+dfEtotal = dfE[["country", "year", "Etotal"]].drop_duplicates()
 
 
 print('')
 
 
+# 10. Extrapolation model
+####################################################
+# Pivot the dataframe
+data_for_extrap = dfEtotal.pivot(index="year", columns="country", values="Etotal")
+# Reset index and rename year -> time
+data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
 
 
+'''
+train_test_split = 0.7
+degree = 2
+steps = 4 # how many years to extrapolate
+data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
+plot_extrapolation_v(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
+
+# 11. actual extrapolation
+##########################
+train_test_split = 1
+data_and_prediction2 = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
+plot_extrapolation_v(data_and_prediction2, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
+'''
+
+# 12. extrapolation backwards
+def polynomial_extrapolation_v_with_backwards(data, train_test_split, degree, steps, steps_back=4):
+    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
+    
+    years_forward = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1)
+    years_back = np.arange(data['Time'].min() - steps_back, data['Time'].min()) if steps_back > 0 else np.array([], dtype=int)
+    all_years = np.concatenate([years_back, years_forward])
+    
+    data = pd.concat([data, pd.DataFrame({col: np.nan if col != 'Time' else all_years for col in data.columns})], ignore_index=True)
+    data['prediction flag'] = data['prediction flag'].fillna(True)
+    
+    for col in countries: data.loc[data['Time'].isin(all_years), f'{col} prediction'] = Polynomial(dfp[col])(all_years)
+    
+    return data
+
+
+
+from matplotlib.ticker import MaxNLocator
+from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
+
+def plot_extrapolation_v_with_backwards(data, countries, title):
+    plotstr_data = 'o-'
+    plotstr_pred = '^'  # red triangles for predictions
+    
+    fig, axes = plt.subplots(nrows=len(countries), ncols=1, figsize=(10, 10), sharex=True)
+    
+    mask = data['prediction flag'].astype(bool) if 'prediction flag' in data.columns else None
+
+    for i, country in enumerate(countries):
+        # plot original data
+        axes[i].plot(data['Time'][~mask], data[country][~mask], plotstr_data, color='tab:blue')
+        
+        if mask is not None:
+            # backward predictions
+            backward_mask = mask & (data['Time'] < data['Time'][~mask].min())
+            if backward_mask.any():
+                axes[i].plot(data['Time'][backward_mask], data[f'{country} prediction'][backward_mask],
+                             plotstr_pred, color='tab:red', linestyle='-')
+            
+            # forward predictions
+            forward_mask = mask & (data['Time'] > data['Time'][~mask].max())
+            if forward_mask.any():
+                axes[i].plot(data['Time'][forward_mask], data[f'{country} prediction'][forward_mask],
+                             plotstr_pred, color='tab:red', linestyle='-')
+        
+        axes[i].set_title(country, loc='left', fontsize=10, pad=5)
+        axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
+        axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
+        axes[i].grid(True)
+
+    axes[-1].set_xlabel('Year')
+    fig.suptitle(title, fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+    # Create custom legend
+    legend_handles = [
+        Line2D([0], [0], color='tab:blue', marker=plotstr_data[0], linestyle='-', label='Data'),
+        Line2D([0], [0], color='tab:red', marker=plotstr_pred, linestyle='-', label='Prediction')
+    ]
+    fig.legend(handles=legend_handles, loc='upper right', fontsize=10, frameon=False)
+
+    plt.show()
+
+
+train_test_split = 0.7
+degree = 2
+steps = 6 # how many years to extrapolate
+data_and_prediction = polynomial_extrapolation_v_with_backwards(data_for_extrap.copy(), train_test_split, degree, steps, steps_back=4)
+plot_extrapolation_v_with_backwards(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
