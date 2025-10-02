@@ -24,6 +24,9 @@ from matplotlib.lines import Line2D
 
 #scikit-learn imports
 from numpy.polynomial import Polynomial
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import Ridge  # or Lasso
+from sklearn.pipeline import make_pipeline
 
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
@@ -40,39 +43,66 @@ from func_plot_real_vs_predicted import plot_real_vs_predicted
 
 
 ####################################################         functions that Extrapolate       ##################################################
-# this function is used in the next function, polynomial_extrapolation
-def polynomial_extrapolation_model(data, train_test_split, degree):
+def polynomial_extrapolation_model(data, train_test_split, degree, alpha):
+    """
+    Polynomial extrapolation with regularization (Ridge/Lasso).
+    
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Must contain column 'Time' + one or more value columns.
+    train_test_split : float
+        If < 1, interpreted as fraction of data for training.
+        If == 1, all rows are used for training (Xtest empty).
+    degree : int
+        Degree of polynomial.
+    alpha : float
+        Regularization strength (Ridge/Lasso). Default = 1.0.
+    """
     data = data.astype(float)
     if train_test_split < 1:
         split_index = int(data.shape[0] * train_test_split)
         Xtrain, Xtest = data.iloc[:split_index][['Time']], data.iloc[split_index:][['Time']]
         ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_index:].drop(columns=['Time'])
-        #note that index in ytest and Xtest are 40:49, not 0:9
-    elif train_test_split == 1:
+    else:
         split_index = data.index[-1] + 1    
         Xtrain, Xtest = data.iloc[:split_index][['Time']], data.iloc[split_index:][['Time']]
         ytrain, ytest = data.iloc[:split_index].drop(columns=['Time']), data.iloc[split_index:].drop(columns=['Time'])
-              
-    # polynomial extrapolation model
-    dfp = pd.DataFrame()
+
+    # container for coefficients
+    coef = pd.DataFrame()
+    
     for col in [c for c in data.columns if c != 'Time']:
-        col = str(col)
-        coefs = Polynomial.fit(Xtrain['Time'], ytrain[col], degree).convert().coef
-        p_object = Polynomial(coefs)   # coefs are in ascending order here (c0 + c1 x + c2 x^2 ...)
-        #save p_object, these are the models
-        dfp[col] = coefs #p_object
-        predictions = p_object(Xtest.to_numpy())
-        data.loc[Xtest.index, f'{col} prediction'] = predictions
+        model = make_pipeline(
+            PolynomialFeatures(degree=degree, include_bias=True),
+            Ridge(alpha=alpha)  # swap with Lasso(alpha=alpha) if desired
+        )
         
+        model.fit(Xtrain, ytrain[col])
+        
+        # store coefficients in coeff
+        coef_rough = model.named_steps['ridge'].coef_
+        intercept = model.named_steps['ridge'].intercept_
+        coef[col] = np.concatenate(([intercept], coef_rough[1:]))  # drop bias term handled by intercept
+
+        # predictions for test set
+        if not Xtest.empty:
+            predictions = model.predict(Xtest)
+            data.loc[Xtest.index, f'{col} prediction'] = predictions
+    
+    # mark prediction rows
     data['prediction flag'] = False
-    data.loc[split_index:, 'prediction flag'] = True
-    return data, dfp
+    if not Xtest.empty:
+        data.loc[Xtest.index, 'prediction flag'] = True
+    
+    return data, coef
+
 
 # this function is used int the next function
 #the following deals with both backwardsa and forwards extrapolation
-def polynomial_extrapolation(data, train_test_split, degree, steps_forward=5, steps_back=4):
+def polynomial_extrapolation(data, train_test_split, degree, steps_forward, steps_back, alpha):
     #building the model - getting coefficients
-    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree) #dfp are the coeff. should change name
+    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree, alpha) #dfp are the coeff. should change name
     # extrapolation
     back_years = np.arange(data['Time'].min() - steps_back, data['Time'].min()) if steps_back > 0 else np.array([], dtype=int)
     future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps_forward + 1)
@@ -95,25 +125,25 @@ def polynomial_extrapolation(data, train_test_split, degree, steps_forward=5, st
 
 
 #the following packages together the pivoting, extrapolation and plotting. two plots - one for test and train and one for teh whoel data points
-def package_extrapolation(v, col_name, train_test_split, degree, steps_forward=5, steps_back=4):
+def package_extrapolation(v, col_name, plot_title, train_test_split, degree, steps_forward=5, steps_back=4, alpha=1.0):
     # Pivot the dataframe
     data_for_extrap = v.pivot(index="year", columns="country", values=col_name)
     # Reset index and rename year -> time
     data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
 
     # plotting the data points and the predictions one over the other
-    data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward, steps_back)
-    plot_extrapolation_v(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
+    data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward, steps_back, alpha)
+    plot_extrapolation(data_and_prediction, countries, title=f'Polinomial Extrapolation of {plot_title}, degree={degree}, alpha={alpha}')
 
-    # actual extrapolation (all data points)
-    train_test_split = 1
-    data_and_prediction2 = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward, steps_back)
-    plot_extrapolation_v(data_and_prediction2, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
-    return data_and_prediction, data_and_prediction2
+    ## actual extrapolation (all data points)
+    #train_test_split = 1
+    #data_and_prediction2 = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward, steps_back, alpha)
+    #plot_extrapolation(data_and_prediction2, countries, title=f'Polinomial Extrapolation of {plot_title}, degree={degree}, alpha={alpha}')
+    return data_and_prediction #, data_and_prediction2
 
 # all three functions above are used in forawrd extrapolation
 
-# for backwards and forward extrapolation together:
+
 
 ##################################################        functions that calculate        ######################################################
 
@@ -271,7 +301,7 @@ def plot_vector_by_country(df, col_name, title=None):
 
 
 #used for extrapolation and for looking at the data
-def plot_extrapolation_v(data, countries, title):
+def plot_extrapolation(data, countries, title):
     plotstr1 = 'o-'
     plotstr2 = '^-'
     #countries = data.drop(['Time', 'prediction flag'], axis=1)
@@ -531,17 +561,20 @@ dfEtotal = dfE[["country", "year", "Etotal"]].drop_duplicates()
 
 # forward extrapolation
 # forward extrapoplation Etotal
-# _,_ = package_extrapolation(dfEtotal, 'Etotal', 0.8, 2, steps_forward=5, steps_back=4)
+# _,_ = package_extrapolation(dfEtotal, 'Etotal', 'Etotal', 0.8, 2, steps_forward=5, steps_back=4, alpha=50)
 
  
 #put the following in a package
-# remove _v from function name
-# document backwards_extrapolation.py, *.ipynb
-train_test_split = 0.8
-degree = 3
-# Pivot the dataframe
-data_for_extrap = dfEict.pivot(index="year", columns="country", values="Etotal")
+# #remove _v from function name
+## document backwards_extrapolation.py, *.ipynb
+#train_test_split = 0.8
+#degree = 3
+## Pivot the dataframe
+#data_for_extrap = dfEict.pivot(index="year", columns="country", values="Etotal")
 # Reset index and rename year -> time
-data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
-data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward=5, steps_back=4)
-plot_extrapolation_v(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment ICT sector, degree={degree}')
+#data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
+#data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward=5, steps_back=4)
+#plot_extrapolation(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment ICT sector, degree={degree}')
+
+_,_ = package_extrapolation(dfEtotal, 'Etotal', 'Etotal', 0.8, 1, steps_forward=5, steps_back=4, alpha=50)
+_,_ = package_extrapolation(dfEict, 'Etotal', 'Eict', 0.8, 1, steps_forward=5, steps_back=4, alpha=50)

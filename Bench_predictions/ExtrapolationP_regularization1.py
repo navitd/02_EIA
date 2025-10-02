@@ -24,7 +24,9 @@ from matplotlib.lines import Line2D
 
 #scikit-learn imports
 from numpy.polynomial import Polynomial
-
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import Ridge  # or Lasso
+from sklearn.pipeline import make_pipeline
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
 from func_data_upload_OECD_salaries import data_upload_OECD_salaries
@@ -41,14 +43,7 @@ from func_plot_real_vs_predicted import plot_real_vs_predicted
 
 ####################################################         functions that Extrapolate       ##################################################
 # this function is used in the next function, polynomial_extrapolation
-
-
-
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import Ridge  # or Lasso
-from sklearn.pipeline import make_pipeline
-
-def polynomial_extrapolation_model(data, train_test_split, degree, alpha=10.0):
+def polynomial_extrapolation_model(data, train_test_split, degree, alpha=1.0):
     """
     Polynomial extrapolation with regularization (Ridge/Lasso).
     
