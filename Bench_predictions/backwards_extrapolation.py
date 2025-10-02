@@ -55,27 +55,29 @@ def polynomial_extrapolation_model(data, train_test_split, degree):
     return data, dfp
 
 
-def polynomial_extrapolation(data,train_test_split, degree):
+#the following deals with both backwardsa and forwards extrapolation
+def polynomial_extrapolation(data, train_test_split, degree, steps_forward=5, steps_back=4):
     #building the model - getting coefficients
-    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
+    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree) #dfp are the coeff. should change name
     # extrapolation
-    steps = 10 # how many years to extrapolate
-    future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
-    future_years = np.array(future_years).flatten()
+    back_years = np.arange(data['Time'].min() - steps_back, data['Time'].min()) if steps_back > 0 else np.array([], dtype=int)
+    future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps_forward + 1)
+    extrap_years = np.concatenate([back_years, future_years])
+
     # Create a DataFrame with 'Time' column and other columns from df_ext, filled with NaN
     additional_rows = pd.DataFrame({
-        col: ([np.nan] * len(future_years)) if col != 'Time' else future_years
+        col: ([np.nan] * (extrap_years) if col != 'Time' else extrap_years)
         for col in data.columns
     })
     additional_rows['prediction flag'] = True  
     data = pd.concat([data.copy(), additional_rows], ignore_index=True)
+    data = data.sort_values('Time').reset_index(drop=True)
 
     for col in [c for c in countries]:
         p_object = Polynomial(dfp[col])  
-        predictions = p_object(future_years)
-        data.loc[ data['Time'].isin(future_years), f'{col} prediction'] = predictions
+        predictions = p_object(extrap_years)
+        data.loc[ data['Time'].isin(extrap_years), f'{col} prediction'] = predictions
     return data
-
 
 ##################################################        functions that calculate        ######################################################
 
@@ -281,7 +283,7 @@ def safe_divide_vector(vector, output):
 
 
 #used for extrapolation and for looking at the data
-def plot_gdp_panels(data, countries, title):
+def plot_gdp_panels(data, countries, title): #red line connects
     plotstr1 = 'o-'
     plotstr2 = '^-'
     #countries = data.drop(['Time', 'prediction flag'], axis=1)
@@ -290,9 +292,7 @@ def plot_gdp_panels(data, countries, title):
     if 'prediction flag' in data.columns:
 
         for i, country in enumerate(countries):
-            
             pred_mask = data['prediction flag'] == True
-
             #plot original data in blue
             axes[i].plot(data['Time'], data[country], plotstr1, color='tab:blue')
            
@@ -346,93 +346,77 @@ data = data.apply(pd.to_numeric, errors='coerce')
 
 steps_back = 4
 steps_forward = 5
+first_year = int(data['Time'].min())
+last_year = int(data['Time'].max())
 
-
-
-def polynomial_extrapolation_v_with_backwards(data, train_test_split, degree, steps, steps_back=4):
-    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
-    
-    years_forward = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1)
-    years_back = np.arange(data['Time'].min() - steps_back, data['Time'].min()) if steps_back > 0 else np.array([], dtype=int)
-    all_years = np.concatenate([years_back, years_forward])
-    
-    data = pd.concat([data, pd.DataFrame({col: np.nan if col != 'Time' else all_years for col in data.columns})], ignore_index=True)
-    data['prediction flag'] = data['prediction flag'].fillna(True)
-    
-    for col in countries: data.loc[data['Time'].isin(all_years), f'{col} prediction'] = Polynomial(dfp[col])(all_years)
-    
-    return data
-
-def polynomial_extrapolation(data,train_test_split, degree):
+#the following deals with both backwardsa and forwards extrapolation
+def polynomial_extrapolation(data, data_title, train_test_split, degree, steps_forward=5, steps_back=4):
     #building the model - getting coefficients
-    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
+    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree) #dfp are the coeff. should change name
     # extrapolation
-    steps = 10 # how many years to extrapolate
-    future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
-    future_years = np.array(future_years).flatten()
+    back_years = np.arange(data['Time'].min() - steps_back, data['Time'].min()) if steps_back > 0 else np.array([], dtype=int)
+    future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps_forward + 1)
+    extrap_years = np.concatenate([back_years, future_years])
+
     # Create a DataFrame with 'Time' column and other columns from df_ext, filled with NaN
     additional_rows = pd.DataFrame({
-        col: ([np.nan] * len(future_years)) if col != 'Time' else future_years
+        col: ([np.nan] * (extrap_years) if col != 'Time' else extrap_years)
         for col in data.columns
     })
     additional_rows['prediction flag'] = True  
     data = pd.concat([data.copy(), additional_rows], ignore_index=True)
+    data = data.sort_values('Time').reset_index(drop=True)
 
     for col in [c for c in countries]:
         p_object = Polynomial(dfp[col])  
-        predictions = p_object(future_years)
-        data.loc[ data['Time'].isin(future_years), f'{col} prediction'] = predictions
+        predictions = p_object(extrap_years)
+        data.loc[ data['Time'].isin(extrap_years), f'{col} prediction'] = predictions
     return data
 
 
 
+def plot_extrapolation(data, first_year, last_year, countries, title): #red line connects
+    plotstr1 = 'o-'
+    plotstr2 = '^-'
+    #countries = data.drop(['Time', 'prediction flag'], axis=1)
+    fig, axes = plt.subplots(nrows=len(countries), ncols=1, figsize=(10, 10), sharex=True)
 
+    if 'prediction flag' in data.columns:
 
-#def polynomial_extrapolation(data, train_test_split, degree, steps_forward=10, steps_back=0):
-    data = data.astype(float).copy()
+        for i, country in enumerate(countries):
+            pred_mask = data['prediction flag'] == True
+            #plot original data in blue
+            axes[i].plot(data['Time'], data[country], plotstr1, color='tab:blue')
+           
+            axes[i].plot(data['Time'][pred_mask], data[f'{country} prediction'][pred_mask], plotstr2, color='tab:red')
 
-    # Split train/test
-    if train_test_split < 1:
-        split_index = int(data.shape[0] * train_test_split)
+            axes[i].set_title(country, loc='left', fontsize=10, pad=5)
+            axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
+            axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
+            axes[i].grid(True)
+
     else:
-        split_index = data.shape[0]
-    Xtrain, ytrain = data.iloc[:split_index][['Time']], data.iloc[:split_index].drop(columns=['Time'])
+        for i, country in enumerate(countries.columns):
+            axes[i].plot(data['Time'], data[country], plotstr1, label=country, color='tab:blue')
+            axes[i].set_title(country, loc='left', fontsize=10, pad=5)
+            axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
+            axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
+            axes[i].grid(True)
 
-    # Fit polynomial models
-    dfp = pd.DataFrame()
-    for col in [c for c in data.columns if c != 'Time']:
-        coefs = Polynomial.fit(Xtrain['Time'], ytrain[col], degree).convert().coef
-        dfp[col] = coefs
-        p_obj = Polynomial(coefs)
-        data[f'{col} prediction'] = np.nan
-        data.loc[:, f'{col} prediction'] = p_obj(data['Time'])
+    axes[-1].set_xlabel('Year')
+    fig.suptitle(title, fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
 
-    data['prediction flag'] = False
-    data.loc[split_index:, 'prediction flag'] = True
+    # Create custom legend handles
+    legend_handles = [
+    Line2D([0], [0], color='tab:blue', marker=plotstr1[0], linestyle='-', label='Data'),
+    Line2D([0], [0], color='tab:red', marker=plotstr2[0], linestyle='-', label='Prediction')
+        ]
 
-    # Extrapolation years
-    min_year, max_year = data['Time'].min(), data['Time'].max()
-    years_back = np.arange(min_year - steps_back, min_year) if steps_back > 0 else []
-    years_forward = np.arange(max_year + 1, max_year + steps_forward + 1)
-    new_years = np.concatenate([years_back, years_forward]) if steps_back > 0 else years_forward
+    # Add a single legend for the whole figure
+    fig.legend(handles=legend_handles, loc='upper right', fontsize=10, frameon=False)
 
-    if len(new_years) > 0:
-        add_rows = pd.DataFrame({'Time': new_years})
-        for col in [c for c in data.columns if col not in ['Time', 'prediction flag']]:
-            add_rows[col] = np.nan
-        add_rows['prediction flag'] = True
-        for col in [c for c in dfp.columns]:
-            p_obj = Polynomial(dfp[col])
-            add_rows[f'{col} prediction'] = p_obj(add_rows['Time'])
-        data = pd.concat([data, add_rows], ignore_index=True)
-
-    return data, dfp
-
-
-
-
-
-
+    plt.show()
 
 
 
@@ -441,11 +425,11 @@ def polynomial_extrapolation(data,train_test_split, degree):
 ####################################################
 train_test_split = 0.8
 degree = 2
-data_and_prediction = polynomial_extrapolation(data.copy(), train_test_split, degree)
-plot_gdp_panels(data_and_prediction, countries, title=f'Polinomial Extrapolation GDP, degree={degree}')
+data_and_prediction = polynomial_extrapolation(data.copy(), 'GDP', train_test_split, degree,5,4)
+plot_gdp_panels(data_and_prediction, countries, title=f'Polinomial Extrapolation GDP, degree={degree}') #lots a line between backwards and forwards extrapolation
 
 # 3. actual extrapolation
 ##########################
 train_test_split = 1
-data_and_prediction2 = polynomial_extrapolation(data.copy(), train_test_split, degree)
+data_and_prediction2 = polynomial_extrapolation(data.copy(), 'GDP', train_test_split, degree,5,4)
 plot_gdp_panels(data_and_prediction2, countries, title=f'Polinomial Extrapolation GDP, degree={degree}')

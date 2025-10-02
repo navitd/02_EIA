@@ -69,41 +69,45 @@ def polynomial_extrapolation_model(data, train_test_split, degree):
     return data, dfp
 
 # this function is used int the next function
-def polynomial_extrapolation(data,train_test_split, degree, steps):
+#the following deals with both backwardsa and forwards extrapolation
+def polynomial_extrapolation(data, train_test_split, degree, steps_forward=5, steps_back=4):
     #building the model - getting coefficients
-    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
+    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree) #dfp are the coeff. should change name
     # extrapolation
-    
-    future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1).reshape(-1, 1)
-    future_years = np.array(future_years).flatten()
+    back_years = np.arange(data['Time'].min() - steps_back, data['Time'].min()) if steps_back > 0 else np.array([], dtype=int)
+    future_years = np.arange(data['Time'].max() + 1, data['Time'].max() + steps_forward + 1)
+    extrap_years = np.concatenate([back_years, future_years])
+
     # Create a DataFrame with 'Time' column and other columns from df_ext, filled with NaN
     additional_rows = pd.DataFrame({
-        col: ([np.nan] * len(future_years)) if col != 'Time' else future_years
+        col: ([np.nan] * (extrap_years) if col != 'Time' else extrap_years)
         for col in data.columns
     })
     additional_rows['prediction flag'] = True  
     data = pd.concat([data.copy(), additional_rows], ignore_index=True)
+    data = data.sort_values('Time').reset_index(drop=True)
 
     for col in [c for c in countries]:
         p_object = Polynomial(dfp[col])  
-        predictions = p_object(future_years)
-        data.loc[ data['Time'].isin(future_years), f'{col} prediction'] = predictions
+        predictions = p_object(extrap_years)
+        data.loc[ data['Time'].isin(extrap_years), f'{col} prediction'] = predictions
     return data
 
+
 #the following packages together the pivoting, extrapolation and plotting. two plots - one for test and train and one for teh whoel data points
-def package_extrapolation_forward(v, col_name, train_test_split, degree, steps):
+def package_extrapolation(v, col_name, train_test_split, degree, steps_forward=5, steps_back=4):
     # Pivot the dataframe
     data_for_extrap = v.pivot(index="year", columns="country", values=col_name)
     # Reset index and rename year -> time
     data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
 
     # plotting the data points and the predictions one over the other
-    data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
+    data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward, steps_back)
     plot_extrapolation_v(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
 
     # actual extrapolation (all data points)
     train_test_split = 1
-    data_and_prediction2 = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps)
+    data_and_prediction2 = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward, steps_back)
     plot_extrapolation_v(data_and_prediction2, countries, title=f'Polinomial Extrapolation of Employment, degree={degree}')
     return data_and_prediction, data_and_prediction2
 
@@ -311,7 +315,7 @@ def plot_extrapolation_v(data, countries, title):
     fig.legend(handles=legend_handles, loc='upper right', fontsize=10, frameon=False)
 
     plt.show()
-
+#plot extrapolation v should be cahnged to extrapolation, where backwars and forwards are dealt with (copy from backwards_extrapolation.py)
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -527,124 +531,17 @@ dfEtotal = dfE[["country", "year", "Etotal"]].drop_duplicates()
 
 # forward extrapolation
 # forward extrapoplation Etotal
-# _,_ = package_extrapolation_forward(dfEtotal, 'Etotal', 0.8, 2, 5)
+# _,_ = package_extrapolation(dfEtotal, 'Etotal', 0.8, 2, steps_forward=5, steps_back=4)
 
- #12. extrapolation forwards
-I want to amke polynomial_extrapolation be good for both backwards and forward plot_extrapolation_v
-    I will practice it in the file backwards_extrapolation and then copy here.
-
-# 12. extrapolation backwards
-def polynomial_extrapolation_v_with_backwards(data, train_test_split, degree, steps, steps_back=4):
-    data, dfp = polynomial_extrapolation_model(data, train_test_split, degree)
-    
-    years_forward = np.arange(data['Time'].max() + 1, data['Time'].max() + steps + 1)
-    years_back = np.arange(data['Time'].min() - steps_back, data['Time'].min()) if steps_back > 0 else np.array([], dtype=int)
-    all_years = np.concatenate([years_back, years_forward])
-    
-    data = pd.concat([data, pd.DataFrame({col: np.nan if col != 'Time' else all_years for col in data.columns})], ignore_index=True)
-    data['prediction flag'] = data['prediction flag'].fillna(True)
-    
-    for col in countries: data.loc[data['Time'].isin(all_years), f'{col} prediction'] = Polynomial(dfp[col])(all_years)
-    
-    return data
-
-
-
-
-
-
-
-############################### plotting ############################
-
-#def plot_extrapolation_v_with_backwards(data, countries, title):
-    plotstr_data = 'o-'
-    plotstr_pred = '^'  # red triangles for predictions
-    
-    fig, axes = plt.subplots(nrows=len(countries), ncols=1, figsize=(10, 10), sharex=True)
-    
-    mask = data['prediction flag'].astype(bool) if 'prediction flag' in data.columns else None
-
-    for i, country in enumerate(countries):
-        # plot original data
-        axes[i].plot(data['Time'][~mask], data[country][~mask], plotstr_data, color='tab:blue')
-        
-        if mask is not None:
-            # backward predictions
-            backward_mask = mask & (data['Time'] < data['Time'][~mask].min())
-            if backward_mask.any():
-                axes[i].plot(data['Time'][backward_mask], data[f'{country} prediction'][backward_mask],
-                             plotstr_pred, color='tab:red', linestyle='-')
-            
-            # forward predictions
-            forward_mask = mask & (data['Time'] > data['Time'][~mask].max())
-            if forward_mask.any():
-                axes[i].plot(data['Time'][forward_mask], data[f'{country} prediction'][forward_mask],
-                             plotstr_pred, color='tab:red', linestyle='-')
-        
-        axes[i].set_title(country, loc='left', fontsize=10, pad=5)
-        axes[i].set_ylabel('GDP', rotation=0, labelpad=30)
-        axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
-        axes[i].grid(True)
-
-    axes[-1].set_xlabel('Year')
-    fig.suptitle(title, fontsize=16)
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-
-    # Create custom legend
-    legend_handles = [
-        Line2D([0], [0], color='tab:blue', marker=plotstr_data[0], linestyle='-', label='Data'),
-        Line2D([0], [0], color='tab:red', marker=plotstr_pred, linestyle='-', label='Prediction')
-    ]
-    fig.legend(handles=legend_handles, loc='upper right', fontsize=10, frameon=False)
-
-    plt.show()
-
-def plot_extrapolation_v_with_backwards(data, countries, title):
-    plotstr_data = 'o-'   # blue dots + line
-    plotstr_pred = '^-'    # red triangles
-    
-    fig, axes = plt.subplots(nrows=len(countries), ncols=1, figsize=(10, 10), sharex=True)
-    
-    mask = data['prediction flag'].astype(bool)
-    
-    for i, country in enumerate(countries):
-        # Original data
-        axes[i].plot(data['Time'][~mask], data[country][~mask], plotstr_data, color='tab:blue')
-        
-        # Backward predictions
-        backward_mask = mask & (data['Time'] < data['Time'][~mask].min())
-        if backward_mask.any():
-            axes[i].plot(data['Time'][backward_mask], data[f'{country} prediction'][backward_mask],
-                         plotstr_pred, color='tab:red', linestyle='-')
-        
-        # Forward predictions
-        forward_mask = mask & (data['Time'] > data['Time'][~mask].max())
-        if forward_mask.any():
-            axes[i].plot(data['Time'][forward_mask], data[f'{country} prediction'][forward_mask],
-                         plotstr_pred, color='tab:red', linestyle='-')
-        
-        axes[i].set_title(country, loc='left', fontsize=10, pad=5)
-        axes[i].set_ylabel('Value', rotation=0, labelpad=30)
-        axes[i].yaxis.set_major_locator(MaxNLocator(nbins=3, prune='both'))
-        axes[i].grid(True)
-    
-    axes[-1].set_xlabel('Year')
-    fig.suptitle(title, fontsize=16)
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-    
-    # Legend
-    legend_handles = [
-        Line2D([0], [0], color='tab:blue', marker='o', linestyle='-', label='Data'),
-        Line2D([0], [0], color='tab:red', marker='^', linestyle='-', label='Prediction')
-    ]
-    fig.legend(handles=legend_handles, loc='upper right', fontsize=10, frameon=False)
-    
-    plt.show()
-
-
-train_test_split = 0.7
-degree = 1
-steps = 6 # how many years to extrapolate
-steps_back=4
-data_and_prediction = polynomial_extrapolation_v_with_backwards(data_for_extrap.copy(), train_test_split, degree, steps, steps_back=4)
-plot_extrapolation_v_with_backwards(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment ICT sector, degree={degree}')
+ 
+#put the following in a package
+# remove _v from function name
+# document backwards_extrapolation.py, *.ipynb
+train_test_split = 0.8
+degree = 3
+# Pivot the dataframe
+data_for_extrap = dfEict.pivot(index="year", columns="country", values="Etotal")
+# Reset index and rename year -> time
+data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
+data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward=5, steps_back=4)
+plot_extrapolation_v(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment ICT sector, degree={degree}')
