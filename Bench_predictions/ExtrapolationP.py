@@ -537,7 +537,6 @@ print(f"\n Elapsed time: {(end_time - start_time)/60:.1f} minutes \n")
 
 #plot_Tc(dfTc, 'G') # Tc is very similar over the different years. I can use T of 2019
 #all I need is to infer final demand in order to get x
-#I also need to infer GDP
 #plot_vector_by_country(dffc, 'final demand', title='final demand')
 #plot_vector_by_country(dfE, 'Employment', title='Employment')
 
@@ -562,19 +561,4 @@ dfEtotal = dfE[["country", "year", "Etotal"]].drop_duplicates()
 # forward extrapolation
 # forward extrapoplation Etotal
 # _,_ = package_extrapolation(dfEtotal, 'Etotal', 'Etotal', 0.8, 2, steps_forward=5, steps_back=4, alpha=50)
-
- 
-#put the following in a package
-# #remove _v from function name
-## document backwards_extrapolation.py, *.ipynb
-#train_test_split = 0.8
-#degree = 3
-## Pivot the dataframe
-#data_for_extrap = dfEict.pivot(index="year", columns="country", values="Etotal")
-# Reset index and rename year -> time
-#data_for_extrap = data_for_extrap.reset_index().rename(columns={"year": "Time"})
-#data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward=5, steps_back=4)
-#plot_extrapolation(data_and_prediction, countries, title=f'Polinomial Extrapolation of Employment ICT sector, degree={degree}')
-
-_,_ = package_extrapolation(dfEtotal, 'Etotal', 'Etotal', 0.8, 1, steps_forward=5, steps_back=4, alpha=50)
 _,_ = package_extrapolation(dfEict, 'Etotal', 'Eict', 0.8, 1, steps_forward=5, steps_back=4, alpha=50)
