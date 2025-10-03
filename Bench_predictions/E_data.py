@@ -12,7 +12,13 @@ file_path = '/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/OECD E 
 data_rough = pd.read_csv(file_path)
 data_rough.head()
 
+I started this file to combine 2010 infor with 2011-2020, but then I downloaded data again
+now 
 
+OECD E 88 sectors 2010-2022 G7.csv'
+
+has 88 sectors 2010-2022 G7 info.
+there's no information before 2010
 
 
 print('data_rough.columns')
