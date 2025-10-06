@@ -11,6 +11,14 @@
 
 import pandas as pd
 
+I tried here to upload OECD Employment data that includes 2010. 2010-2022. 
+previous data has 2011-2020
+but 6.10.25
+since I want to go ahead with teh extrapolation I'm abandoning this file now.
+
+
+
+
 # upload 2010 data and check for missing data
 file_path = '/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/OECD E 88 sectors 2010-2022 G7.csv'
 data_rough = pd.read_csv(file_path,header=None)
