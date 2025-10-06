@@ -4,21 +4,52 @@
 
 # I download data again from https://data-explorer.oecd.org/vis?df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_NASU%40DF_USEVA_T1600&df[ag]=OECD.SDD.NAD&df[vs]=1.0&hc[Transaction]=Output&pg=0&snb=53&tm=input-output&utm_source=chatgpt.com&dq=A.CAN%2BFRA%2BDEU%2BITA%2BJPN%2BUSA%2BGBR.D1.A%2BB%2BC%2BD%2BE%2BF%2BG%2BH%2BI%2BJ%2BK%2BL%2BM%2BN%2BO%2BP%2BQ%2BR%2BS%2BT%2BU%2BA01%2BA02%2BA03%2BB05%2BB06%2BB07%2BB08%2BB09%2BC10T12%2BC13T15%2BC16%2BC17%2BC18%2BC19%2BC20%2BC21%2BC22%2BC23%2BC24%2BC25%2BC26%2BC27%2BC28%2BC29%2BC30%2BC31_32%2BC33%2BE36%2BE37T39%2BF41%2BF42%2BG45%2BG46%2BG47%2BH49%2BH50%2BH51%2BH52%2BH53%2BI55%2BI56%2BJ58%2BJ59_60%2BJ61%2BJ62_63%2BK64%2BK65%2BK66%2BL68A%2BL68B%2BM69_70%2BM71%2BM72%2BM73%2BM74_75%2BN77%2BN78%2BN79%2BN80T82%2BQ86%2BQ87_88%2BR90T92%2BR93%2BS94%2BS95%2BS96%2BT97....V.&pd=2010%2C2022&to[TIME_PERIOD]=false&vw=tb
 
-
+# I started this file to combine 2010 infor with 2011-2020, but then I downloaded data again
+# now OECD E 88 sectors 2010-2022 G7.csv'
+#has 88 sectors 2010-2022 G7 info.
+# in OECD there's no information before 2010
 
 import pandas as pd
+
 # upload 2010 data and check for missing data
 file_path = '/mnt/c/NavitComputer24/2024_NES/Economics/Data/OECDsalaries/OECD E 88 sectors 2010-2022 G7.csv'
-data_rough = pd.read_csv(file_path)
-data_rough.head()
+data_rough = pd.read_csv(file_path,header=None)
+data_rough.drop(data_rough.index[:3],inplace=True)
+data_rough.drop(data_rough.columns[2], axis=1, inplace=True)
+data_rough_columns = data_rough.iloc[0,2:]
+print(f'\n {data_rough_columns} \n')
+# mapping from sector name to sector code
+# 1. uploading the map from statcan sectors to OECD sectors:
+names_codes_file = pd.read_excel(
+                     '/mnt/c/NavitComputer24/2024_NES/Economics/Data/Input_Codes_Map.xlsx', 
+                    usecols="A,B",      # Use Excel column letters directly
+                    header=None,        # Do not treat any row as the header
+                    names=['detailed_Codes', 'sectors_names'],  # Assign these names to the columns
+                    skiprows=1          # Skip the first row (Excel is 1-based, so row 2 is index 1)
+                    )
+detailed_code2name = dict(zip(names_codes_file['detailed_Codes'], names_codes_file['sectors_names']))
+name2detailed_code = dict(zip(names_codes_file['sectors_names'], names_codes_file['detailed_Codes' ]))
+data_rough["sector names"] = None
+data_rough.loc["sector names", data_rough.columns[2:]] = [
+    name2detailed_code[x] for x in data_rough.iloc[0, 2:].values
+]
 
-I started this file to combine 2010 infor with 2011-2020, but then I downloaded data again
-now 
 
-OECD E 88 sectors 2010-2022 G7.csv'
 
-has 88 sectors 2010-2022 G7 info.
-there's no information before 2010
+'''
+codes_map = pd.read_excel(
+                    '/mnt/c/NavitComputer24/2024_NES/Economics/Data/Input_Codes_Map.xlsx', 
+                    usecols="A,C",      # Use Excel column letters directly
+                    header=None,        # Do not treat any row as the header
+                    names=['Detailed_Codes', 'OECD_Codes'],  # Assign these names to the columns
+                    skiprows=1          # Skip the first row (Excel is 1-based, so row 2 is index 1)
+                    )
+mapping_dict = dict(zip(codes_map['Detailed_Codes'], codes_map['OECD_Codes']))
+'''
+
+
+
+
 
 
 print('data_rough.columns')

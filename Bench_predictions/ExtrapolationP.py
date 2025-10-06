@@ -383,7 +383,7 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
-final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
+final_demand_columns = ['HFCE',	'NPISH', 'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
 
 dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
 dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
@@ -561,4 +561,4 @@ dfEtotal = dfE[["country", "year", "Etotal"]].drop_duplicates()
 # forward extrapolation
 # forward extrapoplation Etotal
 # _,_ = package_extrapolation(dfEtotal, 'Etotal', 'Etotal', 0.8, 2, steps_forward=5, steps_back=4, alpha=50)
-_,_ = package_extrapolation(dfEict, 'Etotal', 'Eict', 0.8, 1, steps_forward=5, steps_back=4, alpha=50)
+_ = package_extrapolation(dfEict, 'Etotal', 'Eict', 0.8, 1, steps_forward=5, steps_back=4, alpha=50)
