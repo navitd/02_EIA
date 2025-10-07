@@ -141,18 +141,44 @@ def package_extrapolation(df, col_name, col_total, train_test_split, degree, ste
 
     # plotting the data points and the predictions one over the other
     data_and_prediction = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward, steps_back, alpha)
-    plot_extrapolation(data_and_prediction, countries, title=f'Polinomial Extrapolation of {col_total}, degree={degree}, alpha={alpha}')
+    plot_polynomial_extrapolation(data_and_prediction, countries, title=f'Polinomial Extrapolation of {col_total}, degree={degree}, alpha={alpha}')
 
     ## actual extrapolation (all data points)
     #train_test_split = 1
     #data_and_prediction2 = polynomial_extrapolation(data_for_extrap.copy(), train_test_split, degree, steps_forward, steps_back, alpha)
-    #plot_extrapolation(data_and_prediction2, countries, title=f'Polinomial Extrapolation of {col_total}, degree={degree}, alpha={alpha}')
+    #plot_polynomial_extrapolation(data_and_prediction2, countries, title=f'Polinomial Extrapolation of {col_total}, degree={degree}, alpha={alpha}')
     return df, dftotal, data_and_prediction 
 
 # all three functions above are used in forawrd extrapolation
 
+# 10.b. extrapolation by gdp
+def clc_v_tot(df, value_col, col_tot):
+    # add total employment per (country, year)
+    df[col_tot] = df.groupby(["country", "year"])[value_col].transform("sum")
+    # ratio of sector employment to total
+    df[value_col+"_sector_ratio"] = df[value_col] / df[col_tot]
+    dftotal = df[["country", "year", col_tot]].drop_duplicates()
+    return df, dftotal
 
 
+def compute_E_G_ratio(dfEtotal, worldbank_gdp_data,countries, year_range):
+    
+    # Initialize output with same structure
+    dfE_G_ratio = pd.DataFrame(index=year_range, columns=worldbank_gdp_data.columns[1:])
+    
+    # Loop through each country column (skip 'Time')
+    for country in countries:
+        for year in year_range:
+            if int(year) not in worldbank_gdp_data.index:
+                raise ValueError(f"Year {year} not found in worldbank_gdp_data.")
+            
+            gdp_temp = worldbank_gdp_data[worldbank_gdp_data.index == int(year)][country].values[0]
+            if gdp_temp == 0:
+                raise ValueError(f"GDP value for country {country} in year {year} is zero, cannot compute ratio.")
+            else: 
+                 ratio= dfEtotal[  (dfEtotal.year==year) & (dfEtotal.country== country)].Etotal.values[0] / gdp_temp
+                 dfE_G_ratio.loc[ year, country] = ratio
+    return dfE_G_ratio
 ##################################################        functions that calculate        ######################################################
 
 def multipliers2prediction(s2s_mo, fdf_year2, column_name):
@@ -282,7 +308,7 @@ def plot_Tc(dfTc, plot_sec):
     plt.show()
 
 
-def plot_vector_by_country(df, col_name, title=None):
+def plot_subplots_vector_by_country(df, col_name, title=None):
     countries = df.country.unique()
     fig, axes = plt.subplots(7, 1, figsize=(12, 14), sharex=True)
 
@@ -309,7 +335,7 @@ def plot_vector_by_country(df, col_name, title=None):
 
 
 #used for extrapolation and for looking at the data
-def plot_extrapolation(data, countries, title):
+def plot_polynomial_extrapolation(data, countries, title):
     plotstr1 = 'o-'
     plotstr2 = '^-'
     #countries = data.drop(['Time', 'prediction flag'], axis=1)
@@ -602,8 +628,8 @@ print(f"\n Elapsed time: {(end_time - start_time)/60:.1f} minutes \n")
 
 #plot_Tc(dfTc, 'G') # Tc is very similar over the different years. I can use T of 2019
 #all I need is to infer final demand in order to get x
-#plot_vector_by_country(dffc, 'final demand', title='final demand')
-#plot_vector_by_country(dfE, 'Employment', title='Employment')
+#plot_subplots_vector_by_country(dffc, 'final demand', title='final demand')
+#plot_subplots_vector_by_country(dfE, 'Employment', title='Employment')
 
 
 
@@ -617,48 +643,23 @@ dfEict = (
     .rename(columns={'Employment': 'Etotal'})
 )
 
-## forward extrapolation
+## 10.a. polynomial extrapolation
+#package extrapolation is polynomial extrapolation only with E
 #dfE, dfEtotal, data_and_predictionE = package_extrapolation(dfE, 'Employment', 'Etotal', 0.8, 1, steps_forward=5, steps_back=4, alpha=50)
 #dfGDP, dfGDPtotal, data_and_predictionGDP = package_extrapolation(dfGDP, 'GDP', 'GDPtotal', 0.8, 1, steps_forward=5, steps_back=4, alpha=50)
 
-
-def sector2market(df, value_col, col_tot):
-    # add total employment per (country, year)
-    df[col_tot] = df.groupby(["country", "year"])[value_col].transform("sum")
-    # ratio of sector employment to total
-    df[value_col+"_sector_ratio"] = df[value_col] / df[col_tot]
-    dftotal = df[["country", "year", col_tot]].drop_duplicates()
-    return df, dftotal
-
-dfE, dfEtotal = sector2market(dfE, 'Employment', 'Etotal')
-dfGDP, dfGDPtotal = sector2market(dfGDP, 'GDP', 'GDPtotal')
+#10.b. extrapolation by gdp
+dfE, dfEtotal = clc_v_tot(dfE, 'Employment', 'Etotal')
+dfGDP, dfGDPtotal = clc_v_tot(dfGDP, 'GDP', 'GDPtotal')
 
 # upload GDP data from World Bank
 # GDP of world bank is in current USD dollars. 
-# input-ouput tables and E are in that year's USD dollars.
+# input-ouput tables and E are in millions of that year's USD dollars.
 worldbank_gdp_data = get_worldbank_gdp_data(False)
 worldbank_gdp_data.rename(columns={'Time': 'year'}, inplace=True   ) #renaming the column
 worldbank_gdp_data['year'] = worldbank_gdp_data['year'].astype(int) #recasting as int
 worldbank_gdp_data.set_index('year', inplace=True)                  #setting year as index
 
-def compute_E_G_ratio(dfEtotal, worldbank_gdp_data,countries, year_range):
-    
-    # Initialize output with same structure
-    dfE_G_ratio = pd.DataFrame(index=year_range, columns=worldbank_gdp_data.columns[1:])
-    
-    # Loop through each country column (skip 'Time')
-    for country in countries:
-        for year in year_range:
-            if int(year) not in worldbank_gdp_data.index:
-                raise ValueError(f"Year {year} not found in worldbank_gdp_data.")
-            
-            gdp_temp = worldbank_gdp_data[worldbank_gdp_data.index == int(year)][country].values[0]
-            if gdp_temp == 0:
-                raise ValueError(f"GDP value for country {country} in year {year} is zero, cannot compute ratio.")
-            else: 
-                 ratio= dfEtotal[  (dfEtotal.year==year) & (dfEtotal.country== country)].Etotal.values[0] / gdp_temp
-                 dfE_G_ratio.loc[ year, country] = ratio
-    return dfE_G_ratio
 
 
 
@@ -670,8 +671,36 @@ Eextrap = pd.DataFrame(index=worldbank_gdp_data.index , columns=worldbank_gdp_da
 for country in countries:
     Eextrap[country] = worldbank_gdp_data[country] * avg_ratio_per_country[country]
     
-    
+#Eextrap is the extrapolation E
+the funciton below plots it. should make it a generic plot
+plot_v_by_year_colors
+later I need to print to excel the sectorial E
+get sectorial E
+print to excel
+then make a new File
+read the E from file
+add it to inptuput output tables 1995-2020
+then get all graphs
+no...
+extrapolation needed as well
+so I need to make E and input output tables until 2030
+print all of this 
+then I will be able to do what I want with them.
 
+
+
+
+plt.figure(figsize=(10,6))
+
+for country in Eextrap.columns:
+    plt.plot(Eextrap.index, Eextrap[country], marker='o', label=country)
+
+plt.xlabel("Year")
+plt.ylabel("Employment [Millions USD]")
+plt.title("Extrapolated Employment by Country")
+plt.legend()
+plt.grid(True)
+plt.show()
 
 
 
