@@ -114,6 +114,7 @@ def data_upload_OECD_salaries(year, currency_exchange_type, table_type='DOM', co
         # convert CAD to USD by PPP_or_exch
         one_transaction_type_grouped['OBS_VALUE_USD'] = (one_transaction_type_grouped['OBS_VALUE'] / PPP_or_exch).round(1)
         one_transaction_type_grouped.drop(columns=['OBS_VALUE'], inplace=True)
+        # this gives E in that year's USD dollars
         
         # last step:
         # choose from it only codes that appear in OECD:

@@ -2,6 +2,7 @@
 # input-output table from OECD
 # https://www.oecd.org/en/data/datasets/input-output-tables.html
 
+#I should correct evertying here Time -> year
 
 import sys
 from pathlib import Path
@@ -626,12 +627,53 @@ def sector2market(df, value_col, col_tot):
     df[col_tot] = df.groupby(["country", "year"])[value_col].transform("sum")
     # ratio of sector employment to total
     df[value_col+"_sector_ratio"] = df[value_col] / df[col_tot]
-    dftotal = df[["country", "year", value_col]].drop_duplicates()
+    dftotal = df[["country", "year", col_tot]].drop_duplicates()
     return df, dftotal
 
 dfE, dfEtotal = sector2market(dfE, 'Employment', 'Etotal')
 dfGDP, dfGDPtotal = sector2market(dfGDP, 'GDP', 'GDPtotal')
 
 # upload GDP data from World Bank
+# GDP of world bank is in current USD dollars. 
+# input-ouput tables and E are in that year's USD dollars.
 worldbank_gdp_data = get_worldbank_gdp_data(False)
+worldbank_gdp_data.rename(columns={'Time': 'year'}, inplace=True   ) #renaming the column
+worldbank_gdp_data['year'] = worldbank_gdp_data['year'].astype(int) #recasting as int
+worldbank_gdp_data.set_index('year', inplace=True)                  #setting year as index
 
+def compute_E_G_ratio(dfEtotal, worldbank_gdp_data,countries, year_range):
+    
+    # Initialize output with same structure
+    dfE_G_ratio = pd.DataFrame(index=year_range, columns=worldbank_gdp_data.columns[1:])
+    
+    # Loop through each country column (skip 'Time')
+    for country in countries:
+        for year in year_range:
+            if int(year) not in worldbank_gdp_data.index:
+                raise ValueError(f"Year {year} not found in worldbank_gdp_data.")
+            
+            gdp_temp = worldbank_gdp_data[worldbank_gdp_data.index == int(year)][country].values[0]
+            if gdp_temp == 0:
+                raise ValueError(f"GDP value for country {country} in year {year} is zero, cannot compute ratio.")
+            else: 
+                 ratio= dfEtotal[  (dfEtotal.year==year) & (dfEtotal.country== country)].Etotal.values[0] / gdp_temp
+                 dfE_G_ratio.loc[ year, country] = ratio
+    return dfE_G_ratio
+
+
+
+dfE_G_ratio = compute_E_G_ratio(dfEtotal, worldbank_gdp_data,countries, year_range)
+avg_ratio_per_country = dfE_G_ratio.mean(axis=0)  # axis=0 → down the rows
+std_ratio_per_country = dfE_G_ratio.std(axis=0)
+
+Eextrap = pd.DataFrame(index=worldbank_gdp_data.index , columns=worldbank_gdp_data.columns)
+for country in countries:
+    Eextrap[country] = worldbank_gdp_data[country] * avg_ratio_per_country[country]
+    
+    
+
+
+
+
+
+print("\n \n")
