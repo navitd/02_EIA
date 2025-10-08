@@ -65,7 +65,7 @@ def get_worldbank_gdp_data(plot_flag):
 
 
 
-def plot_gdp_forecast(worldbank_gdp_data, forecast_gdp, countries):
+def plot_gdp_forecast(worldbank_gdp_data, forecast_gdp, countries, title):
     
     plt.figure(figsize=(12, 6))
 
@@ -79,7 +79,7 @@ def plot_gdp_forecast(worldbank_gdp_data, forecast_gdp, countries):
 
     plt.xlabel("Year")
     plt.ylabel("GDP (current USD)")
-    plt.title("Historical and Forecasted GDP")
+    plt.title(title)
     plt.legend()
     plt.grid(True)
     plt.show()
@@ -143,7 +143,7 @@ for country in countries:
     forecast_gdp[country] = forecast_values
 
 
-plot_gdp_forecast(worldbank_gdp_data, forecast_gdp, countries)
+plot_gdp_forecast(worldbank_gdp_data, forecast_gdp, countries, title="ARIMA gdp d=2")
 
 print("\n\n")
 
