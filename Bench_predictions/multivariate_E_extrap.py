@@ -380,6 +380,18 @@ def plot_polynomial_extrapolation(data, countries, title):
 
     plt.show()
 
+def plot_v_by_year_1panel(df, countries, ylabel, title):
+    plt.figure(figsize=(10,6))
+
+    for country in df.columns:
+        plt.plot(df.index, Eextrap[country], marker='o', label=country)
+
+    plt.xlabel("Year")
+    plt.ylabel(ylabel + " [Millions USD]")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 
 #################################################### uploading WorldBank data    ##################################################
@@ -672,37 +684,7 @@ for country in countries:
     Eextrap[country] = worldbank_gdp_data[country] * avg_ratio_per_country[country]
     
 #Eextrap is the extrapolation E
-the funciton below plots it. should make it a generic plot
-plot_v_by_year_colors
-later I need to print to excel the sectorial E
-get sectorial E
-print to excel
-then make a new File
-read the E from file
-add it to inptuput output tables 1995-2020
-then get all graphs
-no...
-extrapolation needed as well
-so I need to make E and input output tables until 2030
-print all of this 
-then I will be able to do what I want with them.
-
-
-
-
-plt.figure(figsize=(10,6))
-
-for country in Eextrap.columns:
-    plt.plot(Eextrap.index, Eextrap[country], marker='o', label=country)
-
-plt.xlabel("Year")
-plt.ylabel("Employment [Millions USD]")
-plt.title("Extrapolated Employment by Country")
-plt.legend()
-plt.grid(True)
-plt.show()
-
-
+plot_v_by_year_1panel(Eextrap, countries, 'Employment', "Extrapolated Employment by Country")
 
 
 print("\n \n")
