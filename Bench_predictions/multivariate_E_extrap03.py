@@ -672,9 +672,6 @@ worldbank_gdp_data.rename(columns={'Time': 'year'}, inplace=True   ) #renaming t
 worldbank_gdp_data['year'] = worldbank_gdp_data['year'].astype(int) #recasting as int
 worldbank_gdp_data.set_index('year', inplace=True)                  #setting year as index
 
-
-
-
 dfE_G_ratio = compute_E_G_ratio(dfEtotal, worldbank_gdp_data,countries, year_range)
 avg_ratio_per_country = dfE_G_ratio.mean(axis=0)  # axis=0 → down the rows
 std_ratio_per_country = dfE_G_ratio.std(axis=0)
