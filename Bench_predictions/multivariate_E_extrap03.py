@@ -699,5 +699,6 @@ for country in countries:
 #Eextrap is the extrapolation E
 plot_v_by_year_1panel(Eextrap, countries, 'Employment', "Extrapolated Employment by Country")
 
-
+# print to excel
+Eextrap.to_csv("Bench_predictions/Etotal_multivariate_E_extrap03.csv", index=True)
 print("\n \n")
