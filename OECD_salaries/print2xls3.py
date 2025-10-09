@@ -5,7 +5,6 @@ import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
@@ -307,9 +306,6 @@ def append_styled_multipliers_to_excel(
 
 
 ##################################################             old functions               ######################################################
-
-
-
 def multipliers2prediction(s2s_mo, fdf_year2, column_name):
     predicted_output_year2_np  = np.round(s2s_mo.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
     
