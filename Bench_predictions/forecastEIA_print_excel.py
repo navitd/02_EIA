@@ -7,7 +7,7 @@
 # 2.2 print to excel E+forecast E. print in excel the name of the program that makes it.
 
 # 3. Esectors_from_Etot05.py
-# 3.1 predict sectors E
+# 3.1 predict _sectors_ E
 # 3.2 print to excel E+forecast E. print in excel the name of the program that makes it.
 @
 # 4. upload final demand F from OECD and use ARIMA to forecast forward
