@@ -664,21 +664,37 @@ dfEict = (
 dfE, dfEtotal = clc_v_tot(dfE, 'Employment', 'Etotal')
 dfGDP, dfGDPtotal = clc_v_tot(dfGDP, 'GDP', 'GDPtotal')
 
-# upload GDP data from World Bank
+# upload GDP data from World Bank - 1995-2024 or from "Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv"
 # GDP of world bank is in current USD dollars. 
 # input-ouput tables and E are in millions of that year's USD dollars.
-worldbank_gdp_data = get_worldbank_gdp_data(False)
-worldbank_gdp_data.rename(columns={'Time': 'year'}, inplace=True   ) #renaming the column
-worldbank_gdp_data['year'] = worldbank_gdp_data['year'].astype(int) #recasting as int
-worldbank_gdp_data.set_index('year', inplace=True)                  #setting year as index
+upload_from_gdp_extrapolated = True
+if upload_from_gdp_extrapolated:
+    #SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    #gdp_filename = os.path.join(SCRIPT_DIR, '..', '..', 'Data', 'Bench_predictions', 'gdp_ARIMAgdp_currentUSD04.csv')
+    gdp_filename = "Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv"
+    gdp_data = pd.read_csv(gdp_filename)
+    gdp_data.rename(columns={'Unnamed: 0': 'year'}, inplace=True) #renaming the column
+    gdp_data['year'] = gdp_data['year'].astype(int)
+    gdp_data.set_index('year', inplace=True)                  #setting year as index
+   
 
-dfE_G_ratio = compute_E_G_ratio(dfEtotal, worldbank_gdp_data,countries, year_range)
+else:
+    worldbank_gdp_data = get_worldbank_gdp_data(False)
+    worldbank_gdp_data.rename(columns={'Time': 'year'}, inplace=True   ) #renaming the column
+    worldbank_gdp_data['year'] = worldbank_gdp_data['year'].astype(int) #recasting as int
+    worldbank_gdp_data.set_index('year', inplace=True) 
+    gdp_data = worldbank_gdp_data.copy()                 #setting year as index
+
+    
+
+#adjust to gdp_data or worldbank_gdp_data
+dfE_G_ratio = compute_E_G_ratio(dfEtotal, gdp_data,countries, year_range)
 avg_ratio_per_country = dfE_G_ratio.mean(axis=0)  # axis=0 → down the rows
 std_ratio_per_country = dfE_G_ratio.std(axis=0)
 
-Eextrap = pd.DataFrame(index=worldbank_gdp_data.index , columns=worldbank_gdp_data.columns)
+Eextrap = pd.DataFrame(index=gdp_data.index , columns=gdp_data.columns)
 for country in countries:
-    Eextrap[country] = worldbank_gdp_data[country] * avg_ratio_per_country[country]
+    Eextrap[country] = gdp_data[country] * avg_ratio_per_country[country]
     
 #Eextrap is the extrapolation E
 plot_v_by_year_1panel(Eextrap, countries, 'Employment', "Extrapolated Employment by Country")
