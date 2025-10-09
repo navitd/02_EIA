@@ -18,6 +18,21 @@ from func_safe_divide import safe_divide, safe_divide_vector
 from func_clc_L import clc_L
 
 
+Etot = pd.read_csv("Bench_predictions/Etotal_multivariate_E_extrap03.csv", index_col=0)
+print("\n Etot from multivariate_E_extrap03:\n")
+print(Etot.tail())  
+
+
+
+I put here the code that collects dffc from input-output tables over the years
+
+there's E here as well, need to get it out
+
+
+
+
+
+
 
 ##################################       collecting data from input-output tables      #########################################
 def clc_v_tot(df, value_col, col_tot):
@@ -43,13 +58,8 @@ def collecting_year_country_data_vector(country, year, dfv, v, vector_name):
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-
-# final demand is needed to get L, and L is needed to get the full E for Japan 2020
-# japan 2020 has missing sectors and this code fixes it.
-
-#dfE at the beginning is only for 2011-2020 - this is the data E we have.
-
-#  get dfE from input-output tables
+# 1. get dfE from input-output tables
+# later remove dfoutput etc.
 table_type = 'TTL' #or'DOM'   
 OECD_path = "../Data/" # windows style: r".\\"
 if table_type == 'DOM':
@@ -82,10 +92,11 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
 final_demand_columns = ['HFCE',	'NPISH', 'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
-# final demand is needed to get L, and L is needed to get the full E for Japan 2020
-# japan 2020 has missing sectors and this code fixes it.
+
 
 dfE = pd.DataFrame() # this will hold country, year, buying sector, selling sector, Eimpact
+dffc = pd.DataFrame()
+dfother_final_demand = pd.DataFrame()
 for country in countries:
     for year in year_range:
         
@@ -99,6 +110,8 @@ for country in countries:
         E           = OECDadditional['employees_compensation'] 
         output      = OECD.loc['OUTPUT', simple_II_labels]
 
+        #dfother_final_demand = collecting_year_country_data_matrix(country, year, dfother_final_demand, other_final_demand , 'other_final_demand')
+    
         dfE = collecting_year_country_data_vector(country, year, dfE, E, 'Employment')
 
     
@@ -115,9 +128,9 @@ for country in countries:
             dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'sector'].map(avg_employment)
             #plot_E_line_graph(dfE[dfE.country=='GBR'], 'Employment', 'Employment by Sector in Great Britain by Year')
 
-        ################################################
-        # get E sectors for Japan 2020 for all sectors #
-        ################################################
+        ##########################
+        # get E sectors for Japan 2020 for all sectors
+        ##########################
         T = safe_divide(II, output)
         Ldf, L_minus_I = clc_L(T)
 
@@ -137,16 +150,26 @@ for country in countries:
             dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'GBR'), ['sector', 'Employment']]\
             .set_index('sector').reindex(IIc.columns)['Employment']
             
-# to delete:
-# get Etotal extrapolation by gdp
-#dfE10years, dfEtotal10years = clc_v_tot(dfE, 'Employment', 'Etotal')
+  
+           
+       
+        #################################
+        # final demand
+        #################################
+        fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
+        fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
+        fcdf.loc['employees_compensation'] = 0        
+        
+        dftemp = pd.DataFrame()
+        dftemp = fcdf.reset_index()
+        dftemp.columns = ['sector', 'final demand']
+        dftemp['country'] = country
+        dftemp['year'] = year
+        dftemp = dftemp[['country', 'year', 'sector', 'final demand']]
+        dffc = pd.concat([dffc, dftemp], ignore_index=True)
 
-# from the above I need dfE - this has Esectors
-# I alrady have Employment_sector_ratio, this is Esector/Etotal
-so I just need to get an average number for Employment_sector_ratio and multiply by Etot for each country, year
-there needs to be dfE2- this is for sectors and extrapolated years
 
-# this is Etot 1995-2040
-Etot = pd.read_csv("Bench_predictions/Etotal_multivariate_E_extrap03.csv", index_col=0)
-print("\n Etot from multivariate_E_extrap03:\n")
-print(Etot.tail())  
+
+
+#10.b. extrapolation by gdp
+dfE, dfEtotal = clc_v_tot(dfE, 'Employment', 'Etotal')
