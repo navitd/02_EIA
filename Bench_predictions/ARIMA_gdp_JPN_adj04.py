@@ -314,7 +314,7 @@ for country in countries:
 # going down with a = 
 
 x1,y1 = 2024, worldbank_gdp_data.loc[2024,'JPN']
-x2,y2 = 2040, worldbank_gdp_data.loc[2024, 'FRA']
+x2,y2 = 2040, worldbank_gdp_data.loc[2024, 'CAN']
 a = (y2-y1)/(x2-x1)
 b = y1 - a*x1
 for year in forecast_years:

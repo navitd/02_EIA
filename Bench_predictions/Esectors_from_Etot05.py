@@ -165,7 +165,8 @@ for country in countries:
         Esector_extrap = pd.concat([Esector_extrap, E1year], ignore_index=True) 
 
 
-# print to csv Esector_extrap.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
+# print to csv 
+Esector_extrap.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
 
 
 print(Etot.tail())  
