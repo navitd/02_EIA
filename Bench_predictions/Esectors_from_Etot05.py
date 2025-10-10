@@ -139,14 +139,60 @@ for country in countries:
             
 # to delete:
 # get Etotal extrapolation by gdp
-#dfE10years, dfEtotal10years = clc_v_tot(dfE, 'Employment', 'Etotal')
+dfE10years, _ = clc_v_tot(dfE, 'Employment', 'Etotal')
 
 # from the above I need dfE - this has Esectors
 # I alrady have Employment_sector_ratio, this is Esector/Etotal
-so I just need to get an average number for Employment_sector_ratio and multiply by Etot for each country, year
-there needs to be dfE2- this is for sectors and extrapolated years
+# so I just need to get an average number for Employment_sector_ratio and multiply by Etot for each country, year
+# there needs to be dfEsectors_from_Etot- this is for sectors and extrapolated years
 
 # this is Etot 1995-2040
 Etot = pd.read_csv("Bench_predictions/Etotal_multivariate_E_extrap03.csv", index_col=0)
-print("\n Etot from multivariate_E_extrap03:\n")
+
+Esector_extrap = pd.DataFrame(columns = ['country', 'year', 'sector', 'Eextrap'])
+for country in countries:
+     ratios = dfE10years[dfE10years.country==country].groupby('sector')['Employment_sector_ratio'].mean()
+     for year in Etot.index:
+        vals = ratios * Etot.loc[int(year), country] 
+        # Create a temporary DataFrame for this (country, year)
+        E1year = pd.DataFrame({
+            'country': country,
+            'year': year,
+            'sector': ratios.index,
+            'Eextrap': vals.values
+        })
+        # Append to the main DataFrame
+        Esector_extrap = pd.concat([Esector_extrap, E1year], ignore_index=True) 
+
+
+# print to csv Esector_extrap.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
+
+
 print(Etot.tail())  
+
+# plot by Country
+for country in countries:
+    subset = Esector_extrap[Esector_extrap['country'] == country]
+
+    # Find the index where year == 2035
+    start_idx = subset[subset['year'] == 2035].index.min()
+
+    # Slice from that index onward
+    subset_after_2035 = subset.loc[start_idx:]
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(subset_after_2035.index, subset_after_2035['Eextrap'], label=country, color='red')
+
+    plt.xlabel('Index')
+    plt.ylabel('Eextrap')
+    plt.title(f'Eextrap for {country} (from 2035)')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+
+
+

@@ -1,3 +1,6 @@
+* correct gdp extrapolation of japan alone. make a linear function with a and b parameters
+    run all files again, print to excel
+
 # 1. ARIMA_gdp04.py
 # 1.1 upload worldbank GDP data + ARIMA forecast 16 years ahead
 # 1.2 print to excel GDP+forecast GDP. print in excel the name of the program that makes it.
