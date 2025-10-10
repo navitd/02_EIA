@@ -676,8 +676,6 @@ if upload_from_gdp_extrapolated:
     gdp_data.rename(columns={'Unnamed: 0': 'year'}, inplace=True) #renaming the column
     gdp_data['year'] = gdp_data['year'].astype(int)
     gdp_data.set_index('year', inplace=True)                  #setting year as index
-   
-
 else:
     worldbank_gdp_data = get_worldbank_gdp_data(False)
     worldbank_gdp_data.rename(columns={'Time': 'year'}, inplace=True   ) #renaming the column

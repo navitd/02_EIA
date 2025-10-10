@@ -171,29 +171,6 @@ Esector_extrap.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
 
 print(Etot.tail())  
 
-# plot by Country
-for country in countries:
-    subset = Esector_extrap[Esector_extrap['country'] == country]
-
-    # Find the index where year == 2035
-    start_idx = subset[subset['year'] == 2035].index.min()
-
-    # Slice from that index onward
-    subset_after_2035 = subset.loc[start_idx:]
-
-    plt.figure(figsize=(8, 5))
-    plt.plot(subset_after_2035.index, subset_after_2035['Eextrap'], label=country, color='red')
-
-    plt.xlabel('Index')
-    plt.ylabel('Eextrap')
-    plt.title(f'Eextrap for {country} (from 2035)')
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-
-
 
 
 

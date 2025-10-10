@@ -17,19 +17,11 @@ from func_data_upload_OECD_salaries import data_upload_OECD_salaries
 from func_safe_divide import safe_divide, safe_divide_vector
 from func_clc_L import clc_L
 
-
+'''
 Etot = pd.read_csv("Bench_predictions/Etotal_multivariate_E_extrap03.csv", index_col=0)
 print("\n Etot from multivariate_E_extrap03:\n")
 print(Etot.tail())  
-
-
-
-I put here the code that collects dffc from input-output tables over the years
-
-there's E here as well, need to get it out
-
-
-
+'''
 
 
 
@@ -52,6 +44,24 @@ def collecting_year_country_data_vector(country, year, dfv, v, vector_name):
             dftemp = dftemp[['country', 'year', 'sector', vector_name]]
             dfv = pd.concat([dfv, dftemp], ignore_index=True)
             return dfv
+
+
+def collecting_year_country_data_matrix(country, year, dfm, m, matrix_name):
+            dftemp = pd.DataFrame()
+            dftemp = m.reset_index().melt(id_vars=m.index.name or 'index', 
+                                        var_name='buying_sector', 
+                                        value_name=matrix_name)
+
+            # Rename 'index' to 'selling_sector'
+            dftemp.rename(columns={m.index.name or 'index': 'selling_sector'}, inplace=True)
+            # Add metadata
+            dftemp['country'] = country
+            dftemp['year'] = year
+            # Reorder columns
+            dftemp = dftemp[['country', 'year',  'selling_sector', 'buying_sector', matrix_name]]
+            # Append to the master DataFrame
+            dfm = pd.concat([dfm, dftemp], ignore_index=True)
+            return dfm
 
 
 
@@ -94,27 +104,19 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 final_demand_columns = ['HFCE',	'NPISH', 'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
 
 
-dfE = pd.DataFrame() # this will hold country, year, buying sector, selling sector, Eimpact
+
 dffc = pd.DataFrame()
 dfother_final_demand = pd.DataFrame()
 for country in countries:
     for year in year_range:
-        
-        # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
         PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
         
         # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
         II = OECD.loc[simple_II_labels, simple_II_labels]
         household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
         other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
-        E           = OECDadditional['employees_compensation'] 
-        output      = OECD.loc['OUTPUT', simple_II_labels]
-
-        #dfother_final_demand = collecting_year_country_data_matrix(country, year, dfother_final_demand, other_final_demand , 'other_final_demand')
-    
-        dfE = collecting_year_country_data_vector(country, year, dfE, E, 'Employment')
-
-    
+        
+        '''
         # predictions before impacts
         # prediction for 2020 Japan, and Great Britain 2020:
         years_for_average = ['2017', '2018', '2019']
@@ -126,7 +128,7 @@ for country in countries:
         if ((year == '2020') & (country == 'GBR')):
             avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='GBR')].groupby('sector')['Employment'].mean()    
             dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'sector'].map(avg_employment)
-            #plot_E_line_graph(dfE[dfE.country=='GBR'], 'Employment', 'Employment by Sector in Great Britain by Year')
+            
 
         ##########################
         # get E sectors for Japan 2020 for all sectors
@@ -150,8 +152,7 @@ for country in countries:
             dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'GBR'), ['sector', 'Employment']]\
             .set_index('sector').reindex(IIc.columns)['Employment']
             
-  
-           
+        '''
        
         #################################
         # final demand
@@ -168,8 +169,21 @@ for country in countries:
         dftemp = dftemp[['country', 'year', 'sector', 'final demand']]
         dffc = pd.concat([dffc, dftemp], ignore_index=True)
 
+        for name in final_demand_columns[1:]:
+            dftemp = pd.DataFrame()
+            dftemp = OECD.loc[simple_II_labels, name].reset_index()
+            dftemp.columns = ['sector', name]
+            dftemp['country'] = country
+            dftemp['year'] = year
+            dftemp = dftemp[['country', 'year', 'sector', name]]
+            dfother_final_demand = pd.concat([dfother_final_demand, dftemp], ignore_index=True)
 
 
 
-#10.b. extrapolation by gdp
-dfE, dfEtotal = clc_v_tot(dfE, 'Employment', 'Etotal')
+
+
+gdp_filename = "Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv"
+gdp_data = pd.read_csv(gdp_filename)
+gdp_data.rename(columns={'Unnamed: 0': 'year'}, inplace=True) #renaming the column
+gdp_data['year'] = gdp_data['year'].astype(int)
+gdp_data.set_index('year', inplace=True) 

@@ -13,11 +13,12 @@
 # apan gdp goes to the negative after 2037. I should correct the gdp extrapolation and run all the files again
 # corrected gdp extrapolation of japan alone. made a linear function with a and b parameters
 #    ran all files again, print to excel
-#ARIMA_gdp_JPN_adj04.py corrects for japan
-@ Esectors_from_Etot05.py add printing to file, move to f
+# ARIMA_gdp_JPN_adj04.py corrects for japan
+
 
 # 4. upload final demand F from OECD and use ARIMA to forecast forward
 # 4.2 print to excel F+forecast F. print in excel the name of the program that makes it.
+@
 
 # 5. create input-output tables for future years
 # 6. print all to excel files
