@@ -63,6 +63,23 @@ def collecting_year_country_data_matrix(country, year, dfm, m, matrix_name):
             dfm = pd.concat([dfm, dftemp], ignore_index=True)
             return dfm
 
+########################################         plotting             ###############################################
+def plot_dffc(years, countries):
+
+    for country in countries:
+        for year in years:
+            subset = dffc[(dffc['country'] == country) & (dffc['year'] == str(year))]
+            if subset.empty:
+                print(f"No data found for {country} in {year}.")
+                continue
+            plt.figure(figsize=(8, 4))
+            plt.plot(subset.index, subset['final demand'], marker='o')
+            plt.title(f"Final Demand – {country}, {year}")
+            plt.xlabel("Index")
+            plt.ylabel("Final Demand")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -116,43 +133,7 @@ for country in countries:
         household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
         other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
         
-        '''
-        # predictions before impacts
-        # prediction for 2020 Japan, and Great Britain 2020:
-        years_for_average = ['2017', '2018', '2019']
-        if ((year == '2020') & (country == 'JPN')):
-            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='JPN')].groupby('sector')['Employment'].mean()    
-            dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'sector'].map(avg_employment)
-           #plot_E_line_graph(dfE[dfE.country=='JPN'], 'Employment', 'Employment by Sector in Japan by Year')
-
-        if ((year == '2020') & (country == 'GBR')):
-            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='GBR')].groupby('sector')['Employment'].mean()    
-            dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'sector'].map(avg_employment)
-            
-
-        ##########################
-        # get E sectors for Japan 2020 for all sectors
-        ##########################
-        T = safe_divide(II, output)
-        Ldf, L_minus_I = clc_L(T)
-
-        IIc = II.copy()
-        IIc["HFCE"] = household_expenditure # added a column for closed model
-        IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
         
-        if ((year == '2020') & (country == 'JPN')):
-            temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
-            IIc.loc['employees_compensation'] = \
-            dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'JPN'), ['sector', 'Employment']]\
-            .set_index('sector').reindex(IIc.columns)['Employment']
-            
-        if ((year == '2020') & (country == 'GBR')):
-            temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment']
-            IIc.loc['employees_compensation'] = \
-            dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'GBR'), ['sector', 'Employment']]\
-            .set_index('sector').reindex(IIc.columns)['Employment']
-            
-        '''
        
         #################################
         # final demand
@@ -179,7 +160,11 @@ for country in countries:
             dfother_final_demand = pd.concat([dfother_final_demand, dftemp], ignore_index=True)
 
 
+# checking the big dataframes
+# Filter for the specific country and year
 
+years = range(2019, 2020)
+plot_dffc(years,  countries)
 
 
 gdp_filename = "Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv"
