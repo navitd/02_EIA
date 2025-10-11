@@ -165,6 +165,52 @@ for country in countries:
         Esector_extrap = pd.concat([Esector_extrap, E1year], ignore_index=True) 
 
 
+
+# important
+
+
+# last step: replaced extrap with data where data is availabel
+dfother_extrap_and_data = dfother_extrap_long.copy()
+
+# Merge the actual data ('dfftotal') on country and year
+dfother_extrap_and_data = dfother_extrap_and_data.merge(
+    dfftotal[["country", "year", "other final demand total"]],
+    on=["country", "year"],
+    how="left",
+    suffixes=("", " data")
+)
+
+# Replace extrapolated values with actual ones where available
+dfother_extrap_and_data["other final demand total"] = (
+    dfother_extrap_and_data["other final demand total data"]
+    .combine_first(dfother_extrap_and_data["other final demand total"])
+)
+# combine first means: If "other final demand total data" has a non-missing value, it replaces the corresponding value in "other final demand total".
+
+# Drop the temporary column
+dfother_extrap_and_data = dfother_extrap_and_data.drop(columns=["other final demand total data"])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # print to csv 
 Esector_extrap.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
 
