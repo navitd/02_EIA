@@ -26,14 +26,12 @@ print(Etot.tail())
 
 
 
-##################################       collecting data from input-output tables      #########################################
+################################       collecting data from input-output tables      #########################################
+
 def clc_v_tot(df, value_col, col_tot):
-    # add total employment per (country, year)
     df[col_tot] = df.groupby(["country", "year"])[value_col].transform("sum")
-    # ratio of sector employment to total
-    df[value_col+"_sector_ratio"] = df[value_col] / df[col_tot]
     dftotal = df[["country", "year", col_tot]].drop_duplicates()
-    return df, dftotal
+    return dftotal
 
 def collecting_year_country_data_vector(country, year, dfv, v, vector_name):
             dftemp = pd.DataFrame()
@@ -64,9 +62,9 @@ def collecting_year_country_data_matrix(country, year, dfm, m, matrix_name):
             return dfm
 
 ########################################         plotting             ###############################################
-def plot_dffc(years, countries):
+def plot_dffc(dffc, years, countries):
 
-    for country in countries:
+    for country in ['CAN']: #countries:
         for year in years:
             subset = dffc[(dffc['country'] == country) & (dffc['year'] == str(year))]
             if subset.empty:
@@ -74,6 +72,23 @@ def plot_dffc(years, countries):
                 continue
             plt.figure(figsize=(8, 4))
             plt.plot(subset.index, subset['final demand'], marker='o')
+            plt.title(f"Final Demand – {country}, {year}")
+            plt.xlabel("Index")
+            plt.ylabel("Final Demand")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+
+def plot_dfother_final_demand(df, col_name, years, countries):
+
+    for country in ['CAN']: #countries:
+        for year in years:
+            subset = df[(df['country'] == country) & (df['year'] == str(year))][col_name]
+            if subset.empty:
+                print(f"No data found for {country} in {year}.")
+                continue
+            plt.figure(figsize=(8, 4))
+            plt.plot(subset.index, subset, marker='o')
             plt.title(f"Final Demand – {country}, {year}")
             plt.xlabel("Index")
             plt.ylabel("Final Demand")
@@ -94,7 +109,7 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '2011'
+first_year = '1995'
 last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 report_title = f'ICT sectors, {last_year}'
@@ -150,21 +165,45 @@ for country in countries:
         dftemp = dftemp[['country', 'year', 'sector', 'final demand']]
         dffc = pd.concat([dffc, dftemp], ignore_index=True)
 
-        for name in final_demand_columns[1:]:
+        # building df1year (also 1 country)
+        vector_name=final_demand_columns[1]
+        ftemp = pd.DataFrame()
+        dftemp = OECD.loc[simple_II_labels,vector_name].reset_index()
+        dftemp.columns = ['sector', vector_name]
+        dftemp['country'] = country
+        dftemp['year'] = year
+        dftemp = dftemp[['country', 'year', 'sector', vector_name]]
+
+        df1year = dftemp.copy()
+        for vector_name in final_demand_columns[2:]:
             dftemp = pd.DataFrame()
-            dftemp = OECD.loc[simple_II_labels, name].reset_index()
-            dftemp.columns = ['sector', name]
+            dftemp = OECD.loc[simple_II_labels, vector_name].reset_index()
+            dftemp.columns = ['sector', vector_name]
             dftemp['country'] = country
             dftemp['year'] = year
-            dftemp = dftemp[['country', 'year', 'sector', name]]
-            dfother_final_demand = pd.concat([dfother_final_demand, dftemp], ignore_index=True)
+            dftemp = dftemp[['country', 'year', 'sector', vector_name]]
+            
+            # Merge dftemp as a new column into dfother_final_demand
+            df1year = df1year.merge(
+                dftemp,
+                on=['country', 'year', 'sector'],
+                how='left'
+            )
 
-
+        dfother_final_demand = pd.concat([dfother_final_demand, df1year], ignore_index=True)
 # checking the big dataframes
 # Filter for the specific country and year
+#years = range(2019, 2020)
+#plot_dffc(dffc, years,  countries)
+#sector_name=final_demand_columns[6]
+#plot_dfother_final_demand(dfother_final_demand,sector_name, years,  countries)
 
-years = range(2019, 2020)
-plot_dffc(years,  countries)
+
+dfother_final_demand['other final demand'] = dfother_final_demand[final_demand_columns[1:]].sum(axis=1)
+dfother_final_demand.drop(columns=final_demand_columns[1:], inplace=True)
+
+dfftotal = clc_v_tot(dfother_final_demand, 'other final demand', 'other final demand total')
+
 
 
 gdp_filename = "Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv"
@@ -172,3 +211,16 @@ gdp_data = pd.read_csv(gdp_filename)
 gdp_data.rename(columns={'Unnamed: 0': 'year'}, inplace=True) #renaming the column
 gdp_data['year'] = gdp_data['year'].astype(int)
 gdp_data.set_index('year', inplace=True) 
+
+
+
+for country in countries:
+     for year in year_range:
+        gdp_value = gdp_data.loc[int(year), country]
+        f_value   = dfother_final_demand.loc[(dfother_final_demand['country'] == country) & (dfother_final_demand['year'] == year), 'other final demand'].values[0]
+        dfftotal["ratio_f_to_gdp"] = safe_divide_vector(f_value, gdp_value)
+        
+print(dfftotal.tail())             
+   
+
+        print('\n\n')
