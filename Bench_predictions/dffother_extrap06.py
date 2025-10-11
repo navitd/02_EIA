@@ -96,31 +96,12 @@ def plot_dfother_final_demand(df, col_name, years, countries):
             plt.tight_layout()
             plt.show()
 
-def plot_ratio_f_to_gdp(dfftotal, factor):
-    """
-    Plots 'ratio_f_to_gdp' over time for each country.
-    
-    Parameters:
-    - dfftotal: DataFrame with columns ['country', 'year', 'ratio_f_to_gdp']
-    """
-    plt.figure(figsize=(10, 6))
-    
-    for country, group in dfftotal.groupby("country"):
-        plt.plot(group["year"], group["ratio_f_to_gdp"], marker="o", label=country)
-    
-    plt.xlabel("Year")
-    plt.ylabel("Ratio of Final Demand to GDP")
-    plt.title("Final Demand to GDP Ratio Over Time by Country")
-    plt.legend(title="Country")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
 
-    def plot_v_by_year_1panel(df, countries, ylabel, title):
+def plot_v_by_year_1panel(df, countries, ylabel, title):
     plt.figure(figsize=(10,6))
 
     for country in df.columns:
-        plt.plot(df.index, Eextrap[country], marker='o', label=country)
+        plt.plot(df.index, df[country], marker='o', label=country)
 
     plt.xlabel("Year")
     plt.ylabel(ylabel + " [Millions USD]")
@@ -232,12 +213,12 @@ dfother_final_demand['year'] = dfother_final_demand['year'].astype(int)
 #sector_name=final_demand_columns[6]
 #plot_dfother_final_demand(dfother_final_demand,sector_name, years,  countries)
 
-# summing over other_final_demand columns to get one number per sector
+# switching to one column instead of 6
 dfother_final_demand['other final demand'] = dfother_final_demand[final_demand_columns[1:]].sum(axis=1)
 dfother_final_demand.drop(columns=final_demand_columns[1:], inplace=True)
 # summing over sectors to get one number per country per year
 dfftotal = clc_v_tot(dfother_final_demand, 'other final demand', 'other final demand total')
-
+#get gdp data
 gdp_filename = "Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv"
 gdp_data = pd.read_csv(gdp_filename)
 gdp_data.rename(columns={'Unnamed: 0': 'year'}, inplace=True) #renaming the column
@@ -263,40 +244,73 @@ dfftotal['ratio_f_to_gdp'] = safe_divide_vector(dfftotal['other final demand tot
 #dfftotal['ratio_f_gdp'] = dfftotal['other final demand total'] / dfftotal['gdp total']
 # if I'm sure there are no zeros in gdp total
 
-stats = (
+n_years_to_average=10
+stats_all = ( #average from 1995 to 2020
     dfftotal
     .groupby("country")["ratio_f_to_gdp"]
     .agg(["mean", "std"])
     .reset_index()
 )
+stats = ( # overage over n last years
+    dfftotal
+    .sort_values(["country", "year"])
+    .groupby("country")
+    .tail(n_years_to_average)  # take last n rows per country
+    .groupby("country")["ratio_f_to_gdp"]
+    .agg(["mean", "std"])
+    .reset_index()
+)
 
-dffother_extrap = pd.DataFrame(index=gdp_data.index , columns=gdp_data.columns)
-for country in countries:
-    dffother_extrap[country] = gdp_data[country] * stats["mean"][country]
-# Assuming:
-# - stats has columns ['country', 'mean', 'std']
-# - gdp_data has countries as columns and years as index
-
-dffextrap = pd.DataFrame(index=gdp_data.index, columns=gdp_data.columns)
-
+dfother_extrap = pd.DataFrame(index=gdp_data.index, columns=gdp_data.columns)
 for country in gdp_data.columns:
     mean_value = stats.loc[stats['country'] == country, 'mean'].values[0]
-    dffextrap[country] = gdp_data[country] * mean_value
+    dfother_extrap[country] = gdp_data[country] * mean_value
+#Eextrap is the extrapolation E
+plot_v_by_year_1panel(dfother_extrap, countries, 'other final demand [Million USD]', "Extrapolated other final demand by Country")
 
 
-dffextrap_long = (
-    dffextrap
+dfother_extrap_long = (
+    dfother_extrap
     .reset_index()
     .melt(id_vars='year', var_name='country', value_name='other final demand total')
 )
+dfother_extrap_long = dfother_extrap_long[["country", "year", "other final demand total"]]
 
-#Eextrap is the extrapolation E
-plot_v_by_year_1panel(dffother_extrap, countries, 'Employment', "Extrapolated Employment by Country")
 
-# print to excel
-dffother_extrap.to_csv("Bench_predictions/dff_extrap06.csv", index=True)
+# last step: replaced extrap with data where data is availabel
+dfother_extrap_and_data = dfother_extrap_long.copy()
+
+# Merge the actual data ('dfftotal') on country and year
+dfother_extrap_and_data = dfother_extrap_and_data.merge(
+    dfftotal[["country", "year", "other final demand total"]],
+    on=["country", "year"],
+    how="left",
+    suffixes=("", " data")
+)
+
+# Replace extrapolated values with actual ones where available
+dfother_extrap_and_data["other final demand total"] = (
+    dfother_extrap_and_data["other final demand total data"]
+    .combine_first(dfother_extrap_and_data["other final demand total"])
+)
+# combine first means: If "other final demand total data" has a non-missing value, it replaces the corresponding value in "other final demand total".
+
+# Drop the temporary column
+dfother_extrap_and_data = dfother_extrap_and_data.drop(columns=["other final demand total data"])
+
+# pivot for plotting
+dfother2 = dfother_extrap_and_data.pivot(
+    index="year",
+    columns="country",
+    values="other final demand total"
+)
+dfother2 = dfother2[dfother_extrap.columns]
+plot_v_by_year_1panel(dfother2, countries, 'other final demand [Million USD]', "Extrapolated other final demand by Country")
+
+
+# print to excel - correct dataframe to print
+dfother_extrap_and_data.to_csv("Bench_predictions/dfother_extrap06.csv", index=True)
 print("\n \n")
-
 
 print('\n')
       

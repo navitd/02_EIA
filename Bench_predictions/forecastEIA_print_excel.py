@@ -16,11 +16,12 @@
 # ARIMA_gdp_JPN_adj04.py corrects for japan
 
 # 4. dffc_to_csv.py
-# 4.1 upload final demand F from OECD and use ARIMA to forecast forward
+# 4.1 upload final demand F from OECD and use ratio with gdp to forecast forward
 # I don't need forecasted input-output tables, just final demand (other vectors)
 # 4.2 print to excel F+forecast F. print in excel the name of the program that makes it.
-@
+
 
 # 5. create input-output tables for future years
-# 6. print all to excel files
+
+# 6. apply old graphs files to new (extrapolated) data
 
