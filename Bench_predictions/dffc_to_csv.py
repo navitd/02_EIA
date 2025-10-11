@@ -218,9 +218,11 @@ for country in countries:
      for year in year_range:
         gdp_value = gdp_data.loc[int(year), country]
         f_value   = dfother_final_demand.loc[(dfother_final_demand['country'] == country) & (dfother_final_demand['year'] == year), 'other final demand'].values[0]
-        dfftotal["ratio_f_to_gdp"] = safe_divide_vector(f_value, gdp_value)
+        if gdp_value == 0:
+            print(f"Warning: GDP value is zero for {country} in {year}.")
+        else:
+            dfftotal["ratio_f_to_gdp"] = f_value/gdp_value
         
 print(dfftotal.tail())             
    
-
-        print('\n\n')
+print('\n\n')
