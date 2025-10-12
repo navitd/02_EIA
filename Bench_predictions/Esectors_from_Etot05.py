@@ -149,7 +149,7 @@ dfE10years, _ = clc_v_tot(dfE, 'Employment', 'Etotal')
 # this is Etot 1995-2040
 Etot = pd.read_csv("Bench_predictions/Etotal_multivariate_E_extrap03.csv", index_col=0)
 
-Esector_extrap = pd.DataFrame(columns = ['country', 'year', 'sector', 'Eextrap'])
+Esector_only_extrap = pd.DataFrame(columns = ['country', 'year', 'sector', 'Eextrap'])
 for country in countries:
      ratios = dfE10years[dfE10years.country==country].groupby('sector')['Employment_sector_ratio'].mean()
      for year in Etot.index:
@@ -162,57 +162,44 @@ for country in countries:
             'Eextrap': vals.values
         })
         # Append to the main DataFrame
-        Esector_extrap = pd.concat([Esector_extrap, E1year], ignore_index=True) 
+        Esector_only_extrap = pd.concat([Esector_only_extrap, E1year], ignore_index=True) 
 
 
 
-# important
+# important correction
+df1 = Esector_only_extrap.loc[1620:1720,:].copy()
+df2 = dfE10years.loc[0:100,:].copy()
+def insert_data_in_extrap(df1, df2, df1_col, df2_col, df3_col): #df1 extrap, df2 data
+    df3 = df1.copy()
+    # Clean merge keys using .loc
+    for col in ["country", "sector"]:
+        df3.loc[:, col] = df3[col].astype(str).str.strip().str.upper()
+        df2.loc[:, col] = df2[col].astype(str).str.strip().str.upper()
 
+    # Ensure year is integer
+    df3.loc[:, "year"] = df3["year"].astype(int)
+    df2.loc[:, "year"] = df2["year"].astype(int)
 
-# last step: replaced extrap with data where data is availabel
-dfother_extrap_and_data = dfother_extrap_long.copy()
+    # Merge actual Employment data
+    df3 = df3.merge(
+        df2[["country", "year", "sector", df2_col]],
+        on=["country", "year", "sector"],
+        how="left"
+    )
+    # Replace extrapolated values with actual Employment where available
+    df3.loc[:, df3_col] = df3[df2_col].combine_first(df3[df1_col])
+    # Drop the temporary Employment column
+    df3.drop(columns=[df2_col, df1_col], inplace=True)
+   
+    return df1, df2, df3
 
-# Merge the actual data ('dfftotal') on country and year
-dfother_extrap_and_data = dfother_extrap_and_data.merge(
-    dfftotal[["country", "year", "other final demand total"]],
-    on=["country", "year"],
-    how="left",
-    suffixes=("", " data")
-)
+df1, df2, df3 = insert_data_in_extrap(df1, df2, "Eextrap", "Employment", "E data and extrap")
 
-# Replace extrapolated values with actual ones where available
-dfother_extrap_and_data["other final demand total"] = (
-    dfother_extrap_and_data["other final demand total data"]
-    .combine_first(dfother_extrap_and_data["other final demand total"])
-)
-# combine first means: If "other final demand total data" has a non-missing value, it replaces the corresponding value in "other final demand total".
-
-# Drop the temporary column
-dfother_extrap_and_data = dfother_extrap_and_data.drop(columns=["other final demand total data"])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+dfE10years, Esector_only_extrap, Esector_extrap_and_data = insert_data_in_extrap( Esector_only_extrap, dfE10years, "Eextrap", "Employment", "E")
 
 
 # print to csv 
-Esector_extrap.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
+Esector_extrap_and_data.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
 
 
 print(Etot.tail())  

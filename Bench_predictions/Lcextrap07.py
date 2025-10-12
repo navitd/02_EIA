@@ -5,3 +5,5 @@
 # extrap = extrapolated, mainly by gdp data from world bank. there's ARIMA in gdp and linear extrapolation in japan gdp
 
 #In this file I will upload everything, make something that  uploads everything, then saves what needs to be saved to excel
+
+u
