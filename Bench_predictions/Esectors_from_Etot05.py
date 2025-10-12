@@ -38,7 +38,29 @@ def collecting_year_country_data_vector(country, year, dfv, v, vector_name):
             dfv = pd.concat([dfv, dftemp], ignore_index=True)
             return dfv
 
+def insert_data_in_extrap(df1, df2, df1_col, df2_col, df3_col): #df1 extrap, df2 data
+    df3 = df1.copy()
+    # Clean merge keys using .loc
+    for col in ["country", "sector"]:
+        df3.loc[:, col] = df3[col].astype(str).str.strip().str.upper()
+        df2.loc[:, col] = df2[col].astype(str).str.strip().str.upper()
 
+    # Ensure year is integer
+    df3.loc[:, "year"] = df3["year"].astype(int)
+    df2.loc[:, "year"] = df2["year"].astype(int)
+
+    # Merge actual Employment data
+    df3 = df3.merge(
+        df2[["country", "year", "sector", df2_col]],
+        on=["country", "year", "sector"],
+        how="left"
+    )
+    # Replace extrapolated values with actual Employment where available
+    df3.loc[:, df3_col] = df3[df2_col].combine_first(df3[df1_col])
+    # Drop the temporary Employment column
+    df3.drop(columns=[df2_col, df1_col], inplace=True)
+   
+    return df1, df2, df3
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -166,43 +188,13 @@ for country in countries:
 
 
 
-# important correction
-df1 = Esector_only_extrap.loc[1620:1720,:].copy()
-df2 = dfE10years.loc[0:100,:].copy()
-def insert_data_in_extrap(df1, df2, df1_col, df2_col, df3_col): #df1 extrap, df2 data
-    df3 = df1.copy()
-    # Clean merge keys using .loc
-    for col in ["country", "sector"]:
-        df3.loc[:, col] = df3[col].astype(str).str.strip().str.upper()
-        df2.loc[:, col] = df2[col].astype(str).str.strip().str.upper()
-
-    # Ensure year is integer
-    df3.loc[:, "year"] = df3["year"].astype(int)
-    df2.loc[:, "year"] = df2["year"].astype(int)
-
-    # Merge actual Employment data
-    df3 = df3.merge(
-        df2[["country", "year", "sector", df2_col]],
-        on=["country", "year", "sector"],
-        how="left"
-    )
-    # Replace extrapolated values with actual Employment where available
-    df3.loc[:, df3_col] = df3[df2_col].combine_first(df3[df1_col])
-    # Drop the temporary Employment column
-    df3.drop(columns=[df2_col, df1_col], inplace=True)
-   
-    return df1, df2, df3
-
-df1, df2, df3 = insert_data_in_extrap(df1, df2, "Eextrap", "Employment", "E data and extrap")
-
+# insert E data into Esector_extrap
+# data         Extrap            Extrap and data
 dfE10years, Esector_only_extrap, Esector_extrap_and_data = insert_data_in_extrap( Esector_only_extrap, dfE10years, "Eextrap", "Employment", "E")
 
 
 # print to csv 
 Esector_extrap_and_data.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
-
-
-print(Etot.tail())  
 
 
 
