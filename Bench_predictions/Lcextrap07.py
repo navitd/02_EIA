@@ -798,7 +798,7 @@ dfoutput = pd.DataFrame() # this will hold output by country, year, sector, outp
 dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
 dfEimpact = pd.DataFrame()
-for country in 'FRA': #countries:
+for country in countries:
     for year in year_range:
         
         # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
@@ -828,7 +828,10 @@ for country in 'FRA': #countries:
 
         
         E = dfE[(dfE.country==country) & (dfE.year==int(year))].copy()
-        
+        #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
+        E.drop(columns=['country','year'], inplace=True)
+        E.set_index('sector', inplace=True)
+        E.loc["HFCE"] = 0
 
         # 2. calculate L and Lc
         ##########################
@@ -837,15 +840,11 @@ for country in 'FRA': #countries:
 
         IIc = II.copy()
         IIc["HFCE"] = household_expenditure # added a column for closed model
-        #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
-        E.drop(columns=['country','year'], inplace=True)
-        E.set_index('sector', inplace=True)
-        E.loc["HFCE"] = 0
         # Convert Series to a one-row DataFrame with sectors as columns
         ET = E.T  # .T transposes to make index=0, columns=sectors
         ET.index = ["employees_compensation"]  # name the row
         IIc = pd.concat([IIc, ET], axis=0)
-
+        '''
         if ((year == '2020') & (country == 'JPN')):
             temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
             IIc.loc['employees_compensation'] = \
@@ -857,7 +856,7 @@ for country in 'FRA': #countries:
             IIc.loc['employees_compensation'] = \
             dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'GBR'), ['sector', 'Employment']]\
             .set_index('sector').reindex(IIc.columns)['Employment']
-            
+        '''    
         IIc.loc['employees_compensation', 'HFCE'] = 0 
 
         outputc = output.copy()
