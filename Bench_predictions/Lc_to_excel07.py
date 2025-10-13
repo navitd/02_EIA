@@ -9,7 +9,7 @@
 
 # https://www.oecd.org/en/data/datasets/input-output-tables.html
 
-
+# Lc_to_excel- I only save to excel Lc data,without extrap
 import sys
 from pathlib import Path
 import os

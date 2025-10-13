@@ -36,6 +36,7 @@
 # OECD is always larger 
 #compare f to waht I have, compare gdp to waht I  have
 #gdp has 4-11% difference between world bank and OECD
+# f has no difference.
 
 then make it into a function, to be used in graphs
 create Lc for future years!!!
