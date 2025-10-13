@@ -41,8 +41,6 @@
 then make it into a function, to be used in graphs
 create Lc for future years!!!
 
-#put in function for graphs to use.
-#    print to excel if necessary
 
 # I can not have the same treatment. with future years I start from T or L
 # 2 different uploading systems, for data and for extrap, once I get to L everything is the same?
@@ -50,7 +48,7 @@ create Lc for future years!!!
 # The files of future years should match the files of OECD for smooth transition?
 
 
-# CGARextrap08.py
+# CGARextrap10.py
 # 6. apply old graphs files to new (extrapolated) data
 # what I have:
 # 1995-2010: OECD II + E extrap
