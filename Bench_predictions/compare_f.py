@@ -830,13 +830,14 @@ for country in countries:
         dftemp = dftemp[['country', 'year', 'sector', 'GDP']]
         dfGDP = pd.concat([dfGDP, dftemp], ignore_index=True)
 
-        f = OECD.loc[simple_II_labels,final_demand_columns]
+        f = OECD.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+        f = f.rename_axis("sector")
         dftemp = pd.DataFrame()
-        dftemp = .reset_index()
-        dftemp.columns = ['sector', 'GDP']
+        dftemp = f.reset_index()
+        dftemp.columns = ['sector', 'other final demand total']
         dftemp['country'] = country
-        dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', 'final demand']]
+        dftemp['year'] =int(year)
+        dftemp = dftemp[['country', 'year', 'sector', 'other final demand total']]
         dff = pd.concat([dff, dftemp], ignore_index=True)
 
 
@@ -972,12 +973,30 @@ print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 
 dff_grouped = dff.groupby(['country', 'year'])['other final demand total'].sum().unstack('country')
 dff_grouped.index = dff_grouped.index.astype(int)
+dffextrap.set_index('year', inplace=True)
 dffextrap.index = dffextrap.index.astype(int)
 for country in countries:
-    # Select the GDP series for this country (indexed by year)
     value2 = dff_grouped[country].loc[int(first_year):int(last_year)]
-    
-    # Compute the difference with the World Bank data
-    diff = dff_worldbank.loc[int(first_year):int(last_year), country] - value2
-    print(f"\n{country}. %:\n", np.round( diff/value2*100) )
 
+    dffextrap_slice = dffextrap.loc[
+        (dffextrap['country'] == country) &
+        (dffextrap.index >= int(first_year)) &
+        (dffextrap.index <= int(last_year))
+    ]
+    
+    dffextrap_slice = dffextrap_slice.drop(columns=["country"])
+    dffextrap_slice.index = dffextrap_slice.index.astype(int)         # ensure int index
+    dffextrap_slice = dffextrap_slice.squeeze()                       # convert dataframe to series
+
+    # align and subtract elementwise
+    diff = dffextrap_slice - value2
+
+    print(f"\n{country} (% difference):\n", np.round(diff / value2 * 100, 2))
+
+
+
+
+
+
+
+print('')
