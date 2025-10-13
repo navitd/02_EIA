@@ -314,7 +314,7 @@ plot_v_by_year_1panel(dfother2, countries, 'other final demand [Million USD]', "
 
 
 # print to excel - correct dataframe to print
-dfother_extrap_and_data.to_csv("Bench_predictions/dfother_extrap06.csv", index=True)
+dfother_extrap_and_data.to_csv("Bench_predictions/dfother_extrap06.csv", index=False)
 print("\n \n")
 
 print('\n')
