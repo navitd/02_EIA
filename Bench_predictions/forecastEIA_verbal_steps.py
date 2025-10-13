@@ -23,16 +23,21 @@
 # now I have all E and all F
 # go back to the graphs I need to make, and see where these get into play
 
-#what are the files with the graphs? they are in textbook_EIA or other folders?
-
 # 5. Lcextrap07.py
-# 5.1 upload dfother to learn the future years
-#     upload dfEextrap
-#     add dfEextrap to 1995-2010 missing data
-# 5.2 upload old T to use in future years II
+# upload gpd
+#       Eextrap+data
+#       fextrap+data
+for country
+for year
+OECD
+combine with above
+calculate L 
+put in function for graphs to use.UserWarning
+    print to excel if necessary
+
 # I can not have the same treatment. with future years I start from T or L
 # 2 different uploading systems, for data and for extrap, once I get to L everything is the same?
-# 5.3 create II and in a different file L, Lc, T, Tc for all years
+
 # The files of future years should match the files of OECD for smooth transition?
 
 
