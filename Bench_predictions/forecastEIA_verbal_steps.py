@@ -32,7 +32,13 @@
 #OECD
 #combine with above
 #calculate L 
-#put in function for graphs to use.UserWarning
+# comparison of gdp world bank and gdp OECD : 4-11% difference in yearly total GDP
+# OECD is always larger 
+compare f to waht I have, compare gdp to waht I  have
+then make it into a function, to be used in graphs
+create Lc for future years!!!
+
+#put in function for graphs to use.
 #    print to excel if necessary
 
 # I can not have the same treatment. with future years I start from T or L
