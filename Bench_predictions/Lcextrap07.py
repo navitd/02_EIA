@@ -752,6 +752,7 @@ dfgdp = pd.read_csv("Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv")
 
 # upload E
 dfE = pd.read_csv("Bench_predictions/Esectors_from_Etot05.csv")
+dfE.rename(columns={"E": "Employment"}, inplace=True)
 
 # upload f other
 dff = pd.read_csv("Bench_predictions/dfother_extrap06.csv")
@@ -796,9 +797,8 @@ final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES',
 dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
 dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
-#dfE = pd.DataFrame() # this will hold country, year, buying sector, selling sector, Eimpact
-#dfEimpact = pd.DataFrame()
-for country in countries:
+dfEimpact = pd.DataFrame()
+for country in 'FRA': #countries:
     for year in year_range:
         
         # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
@@ -827,8 +827,8 @@ for country in countries:
         dfGDP = pd.concat([dfGDP, dftemp], ignore_index=True)
 
         
-        E           = OECDadditional['employees_compensation'] 
-
+        E = dfE[(dfE.country==country) & (dfE.year==int(year))].copy()
+        
 
         # 2. calculate L and Lc
         ##########################
@@ -837,8 +837,15 @@ for country in countries:
 
         IIc = II.copy()
         IIc["HFCE"] = household_expenditure # added a column for closed model
-        IIc.loc['employees_compensation'] = OECDadditional['employees_compensation'] #If I wanted a column I would have written IIC['employees_compensation']
-        
+        #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
+        E.drop(columns=['country','year'], inplace=True)
+        E.set_index('sector', inplace=True)
+        E.loc["HFCE"] = 0
+        # Convert Series to a one-row DataFrame with sectors as columns
+        ET = E.T  # .T transposes to make index=0, columns=sectors
+        ET.index = ["employees_compensation"]  # name the row
+        IIc = pd.concat([IIc, ET], axis=0)
+
         if ((year == '2020') & (country == 'JPN')):
             temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
             IIc.loc['employees_compensation'] = \
@@ -854,7 +861,8 @@ for country in countries:
         IIc.loc['employees_compensation', 'HFCE'] = 0 
 
         outputc = output.copy()
-        outputc['HFCE'] = OECDadditional['employees_compensation'].sum()
+        outputc['HFCE'] = E.sum().values[0]
+        print(country, year)
         Tc = safe_divide(IIc, outputc)
         Lcdf, Lc_minus_I = clc_L(Tc)
 

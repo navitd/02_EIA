@@ -48,3 +48,19 @@
 # 2011-2020: OECD II + OECD E
 # 2021-2040: Lc extrap, E extrap
 # extrap = extrapolated, mainly by gdp data from world bank. there's ARIMA in gdp and linear extrapolation in japan gdp
+
+
+
+
+
+below is a general summery of Bench marking, taken from Lcextrap07.py before I removed plotting from it.
+
+copy here Lcestrap07.py before I remove copy from here
+
+
+
+
+
+
+
+

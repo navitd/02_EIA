@@ -1,5 +1,6 @@
 
 import pandas as pd
+import numpy as np
 import time
 
 OECD_PATH = '../Data/' # windows style: r".\\"
@@ -32,7 +33,10 @@ def data_upload_OECD_without_E(year, currency_exchange_type, table_type='TTL', c
         (PPP_rough['LOCATION'] == country) &
         (PPP_rough['TIME_PERIOD'] == int(year)) &
         (PPP_rough['INDICATOR'] == currency_exchange_type) ]
-    PPP_or_exch = PPP_filtered['OBS_VALUE'].iloc[0]
+    if PPP_filtered.empty:
+        PPP_or_exch = np.nan
+    else:
+        PPP_or_exch = PPP_filtered['OBS_VALUE'].iloc[0]
 
 
     # 3. Loading OECD data
