@@ -25,15 +25,15 @@
 
 # 5. Lcextrap07.py
 # upload gpd
-#       Eextrap+data
-#       fextrap+data
-for country
-for year
-OECD
-combine with above
-calculate L 
-put in function for graphs to use.UserWarning
-    print to excel if necessary
+# Eextrap+data
+# fextrap+data
+#for country
+#for year
+#OECD
+#combine with above
+#calculate L 
+#put in function for graphs to use.UserWarning
+#    print to excel if necessary
 
 # I can not have the same treatment. with future years I start from T or L
 # 2 different uploading systems, for data and for extrap, once I get to L everything is the same?

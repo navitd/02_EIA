@@ -6,13 +6,6 @@
 
 #In this file I will upload everything, make something that  uploads everything, then saves what needs to be saved to excel
 
-
-
-
-
-
-# benchmarking - the EIA from print2xls3.py is in a function and I choose sectors, years, calculate compound annual growth rate and plot
-# input-output table from OECD
 # https://www.oecd.org/en/data/datasets/input-output-tables.html
 
 
@@ -34,7 +27,7 @@ from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 from openpyxl.cell.cell import MergedCell
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
-from func_data_upload_OECD_salaries import data_upload_OECD_salaries
+from func_data_upload_OECD_without_E import data_upload_OECD_without_E
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
 from func_safe_divide import safe_divide, safe_divide_vector
@@ -42,11 +35,9 @@ from func_multipliers_by_f import multipliers_by_f
 from func_plot_real_vs_predicted import plot_real_vs_predicted
 
 
-
+##########################################         functions from Benchmarking/Employment.py       ##########################################
+#the plotting functions from Employment are not needed here, they are to be moved to 08 file
 ####################################################         functions that plot       ######################################################
-
-
-
 def plot_E_line_graph(JPNE, col_name, title):
     years = sorted(JPNE['year'].unique())
     num_years = len(years)
@@ -67,9 +58,6 @@ def plot_E_line_graph(JPNE, col_name, title):
     plt.legend(title='Year')
     plt.tight_layout()
     plt.show()
-
-
-
 
 #Fig 1: CAGR data manipulation
 def clc_cagr(dfoutput, first_year, last_year, value_column):
@@ -443,8 +431,6 @@ def plot_GDPimpact_side_by_side(
     plt.show()
 
 
-
-
 def plot_GDPimpact_top_bottom(
     first_year_backwards, last_year_backwards,
     first_year_forwards, last_year_forwards,
@@ -757,7 +743,20 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
     return dfimpact
 
 
+
+
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# upload gdp
+dfgdp = pd.read_csv("Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv")
+
+# upload E
+dfE = pd.read_csv("Bench_predictions/Esectors_from_Etot05.csv")
+
+# upload f other
+dff = pd.read_csv("Bench_predictions/dfother_extrap06.csv")
+
+########################################                           parameters                       ##################################################
 start_time = time.time()
 print("working directory of GDPsupplychain.py is: ",os.getcwd())  # Print the current working directory
 
@@ -788,10 +787,8 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 
-
-
-# 1. Get IO=II, X, GDP, from OECD
-###################################   
+# 1. upload OECD intput-output tables 1995-2020
+###############################################   
 #copied from Benchmarking/Employment.py
 
 final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
@@ -805,25 +802,11 @@ for country in countries:
     for year in year_range:
         
         # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
-        PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
-
-
-I need a new data uploading function
-additionalOECD is not uploaded from OECD data_upload_OECD_salaries
-we have salaries in dfE (uploaded below from csv I made)
-
-
-
-
-
-
-
-
+        PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
 
         # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
         II = OECD.loc[simple_II_labels, simple_II_labels]
         household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-        E           = OECDadditional['employees_compensation'] 
         GDP         = OECD.loc['VALU', simple_II_labels]
         output      = OECD.loc['OUTPUT', simple_II_labels]
         
@@ -843,26 +826,8 @@ we have salaries in dfE (uploaded below from csv I made)
         dftemp = dftemp[['country', 'year', 'sector', 'GDP']]
         dfGDP = pd.concat([dfGDP, dftemp], ignore_index=True)
 
-        dftemp = pd.DataFrame()
-        dftemp = E.reset_index()
-        dftemp.columns = ['sector', 'Employment']
-        dftemp['country'] = country
-        dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', 'Employment']]
-        dfE = pd.concat([dfE, dftemp], ignore_index=True)
-
-        # predictions before impacts
-        # prediction for 2020 Japan, and Great Britain 2020:
-        years_for_average = ['2017', '2018', '2019']
-        if ((year == '2020') & (country == 'JPN')):
-            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='JPN')].groupby('sector')['Employment'].mean()    
-            dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'sector'].map(avg_employment)
-           #plot_E_line_graph(dfE[dfE.country=='JPN'], 'Employment', 'Employment by Sector in Japan by Year')
-
-        if ((year == '2020') & (country == 'GBR')):
-            avg_employment = dfE[ (dfE.year.isin(years_for_average)) & (dfE.country=='GBR')].groupby('sector')['Employment'].mean()    
-            dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment'] = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'sector'].map(avg_employment)
-            #plot_E_line_graph(dfE[dfE.country=='GBR'], 'Employment', 'Employment by Sector in Great Britain by Year')
+        
+        E           = OECDadditional['employees_compensation'] 
 
 
         # 2. calculate L and Lc
@@ -1144,30 +1109,5 @@ plot_multipliers(OECD_sectors_ICT, direct_o.loc[OECD_sectors_ICT,:].sum(axis=1),
 '''
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# upload gdp
-dfgdp = pd.read_csv("Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv")
-
-# upload E
-dfE = pd.read_csv("Bench_predictions/Esectors_from_Etot05.csv")
-
-# upload f other
-dff = pd.read_csv("Bench_predictions/dfother_extrap06.csv")
 
 print('')

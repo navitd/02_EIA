@@ -56,4 +56,4 @@ def data_upload_OECD_without_E(year, currency_exchange_type, table_type='TTL', c
     # but output of GDP is given and should be marked independently
 
 
-    return PPP_or_exch, OECD
+    return PPP_or_exch, OECD,simple_II_labels
