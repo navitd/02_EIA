@@ -832,15 +832,18 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 # collecting Tc for base
 for country in countries:
     Tc_1country = dfTc[(dfTc['country'] == country) & (dfTc['year'].isin(years_for_Tc_base))]
-    group_Tc_1country = (
+    Tc_extrap = (
         Tc_1country
         .groupby(["country", "selling_sector", "buying_sector"])["Tc"]
         .mean()
         .reset_index()
     )
 
-print(group_Tc_1country)
-group_Tc_1country.to_csv("Bench_predictions/Tc_extrap08.csv", index=False)
+print(Tc_extrap)
+Tc_extrap.to_csv("Bench_predictions/Tc_extrap08.csv", index=False)
+Lc_extrap, Lc_minus_I = clc_L(Tc_extrap)
+
+
 # 1. upload OECD intput-output tables 1995-2020
 ###############################################   
 #copied from Benchmarking/Employment.py
@@ -856,54 +859,50 @@ dfLc = pd.DataFrame()
 for country in countries:
     for year in year_range:
         print(country, year)
-        #if year in year_range2:
-        #    Lc = 
+        if year in year_range2:
+            Lc = Lc_extrap
+        else:
+            # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
+            PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
 
+            # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
+            II = OECD.loc[simple_II_labels, simple_II_labels]
+            household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
+            GDP         = OECD.loc['VALU', simple_II_labels]
+            output      = OECD.loc['OUTPUT', simple_II_labels]
 
+            dfoutput = collect_v(output, country, year, ['sector', 'output'], dfoutput)
+            dfGDP    = collect_v(GDP,    country, year, ['sector', 'GDP'],    dfGDP)
+            f = OECD.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+            f = f.rename_axis("sector")
+            dff     = collect_v(f,       country, year, ['sector', 'other final demand total'], dff)
+            
 
+            E = dfE[(dfE.country==country) & (dfE.year==int(year))].copy()
+            #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
+            E.drop(columns=['country','year'], inplace=True)
+            E.set_index('sector', inplace=True)
+            E.loc["HFCE"] = 0
 
-        # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
-        PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
+            # 2. calculate L and Lc
+            ##########################
+            T = safe_divide(II, output)
+            Ldf, L_minus_I = clc_L(T)
 
-        # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
-        II = OECD.loc[simple_II_labels, simple_II_labels]
-        household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-        GDP         = OECD.loc['VALU', simple_II_labels]
-        output      = OECD.loc['OUTPUT', simple_II_labels]
+            IIc = II.copy()
+            IIc["HFCE"] = household_expenditure # added a column for closed model
+            # Convert Series to a one-row DataFrame with sectors as columns
+            ET = E.T  # .T transposes to make index=0, columns=sectors
+            ET.index = ["employees_compensation"]  # name the row
+            IIc = pd.concat([IIc, ET], axis=0)
+            IIc.loc['employees_compensation', 'HFCE'] = 0 
 
-        dfoutput = collect_v(output, country, year, ['sector', 'output'], dfoutput)
-        dfGDP    = collect_v(GDP,    country, year, ['sector', 'GDP'],    dfGDP)
-        f = OECD.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
-        f = f.rename_axis("sector")
-        dff     = collect_v(f,       country, year, ['sector', 'other final demand total'], dff)
-        
-
-        E = dfE[(dfE.country==country) & (dfE.year==int(year))].copy()
-        #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
-        E.drop(columns=['country','year'], inplace=True)
-        E.set_index('sector', inplace=True)
-        E.loc["HFCE"] = 0
-
-        # 2. calculate L and Lc
-        ##########################
-        T = safe_divide(II, output)
-        Ldf, L_minus_I = clc_L(T)
-
-        IIc = II.copy()
-        IIc["HFCE"] = household_expenditure # added a column for closed model
-        # Convert Series to a one-row DataFrame with sectors as columns
-        ET = E.T  # .T transposes to make index=0, columns=sectors
-        ET.index = ["employees_compensation"]  # name the row
-        IIc = pd.concat([IIc, ET], axis=0)
-        IIc.loc['employees_compensation', 'HFCE'] = 0 
-
-        outputc = output.copy()
-        outputc['HFCE'] = E.sum().values[0]
-        Tc = safe_divide(IIc, outputc)
-        Lcdf, Lc_minus_I = clc_L(Tc)
-        
-        dfTc = collect_m(Tc, country, year, 'Tc', dfTc)
-        dfLc = collect_m(Lc, country, year, 'Lc', dfLc)
+            outputc = output.copy()
+            outputc['HFCE'] = E.sum().values[0]
+            Tc = safe_divide(IIc, outputc)
+            Lcdf, Lc_minus_I = clc_L(Tc)
+            
+            
 
 
         # 3. calculate multipliers
