@@ -39,6 +39,7 @@ from func_plot_real_vs_predicted import plot_real_vs_predicted
 ##########################################         functions from Benchmarking/Employment.py       ##########################################
 #the plotting functions from Employment are not needed here, they are to be moved to 08 file
 
+# collect_v and collect_m - this is moving from 1year to many years - collecting in a dataframe an aggregation of the differnt years
 def collect_v(v, country, year, cols_list, dfv):
     dftemp = pd.DataFrame()
     dftemp = v.reset_index()
@@ -48,22 +49,24 @@ def collect_v(v, country, year, cols_list, dfv):
     dftemp = dftemp[["country", "year"] + cols_list]
     dfv = pd.concat([dfv, dftemp], ignore_index=True)
     return dfv
-def collect_m(m, country, year, m_value_name, dfm):
-            dftemp = pd.DataFrame()
-            dftemp = m.reset_index().melt(id_vars=m.index.name or 'index', 
-                                            var_name='buying_sector', 
-                                            value_name=m_value_name)
 
-            # Rename 'index' to 'selling_sector' if needed
-            dftemp.rename(columns={m.index.name or 'index': 'selling_sector'}, inplace=True)
-            # Add metadata
-            dftemp['country'] = country
-            dftemp['year'] = year
-            # Reorder columns
-            dftemp = dftemp[['country', 'year',  'selling_sector', 'buying_sector', m_value_name]]
-            # Append to the master DataFrame
-            dfm = pd.concat([dfm, dftemp], ignore_index=True)
-            return dfm
+def collect_m(m, country, year, m_value_name, dfm):
+    dftemp = pd.DataFrame()
+    dftemp = m.reset_index().melt(id_vars=m.index.name or 'index', 
+                                    var_name='buying_sector', 
+                                    value_name=m_value_name)
+
+    # Rename 'index' to 'selling_sector' if needed
+    dftemp.rename(columns={m.index.name or 'index': 'selling_sector'}, inplace=True)
+    # Add metadata
+    dftemp['country'] = country
+    dftemp['year'] = year
+    # Reorder columns
+    dftemp = dftemp[['country', 'year',  'selling_sector', 'buying_sector', m_value_name]]
+    # Append to the master DataFrame
+    dfm = pd.concat([dfm, dftemp], ignore_index=True)
+    return dfm
+
 ####################################################         functions that plot       ######################################################
 def plot_E_line_graph(JPNE, col_name, title):
     years = sorted(JPNE['year'].unique())
@@ -827,8 +830,9 @@ currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
-
-
+################################################################################################
+# The important Tc_extrap08 step
+# preparing Lc and Tc for base for all future years
 # collecting Tc for base
 for country in countries:
     Tc_1country = dfTc[(dfTc['country'] == country) & (dfTc['year'].isin(years_for_Tc_base))]
@@ -841,8 +845,10 @@ for country in countries:
 
 print(Tc_extrap)
 Tc_extrap.to_csv("Bench_predictions/Tc_extrap08.csv", index=False)
+#convert Tc to 46x46 to fid into clc_L
 Lc_extrap, Lc_minus_I = clc_L(Tc_extrap)
-
+#################################################################################################
+#################################################################################################
 
 # 1. upload OECD intput-output tables 1995-2020
 ###############################################   
@@ -859,25 +865,37 @@ dfLc = pd.DataFrame()
 for country in countries:
     for year in year_range:
         print(country, year)
-        slice from E make it into a function
+        def slice_v_from_bigdf(bigdf):
+            # assuming bigdf was prepared by collect_v: columns are country, year, sector, value_column
+            v = bigdf[(bigdf.country==country) & (bigdf.year==int(year))].copy()
+            #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
+            v.drop(columns=['country','year'], inplace=True)
+            v.set_index('sector', inplace=True)
+            return v
+        E2 = slice_v_from_bigdf(dfE)
+        E2.loc["HFCE"] = 0
+
+
+
+
         E = dfE[(dfE.country==country) & (dfE.year==int(year))].copy()
         #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
         E.drop(columns=['country','year'], inplace=True)
         E.set_index('sector', inplace=True)
         E.loc["HFCE"] = 0
         if year in year_range2:
-            E
-            fc
-            Lc = Lc_extrap
-            L
-            T
-            output
-            GDP
-            II
+            print(E)
+            #fc
+            #Lc = Lc_extrap
+            #L
+            #T
+            #output
+            #GDP
+            #II
+        else:  
             
             
-            
-        else:
+        
             # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
             PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
 
