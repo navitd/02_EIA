@@ -859,8 +859,24 @@ dfLc = pd.DataFrame()
 for country in countries:
     for year in year_range:
         print(country, year)
+        slice from E make it into a function
+        E = dfE[(dfE.country==country) & (dfE.year==int(year))].copy()
+        #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
+        E.drop(columns=['country','year'], inplace=True)
+        E.set_index('sector', inplace=True)
+        E.loc["HFCE"] = 0
         if year in year_range2:
+            E
+            fc
             Lc = Lc_extrap
+            L
+            T
+            output
+            GDP
+            II
+            
+            
+            
         else:
             # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
             PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
@@ -877,13 +893,6 @@ for country in countries:
             f = f.rename_axis("sector")
             dff     = collect_v(f,       country, year, ['sector', 'other final demand total'], dff)
             
-
-            E = dfE[(dfE.country==country) & (dfE.year==int(year))].copy()
-            #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
-            E.drop(columns=['country','year'], inplace=True)
-            E.set_index('sector', inplace=True)
-            E.loc["HFCE"] = 0
-
             # 2. calculate L and Lc
             ##########################
             T = safe_divide(II, output)

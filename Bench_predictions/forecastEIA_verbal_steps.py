@@ -40,7 +40,14 @@
 
 then make it into a function, to be used in graphs
 create Lc for future years!!!
-
+E
+fc
+Lc = Lc_extrap
+L
+T
+output
+GDP
+II
 
 # I can not have the same treatment. with future years I start from T or L
 # 2 different uploading systems, for data and for extrap, once I get to L everything is the same?
