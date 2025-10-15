@@ -21,11 +21,13 @@ from func_clc_L import clc_L
 
 
 ################################       collecting data from input-output tables      #########################################
-
 def clc_v_tot(df, value_col, col_tot):
+    # add total employment per (country, year)
     df[col_tot] = df.groupby(["country", "year"])[value_col].transform("sum")
+    # ratio of sector employment to total
+    df[value_col+" sector ratio"] = df[value_col] / df[col_tot]
     dftotal = df[["country", "year", col_tot]].drop_duplicates()
-    return dftotal
+    return df, dftotal
 
 def collecting_year_country_data_vector(country, year, dfv, v, vector_name):
             dftemp = pd.DataFrame()
@@ -54,6 +56,16 @@ def collecting_year_country_data_matrix(country, year, dfm, m, matrix_name):
             # Append to the master DataFrame
             dfm = pd.concat([dfm, dftemp], ignore_index=True)
             return dfm
+
+
+def slice_v_from_bigdf(bigdf, country, year):
+    # assuming bigdf was prepared by collect_v: columns are country, year, sector, value_column
+    v = bigdf[(bigdf.country==country) & (bigdf.year==int(year))].copy()
+    #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
+    v.drop(columns=['country','year'], inplace=True)
+    v.set_index('sector', inplace=True)
+    return v
+
 
 ########################################         plotting             ###############################################
 def plot_dffc(dffc, years, countries):
@@ -143,8 +155,6 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 ##########################################################################################################################################   
 final_demand_columns = ['HFCE',	'NPISH', 'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
 
-
-
 dffc = pd.DataFrame()
 dfother_final_demand = pd.DataFrame()
 for country in countries:
@@ -156,8 +166,6 @@ for country in countries:
         household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
         other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
         
-        
-       
         #################################
         # final demand
         #################################
@@ -200,20 +208,30 @@ for country in countries:
 
         dfother_final_demand = pd.concat([dfother_final_demand, df1year], ignore_index=True)
 dfother_final_demand['year'] = dfother_final_demand['year'].astype(int)
-# checking the big dataframes
-# Filter for the specific country and year
-#years = range(2019, 2020)
-#plot_dffc(dffc, years,  countries)
-#sector_name=final_demand_columns[6]
-#plot_dfother_final_demand(dfother_final_demand,sector_name, years,  countries)
+
 
 # switching to one column instead of 6
 dfother_final_demand['other final demand'] = dfother_final_demand[final_demand_columns[1:]].sum(axis=1)
 dfother_final_demand.drop(columns=final_demand_columns[1:], inplace=True)
+
+# Part 1
+########
+# to get the ratio of dfother_sector / dfother_tot for data years
+dfother_final_demand, dfother_total = clc_v_tot(dfother_final_demand, 'other final demand', 'other final demand total')
+
+#print to csv
+dfother_final_demand.to_csv("Bench_predictions/A06_dfother_final_demand.csv", index=False)
+
+
+
+# Part 2
+########
+# to get the ratio dfother_total / gdp_total for each extrap year
+#to get one number of dff per year - for extrapolation
 # summing over sectors to get one number per country per year
-dfftotal = clc_v_tot(dfother_final_demand, 'other final demand', 'other final demand total')
+#dfftotal = clc_v_tot(dfother_final_demand, 'other final demand', 'other final demand total')
 #get gdp data
-gdp_filename = "Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv"
+gdp_filename = "Bench_predictions/A04_gdp_ARIMAgdp_currentUSD04.csv"
 gdp_data = pd.read_csv(gdp_filename)
 gdp_data.rename(columns={'Unnamed: 0': 'year'}, inplace=True) #renaming the column
 gdp_data['year'] = gdp_data['year'].astype(int)
@@ -227,26 +245,26 @@ gdp_long = (
     .reset_index(drop=True)
 )
 # inserting gdp data to dfftotal
-dfftotal = dfftotal.merge(
+dfother_total = dfother_total.merge(
     gdp_long[['country', 'year', 'gdp total']],
     on=['country', 'year'],
     how='left'
 )
 
-dfftotal['ratio_f_to_gdp'] = safe_divide_vector(dfftotal['other final demand total'], dfftotal['gdp total'])
+dfother_total['ratio_f_to_gdp'] = safe_divide_vector(dfother_total['other final demand total'], dfother_total['gdp total'])
 # or
 #dfftotal['ratio_f_gdp'] = dfftotal['other final demand total'] / dfftotal['gdp total']
 # if I'm sure there are no zeros in gdp total
 
 n_years_to_average=10
 stats_all = ( #average from 1995 to 2020
-    dfftotal
+    dfother_total
     .groupby("country")["ratio_f_to_gdp"]
     .agg(["mean", "std"])
     .reset_index()
 )
 stats = ( # overage over n last years
-    dfftotal
+    dfother_total
     .sort_values(["country", "year"])
     .groupby("country")
     .tail(n_years_to_average)  # take last n rows per country
@@ -279,7 +297,7 @@ dfother_extrap_and_data = dfother_extrap_long.copy()
 
 # Merge the actual data ('dfftotal') on country and year
 dfother_extrap_and_data = dfother_extrap_and_data.merge(
-    dfftotal[["country", "year", "other final demand total"]],
+    dfother_total[["country", "year", "other final demand total"]],
     on=["country", "year"],
     how="left",
     suffixes=("", " data")
@@ -308,8 +326,8 @@ plot_v_by_year_1panel(dfother2, countries, 'other final demand [Million USD]', "
 
 
 # print to excel - correct dataframe to print
-dfother_extrap_and_data.to_csv("Bench_predictions/dfother_extrap06.csv", index=False)
-print("\n \n")
+dfother_extrap_and_data.to_csv("Bench_predictions/A06fother_extrap.csv", index=False)
+
 
 print('\n')
       

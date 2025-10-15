@@ -9,6 +9,13 @@
 
 # https://www.oecd.org/en/data/datasets/input-output-tables.html
 
+#major difference: dffohter or dff and dfE - I already extrapolated and each year of future year exists there
+#Tc, GDPj_by_xj: one for all future years
+#I know I have GDP extrapolated from world bank - but - there is 10% difference between world bank GDP and OECD GDP
+#so I used fixed year GDP 2020 divided by output, as per EIA method, and will multiply by extrapolated output of each future year
+
+
+
 
 import sys
 from pathlib import Path
@@ -819,12 +826,14 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '2021'
-last_year = '2021'
+first_year = '2019'
+last_year = '2024'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)]
-n_for_Tc=2
-years_for_Tc_base = [year for year in range(int(last_year)-n_for_Tc, int(last_year)+1)]
+n_for_Tc=0
+years_for_Tc_base = [year for year in range(int(2020)-n_for_Tc, int(2020)+1)]
+n_for_gdp=0
+years_for_gdp_base = [year for year in range(int(2020)-n_for_gdp, int(2020)+1)]
 
 report_title = f'ICT sectors, {last_year}'
 ICT_factors = {'ICT - Manufacturing': 'C26',
@@ -842,50 +851,38 @@ currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
-################################################################################################
-################################################################################################
-# The important Tc_extrap08 step correct: make this into step 08 and the rest step 9
-# preparing Lc and Tc for base for all future years
-# collecting Tc for base
-Tc_extrap = pd.DataFrame()  # start with empty DataFrame
-for country in countries:
-    Tc_1country = dfTc[
-        (dfTc['country'] == country) & 
-        (dfTc['year'].isin(years_for_Tc_base))
-    ]
-    Tc_country_mean = (
-        Tc_1country
-        .groupby(["country", "selling_sector", "buying_sector"])["Tc"]
-        .mean()
-        .reset_index()
-    )
-    Tc_extrap = pd.concat([Tc_extrap, Tc_country_mean], ignore_index=True)
 
-Tc_extrap.to_csv("Bench_predictions/Tc_extrap08.csv", index=False)
-#################################################################################################
-#################################################################################################
 
 # 1. upload OECD intput-output tables 1995-2020
 ###############################################   
-#copied from Benchmarking/Employment.py
 
 final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
-
+# dataframes for plotting (not for extrapolation)
 dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
 dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
 dfEimpact = pd.DataFrame()
-dfTc = pd.DataFrame()
-dfLc = pd.DataFrame()
+
 for country in countries:
     for year in year_range:
-        print(country, year)
-        
+        print(country, year)        
         E = slice_v_from_bigdf(dfE)
         E.loc["HFCE"] = 0
+        # f extrapolated - get per country
+        # but dff has only one number per year. I need the fother_extrap_sector
+        
+        fother = slice_v_from_bigdf(dff)
 
         if year in year_range2:
+            simple_II_labels = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
+                 'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
+                  'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
             
+            
+            #!major difference: E, f can be sliced form bigdf because all future years exist there
+            #!Tc, GDPj_by_xj - only one matrix/vector for all future years
+
+            # Tc,T,Lc,L extrapolated
             #convert Tc to 46x46 to fid into clc_L
             # slice Tc - not with slice_m becuase no year
             Tc_1country = Tc_extrap[(Tc_extrap.country==country)].copy()
@@ -896,15 +893,23 @@ for country in countries:
                 values="Tc"
             )
             Tc = Tc[[c for c in Tc.columns if c != 'HFCE'] + ['HFCE']] #put 'HFCE' at the end
-
             #I need a 46x46 Textrap to insert here
-            Lc_extrap, Lc_minus_I = clc_L(Tc)
+            Lc, Lc_minus_I = clc_L(Tc)
             #Lc from Tc - the same for all  years but differs for different countries
-            #fc
-            #L
-            #T
-            #output
-            #GDP
+            T = Tc.loc[simple_II_labels,simple_II_labels].copy()
+            L, L_minus_I = clc_L(T)
+            # output extrapolated
+            
+            # GDP extrapolated
+            #convert GDPj_by_xj to 46x46 
+            # slice Tc - not with slice_m becuase no year
+            GDPj_by_xj_1country = GDPj_by_xj_extrap[(GDPj_by_xj_extrap.country==country)].copy()
+            GDPj_by_xj_1country.drop(columns=['country'], inplace=True)
+            GDPj_by_xj_1country = GDPj_by_xj_1country.set_index("sector")
+            GDPj_by_xj = pd.concat([ GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index != "HFCE"],
+                                     GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index == "HFCE"] ])
+
+          
             #II
         else:  
             

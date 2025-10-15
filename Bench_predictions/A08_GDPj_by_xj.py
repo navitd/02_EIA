@@ -57,7 +57,7 @@ def collect_m(m, country, year, m_value_name, dfm):
     dfm = pd.concat([dfm, dftemp], ignore_index=True)
     return dfm
 
-def slice_v_from_bigdf(bigdf):
+def slice_v_from_bigdf(bigdf, country, year): #! a problem here: need to input also country and year
     # assuming bigdf was prepared by collect_v: columns are country, year, sector, value_column
     v = bigdf[(bigdf.country==country) & (bigdf.year==int(year))].copy()
     #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
