@@ -9,7 +9,7 @@
 
 # https://www.oecd.org/en/data/datasets/input-output-tables.html
 
-#major difference: dffohter or dff and dfE - I already extrapolated and each year of future year exists there
+#major difference: dffohter or dfother_total and dfE - I already extrapolated and each year of future year exists there
 #Tc, GDPj_by_xj: one for all future years
 #I know I have GDP extrapolated from world bank - but - there is 10% difference between world bank GDP and OECD GDP
 #so I used fixed year GDP 2020 divided by output, as per EIA method, and will multiply by extrapolated output of each future year
@@ -74,7 +74,7 @@ def collect_m(m, country, year, m_value_name, dfm):
     dfm = pd.concat([dfm, dftemp], ignore_index=True)
     return dfm
 
-def slice_v_from_bigdf(bigdf):
+def slice_v_from_bigdf(bigdf,country,year):
     # assuming bigdf was prepared by collect_v: columns are country, year, sector, value_column
     v = bigdf[(bigdf.country==country) & (bigdf.year==int(year))].copy()
     #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
@@ -804,7 +804,8 @@ dfE = pd.read_csv("Bench_predictions/A05_Esectors_from_Etot05.csv")
 dfE.rename(columns={"E": "Employment"}, inplace=True)
 
 # upload f other
-dff = pd.read_csv("Bench_predictions/A06_dfother_extrap06.csv")
+dfother_sector_ratio = pd.read_csv("Bench_predictions/A06_dfother_final_demand.csv") # has sector ratio 1995-2020
+dfother_total = pd.read_csv("Bench_predictions/A06_dfother_extrap06.csv")     # extrapolated from gdp until 2040
 
 # upload Tc for making Tc for future years
 Tc_extrap = pd.read_csv("Bench_predictions/A08_Tc_extrap08.csv") #this is here because when I wrote I did it in steps. 
@@ -862,16 +863,16 @@ dfoutput = pd.DataFrame() # this will hold output by country, year, sector, outp
 dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
 dfEimpact = pd.DataFrame()
-
+dff = pd.DataFrame() #to delete
 for country in countries:
     for year in year_range:
-        print(country, year)        
-        E = slice_v_from_bigdf(dfE)
+        print(country, year)
+        # E is different from dfother, GDPj_by_xj and Tc because it is added to data years as well as future years        
+        E = slice_v_from_bigdf(dfE, country, year)
         E.loc["HFCE"] = 0
         # f extrapolated - get per country
-        # but dff has only one number per year. I need the fother_extrap_sector
+        ftemp = slice_v_from_bigdf(dfother_sector_ratio, country, year)
         
-        fother = slice_v_from_bigdf(dff)
 
         if year in year_range2:
             simple_II_labels = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
@@ -879,8 +880,8 @@ for country in countries:
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
             
             
-            #!major difference: E, f can be sliced form bigdf because all future years exist there
-            #!Tc, GDPj_by_xj - only one matrix/vector for all future years
+            #!major difference: E can be sliced form bigdf because all future years exist there
+            #!Tc, GDPj_by_xj,f - only one matrix/vector for all future years
 
             # Tc,T,Lc,L extrapolated
             #convert Tc to 46x46 to fid into clc_L
@@ -909,7 +910,13 @@ for country in countries:
             GDPj_by_xj = pd.concat([ GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index != "HFCE"],
                                      GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index == "HFCE"] ])
 
-          
+          ``dfother_sector_base_1country = dfother_sector_base_for_extrap[(dfother_sector_base_for_extrap.country==country)].copy()
+            dfother_sector_base_1country.drop(columns=['country'], inplace=True)
+            dfother_sector_base_1country = dfother_sector_base_1country.set_index("sector")
+            dfother_sector_base_1country.loc["employees_compensation"] = 0
+            #multiply by future year total other final demand
+            ftot_value = dfother_total[(dfother_total.country==country) & (dfother_total.year==int(year))]["other final demand total"].values[0]
+            fother = dfother_sector_base_1country * ftot_value
             #II
         else:  
             
@@ -928,7 +935,7 @@ for country in countries:
             dfGDP    = collect_v(GDP,    country, year, ['sector', 'GDP'],    dfGDP)
             f = OECD.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
             f = f.rename_axis("sector")
-            dff     = collect_v(f,       country, year, ['sector', 'other final demand total'], dff)
+            dff     = collect_v(f,       country, year, ['sector', 'other final demand total'], dff) # to delete
             
             # 2. calculate L and Lc
             ##########################

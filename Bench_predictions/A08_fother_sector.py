@@ -57,7 +57,7 @@ def collect_m(m, country, year, m_value_name, dfm):
     dfm = pd.concat([dfm, dftemp], ignore_index=True)
     return dfm
 
-def slice_v_from_bigdf(bigdf,country, year): #! a problem here: need to input also country and year
+def slice_v_from_bigdf(bigdf, country, year): #! a problem here: need to input also country and year
     # assuming bigdf was prepared by collect_v: columns are country, year, sector, value_column
     v = bigdf[(bigdf.country==country) & (bigdf.year==int(year))].copy()
     #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
@@ -788,7 +788,8 @@ dfE = pd.read_csv("Bench_predictions/A05_Esectors_from_Etot05.csv")
 dfE.rename(columns={"E": "Employment"}, inplace=True)
 
 # upload f other
-dff = pd.read_csv("Bench_predictions/A06_dfother_extrap06.csv")
+dfother_sector_ratio = pd.read_csv("Bench_predictions/A06_dfother_final_demand.csv") # has sector ratio 1995-2020
+dfother_total = pd.read_csv("Bench_predictions/A06_dfother_extrap06.csv")     # extrapolated from gdp until 2040
 
 # upload Tc for making Tc for future years
 Tc_extrap = pd.read_csv("Bench_predictions/A08_Tc_extrap08.csv") #this is here because when I wrote I did it in steps. 
@@ -809,12 +810,14 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '2021'
-last_year = '2021'
+first_year = '2019'
+last_year = '2024'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)]
-n_for_gdp=2
-years_for_gdp_base = [year for year in range(int(last_year)-n_for_gdp, int(last_year)+1)]
+n_for_Tc=0
+years_for_Tc_base = [year for year in range(int(2020)-n_for_Tc, int(2020)+1)]
+n_for_fother=0
+years_for_fother_base = [year for year in range(int(2020)-n_for_fother, int(2020)+1)]
 
 report_title = f'ICT sectors, {last_year}'
 ICT_factors = {'ICT - Manufacturing': 'C26',
@@ -835,24 +838,25 @@ currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 ################################################################################################
 ################################################################################################
 # This is the important part of A08
-
-# preparing Lc and Tc for base for all future years
-# collecting Tc for base
-GDPj_by_xj_extrap = pd.DataFrame()  # start with empty DataFrame
+#dfother_sector_ratio 
+#dfother_total  - not needed here
+# preparing fother sector and from fother ratio for base for all future years
+# collecting fother for base
+dfother_sector_base_for_extrap = pd.DataFrame()  # start with empty DataFrame
 for country in countries:
-    GDPj_by_xj_1country = dfGDPj_by_xj[
-        (dfGDPj_by_xj['country'] == country) & 
-        (dfGDPj_by_xj['year'].isin(years_for_gdp_base))
+    fother_1country = dfother_sector_ratio[
+        (dfother_sector_ratio['country'] == country) & 
+        (dfother_sector_ratio['year'].isin(years_for_fother_base))
     ]
-    GDPj_by_xj_country_mean = (
-        GDPj_by_xj_1country
-        .groupby(["country", "sector"])["GDPj_by_xj"]
+    fother_country_mean = (
+        fother_1country
+        .groupby(["country", "sector"])["other final demand sector ratio"]
         .mean()
         .reset_index()
     )
-    GDPj_by_xj_extrap = pd.concat([GDPj_by_xj_extrap, GDPj_by_xj_country_mean], ignore_index=True)
+    dfother_sector_base_for_extrap = pd.concat([dfother_sector_base_for_extrap, fother_country_mean], ignore_index=True)
 
-GDPj_by_xj_extrap.to_csv("Bench_predictions/A08_GDPj_by_xj_extrap08.csv", index=False)
+dfother_sector_base_for_extrap.to_csv("Bench_predictions/A08_fother_sector_base_for_extrap.csv", index=False)
 #################################################################################################
 #################################################################################################
 
@@ -870,11 +874,12 @@ dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
 dfEimpact = pd.DataFrame()
 dfGDP_for_graphs= pd.DataFrame()
+dff = pd.DataFrame()
 for country in countries:
     for year in year_range:
         print(country, year)
         
-        E = slice_v_from_bigdf(dfE)
+        E = slice_v_from_bigdf(dfE, country, year)
         E.loc["HFCE"] = 0
 
         if year in year_range2:
@@ -899,16 +904,14 @@ for country in countries:
             T = Tc.loc[simple_II_labels,simple_II_labels].copy()
             L, L_minus_I = clc_L(T)
 
-            #convert GDPj_by_xj to 46x46 
-            # slice Tc - not with slice_m becuase no year
-            GDPj_by_xj_1country = GDPj_by_xj_extrap[(GDPj_by_xj_extrap.country==country)].copy()
-            GDPj_by_xj_1country.drop(columns=['country'], inplace=True)
-            GDPj_by_xj_1country = GDPj_by_xj_1country.set_index("sector")
-            GDPj_by_xj = pd.concat([ GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index != "HFCE"],
-                                     GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index == "HFCE"] ])
-
-
-            #fc
+            dfother_sector_base_1country = dfother_sector_base_for_extrap[(dfother_sector_base_for_extrap.country==country)].copy()
+            dfother_sector_base_1country.drop(columns=['country'], inplace=True)
+            dfother_sector_base_1country = dfother_sector_base_1country.set_index("sector")
+            dfother_sector_base_1country.loc["employees_compensation"] = 0
+            #multiply by future year total other final demand
+            ftot_value = dfother_total[(dfother_total.country==country) & (dfother_total.year==int(year))]["other final demand total"].values[0]
+            fother = dfother_sector_base_1country * ftot_value
+            
             #T
             #output
             #II
