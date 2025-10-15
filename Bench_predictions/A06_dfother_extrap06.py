@@ -17,12 +17,6 @@ from func_data_upload_OECD_salaries import data_upload_OECD_salaries
 from func_safe_divide import safe_divide, safe_divide_vector
 from func_clc_L import clc_L
 
-'''
-Etot = pd.read_csv("Bench_predictions/Etotal_multivariate_E_extrap03.csv", index_col=0)
-print("\n Etot from multivariate_E_extrap03:\n")
-print(Etot.tail())  
-'''
-
 
 
 
@@ -64,7 +58,7 @@ def collecting_year_country_data_matrix(country, year, dfm, m, matrix_name):
 ########################################         plotting             ###############################################
 def plot_dffc(dffc, years, countries):
 
-    for country in ['CAN']: #countries:
+    for country in countries:
         for year in years:
             subset = dffc[(dffc['country'] == country) & (dffc['year'] == str(year))]
             if subset.empty:
