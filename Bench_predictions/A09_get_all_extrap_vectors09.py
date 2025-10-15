@@ -870,15 +870,10 @@ for country in countries:
         # E is different from dfother, GDPj_by_xj and Tc because it is added to data years as well as future years        
         E = slice_v_from_bigdf(dfE, country, year)
         E.loc["HFCE"] = 0
-        # f extrapolated - get per country
-        ftemp = slice_v_from_bigdf(dfother_sector_ratio, country, year)
-        
-
         if year in year_range2:
             simple_II_labels = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
-            
             
             #!major difference: E can be sliced form bigdf because all future years exist there
             #!Tc, GDPj_by_xj,f - only one matrix/vector for all future years
@@ -909,19 +904,17 @@ for country in countries:
             GDPj_by_xj_1country = GDPj_by_xj_1country.set_index("sector")
             GDPj_by_xj = pd.concat([ GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index != "HFCE"],
                                      GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index == "HFCE"] ])
-
-          ``dfother_sector_base_1country = dfother_sector_base_for_extrap[(dfother_sector_base_for_extrap.country==country)].copy()
+                                        
+            dfother_sector_base_1country = dfother_sector_ratio[(dfother_sector_ratio.country==country)].copy()
             dfother_sector_base_1country.drop(columns=['country'], inplace=True)
             dfother_sector_base_1country = dfother_sector_base_1country.set_index("sector")
             dfother_sector_base_1country.loc["employees_compensation"] = 0
             #multiply by future year total other final demand
             ftot_value = dfother_total[(dfother_total.country==country) & (dfother_total.year==int(year))]["other final demand total"].values[0]
-            fother = dfother_sector_base_1country * ftot_value
+            fother = dfother_sector_base_1country.loc[:,"other final demand sector ratio"] * ftot_value
             #II
         else:  
-            
-            
-        
+
             # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
             PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
 
