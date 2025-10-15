@@ -792,6 +792,7 @@ dff = pd.read_csv("Bench_predictions/A06_dfother_extrap06.csv")
 
 # upload Tc for making Tc for future years
 dfTc = pd.read_csv("Bench_predictions/A07_dfTc_Tc_Lc_to_csv07.csv")
+#instead of this I need Tc_extrap
 
 
 

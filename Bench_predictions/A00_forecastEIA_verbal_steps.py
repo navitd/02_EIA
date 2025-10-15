@@ -27,19 +27,24 @@
 # upload gpd
 # Eextrap+data
 # fextrap+data
-#for country
-#for year
-#OECD
-#combine with above
-#calculate L 
 # comparison of gdp world bank and gdp OECD : 4-11% difference in yearly total GDP
 # OECD is always larger 
 #compare f to waht I have, compare gdp to waht I  have
 #gdp has 4-11% difference between world bank and OECD
 # f has no difference.
 
+
+# 5.5 A07_Tc_Lc_to_csv07.py
+# collect dfTc of all years and write to file
+# 5.6 A08_Tc_extrap08.py
+# 5.6.1 dfTc upload
+# A08_Tc_extrap08.py
+# 5.6.2 Tc_1country_mean - averaging values of Tc to get the Tc_extrap for future years
+# 5.6.3 from Tc_extrap (long) to Tc_wide 46x46
+# 5.6.4 calculating Lc_extrap from Tc using the old function - now I have Lc for future years per country
+
 then make it into a function, to be used in graphs
-create Lc for future years!!!
+
 E
 fc
 Lc = Lc_extrap
@@ -49,10 +54,6 @@ output
 GDP
 II
 
-# I can not have the same treatment. with future years I start from T or L
-# 2 different uploading systems, for data and for extrap, once I get to L everything is the same?
-
-# The files of future years should match the files of OECD for smooth transition?
 
 
 # CGARextrap10.py

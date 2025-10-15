@@ -841,7 +841,7 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 ################################################################################################
 ################################################################################################
-# This is the important
+# This is the important part of A08
 
 # preparing Lc and Tc for base for all future years
 # collecting Tc for base
