@@ -5,7 +5,7 @@
 # 2021-2040: Lc extrap, E extrap
 # extrap = extrapolated, mainly by gdp data from world bank. there's ARIMA in gdp and linear extrapolation in japan gdp
 
-#In this file I will upload everything, make something that  uploads everything, then saves what needs to be saved to excel
+#In this file I will upload everything, and make necessary alternations to dataframe so that future years data and data years data is the same
 
 # https://www.oecd.org/en/data/datasets/input-output-tables.html
 
@@ -786,22 +786,25 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-# upload gdp
-dfgdp_worldbank = pd.read_csv("Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv")
-dfgdp_worldbank.rename(columns={"Unnamed: 0": "year"}, inplace=True)
-dfgdp_worldbank.iloc[:, 1:] = dfgdp_worldbank.iloc[:, 1:] * 10**(-6)
-dfgdp_worldbank = dfgdp_worldbank.set_index('year')
+# upload world bank gdp - not needed
+#dfgdp_worldbank = pd.read_csv("Bench_predictions/A04_gdp_ARIMAgdp_currentUSD04.csv")
+#dfgdp_worldbank.rename(columns={"Unnamed: 0": "year"}, inplace=True)
+#dfgdp_worldbank.iloc[:, 1:] = dfgdp_worldbank.iloc[:, 1:] * 10**(-6)
+#dfgdp_worldbank = dfgdp_worldbank.set_index('year')
 
 # upload E
-dfE = pd.read_csv("Bench_predictions/Esectors_from_Etot05.csv")
+dfE = pd.read_csv("Bench_predictions/A05_Esectors_from_Etot05.csv")
 dfE.rename(columns={"E": "Employment"}, inplace=True)
 
 # upload f other
-dff = pd.read_csv("Bench_predictions/dfother_extrap06.csv")
+dff = pd.read_csv("Bench_predictions/A06_dfother_extrap06.csv")
 
 # upload Tc for making Tc for future years
-dfTc = pd.read_csv("Bench_predictions/dfTc_Lc_to_excel07.csv")
+Tc_extrap = pd.read_csv("Bench_predictions/A08_Tc_extrap08.csv") #this is here because when I wrote I did it in steps. 
+#after I clean the files, I could upload here dfTc, make Tc_extrap below _as well as_ GDPj_by_xj, and save both, to be used in A09
 
+# upload GDPj_by_xj
+GDPj_by_xj_extrap = pd.read_csv("Bench_predictions/A08_GDPj_by_xj_extrap08.csv")
 
 
 
