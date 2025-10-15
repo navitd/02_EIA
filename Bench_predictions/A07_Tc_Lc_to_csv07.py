@@ -39,7 +39,6 @@ from func_plot_real_vs_predicted import plot_real_vs_predicted
 ##########################################         functions from Benchmarking/Employment.py       ##########################################
 #the plotting functions from Employment are not needed here, they are to be moved to 08 file
 
-# collect_v and collect_m - this is moving from 1year to many years - collecting in a dataframe an aggregation of the differnt years
 def collect_v(v, country, year, cols_list, dfv):
     dftemp = pd.DataFrame()
     dftemp = v.reset_index()
@@ -49,23 +48,6 @@ def collect_v(v, country, year, cols_list, dfv):
     dftemp = dftemp[["country", "year"] + cols_list]
     dfv = pd.concat([dfv, dftemp], ignore_index=True)
     return dfv
-
-def collect_m(m, country, year, m_value_name, dfm):
-    dftemp = pd.DataFrame()
-    dftemp = m.reset_index().melt(id_vars=m.index.name or 'index', 
-                                    var_name='buying_sector', 
-                                    value_name=m_value_name)
-
-    # Rename 'index' to 'selling_sector' if needed
-    dftemp.rename(columns={m.index.name or 'index': 'selling_sector'}, inplace=True)
-    # Add metadata
-    dftemp['country'] = country
-    dftemp['year'] = year
-    # Reorder columns
-    dftemp = dftemp[['country', 'year',  'selling_sector', 'buying_sector', m_value_name]]
-    # Append to the master DataFrame
-    dfm = pd.concat([dfm, dftemp], ignore_index=True)
-    return dfm
 
 ####################################################         functions that plot       ######################################################
 def plot_E_line_graph(JPNE, col_name, title):
@@ -790,12 +772,6 @@ dfE.rename(columns={"E": "Employment"}, inplace=True)
 # upload f other
 dff = pd.read_csv("Bench_predictions/dfother_extrap06.csv")
 
-# upload Tc for making Tc for future years
-dfTc = pd.read_csv("Bench_predictions/dfTc_Lc_to_excel07.csv")
-
-
-
-
 ########################################                           parameters                       ##################################################
 start_time = time.time()
 print("working directory of GDPsupplychain.py is: ",os.getcwd())  # Print the current working directory
@@ -811,9 +787,6 @@ first_year = '1995'
 last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)]
-n_for_Tc=2
-years_for_Tc_base = [year for year in range(int(last_year)-n_for_Tc, int(last_year)+1)]
-
 report_title = f'ICT sectors, {last_year}'
 ICT_factors = {'ICT - Manufacturing': 'C26',
                 'ICT - Wholesaling': 'G',
@@ -830,25 +803,6 @@ currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
-################################################################################################
-# The important Tc_extrap08 step
-# preparing Lc and Tc for base for all future years
-# collecting Tc for base
-for country in countries:
-    Tc_1country = dfTc[(dfTc['country'] == country) & (dfTc['year'].isin(years_for_Tc_base))]
-    Tc_extrap = (
-        Tc_1country
-        .groupby(["country", "selling_sector", "buying_sector"])["Tc"]
-        .mean()
-        .reset_index()
-    )
-
-print(Tc_extrap)
-Tc_extrap.to_csv("Bench_predictions/Tc_extrap08.csv", index=False)
-#convert Tc to 46x46 to fid into clc_L
-Lc_extrap, Lc_minus_I = clc_L(Tc_extrap)
-#################################################################################################
-#################################################################################################
 
 # 1. upload OECD intput-output tables 1995-2020
 ###############################################   
@@ -865,71 +819,67 @@ dfLc = pd.DataFrame()
 for country in countries:
     for year in year_range:
         print(country, year)
-        def slice_v_from_bigdf(bigdf):
-            # assuming bigdf was prepared by collect_v: columns are country, year, sector, value_column
-            v = bigdf[(bigdf.country==country) & (bigdf.year==int(year))].copy()
-            #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
-            v.drop(columns=['country','year'], inplace=True)
-            v.set_index('sector', inplace=True)
-            return v
-        E2 = slice_v_from_bigdf(dfE)
-        E2.loc["HFCE"] = 0
+         # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
+        PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
 
+        # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
+        II = OECD.loc[simple_II_labels, simple_II_labels]
+        household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
+        GDP         = OECD.loc['VALU', simple_II_labels]
+        output      = OECD.loc['OUTPUT', simple_II_labels]
 
-
+        dfoutput = collect_v(output, country, year, ['sector', 'output'], dfoutput)
+        dfGDP    = collect_v(GDP,    country, year, ['sector', 'GDP'],    dfGDP)
+        f = OECD.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+        f = f.rename_axis("sector")
+        dff     = collect_v(f,       country, year, ['sector', 'other final demand total'], dff)
+        
 
         E = dfE[(dfE.country==country) & (dfE.year==int(year))].copy()
         #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
         E.drop(columns=['country','year'], inplace=True)
         E.set_index('sector', inplace=True)
         E.loc["HFCE"] = 0
-        if year in year_range2:
-            print(E)
-            #fc
-            #Lc = Lc_extrap
-            #L
-            #T
-            #output
-            #GDP
-            #II
-        else:  
-            
-            
+
+        # 2. calculate L and Lc
+        ##########################
+        T = safe_divide(II, output)
+        Ldf, L_minus_I = clc_L(T)
+
+        IIc = II.copy()
+        IIc["HFCE"] = household_expenditure # added a column for closed model
+        # Convert Series to a one-row DataFrame with sectors as columns
+        ET = E.T  # .T transposes to make index=0, columns=sectors
+        ET.index = ["employees_compensation"]  # name the row
+        IIc = pd.concat([IIc, ET], axis=0)
+        IIc.loc['employees_compensation', 'HFCE'] = 0 
+
+        outputc = output.copy()
+        outputc['HFCE'] = E.sum().values[0]
+        Tc = safe_divide(IIc, outputc)
+        Lcdf, Lc_minus_I = clc_L(Tc)
         
-            # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
-            PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
+        def collect_m(m, country, year, m_value_name, dfm):
+            dftemp = pd.DataFrame()
+            dftemp = m.reset_index().melt(id_vars=m.index.name or 'index', 
+                                            var_name='buying_sector', 
+                                            value_name=m_value_name)
 
-            # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
-            II = OECD.loc[simple_II_labels, simple_II_labels]
-            household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-            GDP         = OECD.loc['VALU', simple_II_labels]
-            output      = OECD.loc['OUTPUT', simple_II_labels]
+            # Rename 'index' to 'selling_sector' if needed
+            dftemp.rename(columns={m.index.name or 'index': 'selling_sector'}, inplace=True)
+            # Add metadata
+            dftemp['country'] = country
+            dftemp['year'] = year
+            # Reorder columns
+            dftemp = dftemp[['country', 'year',  'selling_sector', 'buying_sector', m_value_name]]
+            # Append to the master DataFrame
+            dfm = pd.concat([dfm, dftemp], ignore_index=True)
+            return dfm
 
-            dfoutput = collect_v(output, country, year, ['sector', 'output'], dfoutput)
-            dfGDP    = collect_v(GDP,    country, year, ['sector', 'GDP'],    dfGDP)
-            f = OECD.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
-            f = f.rename_axis("sector")
-            dff     = collect_v(f,       country, year, ['sector', 'other final demand total'], dff)
-            
-            # 2. calculate L and Lc
-            ##########################
-            T = safe_divide(II, output)
-            Ldf, L_minus_I = clc_L(T)
 
-            IIc = II.copy()
-            IIc["HFCE"] = household_expenditure # added a column for closed model
-            # Convert Series to a one-row DataFrame with sectors as columns
-            ET = E.T  # .T transposes to make index=0, columns=sectors
-            ET.index = ["employees_compensation"]  # name the row
-            IIc = pd.concat([IIc, ET], axis=0)
-            IIc.loc['employees_compensation', 'HFCE'] = 0 
 
-            outputc = output.copy()
-            outputc['HFCE'] = E.sum().values[0]
-            Tc = safe_divide(IIc, outputc)
-            Lcdf, Lc_minus_I = clc_L(Tc)
-            
-            
+        dfTc = collect_m(Tc, country, year, 'Tc', dfTc)
+        dfLc = collect_m(Lcdf, country, year, 'Lc', dfLc)
 
 
         # 3. calculate multipliers
@@ -1031,7 +981,8 @@ end_time = time.time()
 print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 
 
-
+dfTc.to_csv("Bench_predictions/dfTc_Tc_Lc_to_csv07.csv", index=False)
+dfLc.to_csv("Bench_predictions/dfLc_Tc_Lc_to_csv07.csv", index=False)
 
 
 
@@ -1133,60 +1084,3 @@ if 0:
 print(dfEimpact)
 
 
-
-
-print('')
-
-
-##############################  calculating and plotting predictions  ################################
-'''
-        predicted_output = multipliers2prediction(s2s_mo, fdf, 'Predicted_Output')
-        predicted_outputc = multipliers2prediction(s2s_moc, fcdf, 'Predicted_Output')
-        predicted_income = multipliers2prediction(s2s_mh, fdf, 'Predicted_Income')  
-        predicted_incomec = multipliers2prediction(s2s_mhc, fcdf, 'Predicted_Income') 
-        predicted_GDP = multipliers2prediction(s2s_mg, fdf, 'Predicted_GDP') 
-        predicted_GDPc = multipliers2prediction(s2s_mgc, fcdf, 'Predicted_GDP') 
-
-        plot_real_vs_predicted(output, predicted_output,
-                       OECDadditional['employees_compensation'], predicted_income,
-                       GDP, predicted_GDP,  
-                       year, year,'Simple Model')
-
-        plot_real_vs_predicted(output, predicted_outputc.iloc[:-1],
-                       OECDadditional['employees_compensation'], predicted_incomec.iloc[:-1],
-                       GDP, predicted_GDPc.iloc[:-1],  
-                       year, year,'Closed Model')
-'''
-
-##############################              ICT old         #############################                      
-# bar graphs of direct, indirect and induced
-'''
-ICT_sectors = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services',
-               'ICT - Software and computer services',	'ICT - Software and computer services']
-OECD_sectors_ICT = ['C26',	'G',	'J58T60',	'J61',	'J62_63',	'M']
-ICT_sectors_dict = {'ICT - Manufacturing': 'C26',
-                    'ICT - Wholesaling': 'G',
-                    'ICT - Software and computer services': ['J58T60', 'J62_63', 'M'],  
-                    'ICT - Communications services': 'J61'}
-# Build sector code to name mapping
-code_to_name = {}
-for name, codes in ICT_sectors_dict.items():
-    if isinstance(codes, list):
-        for code in codes:
-            code_to_name[code] = name
-    else:
-        code_to_name[codes] = name
-
-# assume I want to see the ICT sectors as selling sectors. how much they will sell
-plot_multipliers(OECD_sectors_ICT, direct_o.loc[OECD_sectors_ICT,:].sum(axis=1), indirect_o.loc[OECD_sectors_ICT,:].sum(axis=1), 
-                 induced_o.loc[OECD_sectors_ICT,:].sum(axis=1),
-                 direct_h.loc[OECD_sectors_ICT,:].sum(axis=1), indirect_h.loc[OECD_sectors_ICT,:].sum(axis=1),
-                 induced_h.loc[OECD_sectors_ICT,:].sum(axis=1),
-                 direct_g.loc[OECD_sectors_ICT,:].sum(axis=1), indirect_g.loc[OECD_sectors_ICT,:].sum(axis=1),
-                 induced_g.loc[OECD_sectors_ICT,:].sum(axis=1), 
-                  title="Multipliers")
-'''
-
-
-
-print('')
