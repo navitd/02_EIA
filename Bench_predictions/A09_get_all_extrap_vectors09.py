@@ -804,16 +804,15 @@ dfE = pd.read_csv("Bench_predictions/A05_Esectors_from_Etot05.csv")
 dfE.rename(columns={"E": "Employment"}, inplace=True)
 
 # upload f other
-dfother_sector_ratio = pd.read_csv("Bench_predictions/A06_dfother_final_demand.csv") # has sector ratio 1995-2020
-dfother_total = pd.read_csv("Bench_predictions/A06_dfother_extrap06.csv")     # extrapolated from gdp until 2040
+dfother_sector_ratio = pd.read_csv("Bench_predictions/A08_fother_sector_base_for_extrap.csv") # has sector ratio _base_, only for 1 year
+dfother_total = pd.read_csv("Bench_predictions/A06fother_extrap.csv")     # extrapolated from gdp until 2040
 
 # upload Tc for making Tc for future years
-Tc_extrap = pd.read_csv("Bench_predictions/A08_Tc_extrap08.csv") #this is here because when I wrote I did it in steps. 
+Tc_extrap = pd.read_csv("Bench_predictions/A08_Tc_extrap08.csv") #1 matrix for each country. this is _base_
 #after I clean the files, I could upload here dfTc, make Tc_extrap below _as well as_ GDPj_by_xj, and save both, to be used in A09
 
 # upload GDPj_by_xj
-GDPj_by_xj_extrap = pd.read_csv("Bench_predictions/A08_GDPj_by_xj_extrap08.csv")
-
+GDPj_by_xj_extrap = pd.read_csv("Bench_predictions/A08_GDPj_by_xj_extrap08.csv") #1 vector for each country. this is _base_
 
 
 ########################################                           parameters                       ##################################################
@@ -827,7 +826,7 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '2019'
+first_year = '2021'
 last_year = '2024'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)]
@@ -835,6 +834,8 @@ n_for_Tc=0
 years_for_Tc_base = [year for year in range(int(2020)-n_for_Tc, int(2020)+1)]
 n_for_gdp=0
 years_for_gdp_base = [year for year in range(int(2020)-n_for_gdp, int(2020)+1)]
+n_for_E=1
+years_for_E_base = [year for year in range(int(2020)-n_for_E, int(2020)+1)]
 
 report_title = f'ICT sectors, {last_year}'
 ICT_factors = {'ICT - Manufacturing': 'C26',
@@ -854,9 +855,41 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 
 
-# 1. upload OECD intput-output tables 1995-2020
-###############################################   
 
+
+################################################################################################
+################################################################################################
+# This is the important part of A08
+# preparing  for base for all future years
+# collecting E for base
+
+dfEbase_temp = dfE[dfE["year"].isin(years_for_E_base)].reset_index(drop=True).copy()
+dfEbase_temp["E_tot"] = (dfEbase_temp.groupby(["country", "year"])["Employment"].transform("sum"))
+dfEbase_temp["E sector to tot ratio"] = dfEbase_temp.Employment / dfEbase_temp.E_tot
+dfEbase_temp.drop(columns=["Employment", "E_tot"], inplace=True)
+dfEbase = pd.DataFrame()
+for country in countries:
+    dfEbase_1country = dfEbase_temp[
+        (dfEbase_temp['country'] == country) & 
+        (dfEbase_temp['year'].isin(years_for_gdp_base))
+    ]
+    dfEbase_1country_mean = (
+        dfEbase_1country
+        .groupby(["country", "sector"])["E sector to tot ratio"]
+        .mean()
+        .reset_index()
+    )
+    dfEbase = pd.concat([dfEbase, dfEbase_1country_mean], ignore_index=True)
+
+dfEbase.to_csv("Bench_predictions/A08_dfEbase.csv", index=False)
+#dfEbase: 1 country, mean over years, base for later getting Esector from Etot
+#################################################################################################
+#################################################################################################
+
+
+
+# 1. upload OECD intput-output tables 1995-2020
+###############################################  
 final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
 # dataframes for plotting (not for extrapolation)
 dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
@@ -868,8 +901,7 @@ for country in countries:
     for year in year_range:
         print(country, year)
         # E is different from dfother, GDPj_by_xj and Tc because it is added to data years as well as future years        
-        E = slice_v_from_bigdf(dfE, country, year)
-        E.loc["HFCE"] = 0
+        
         if year in year_range2:
             simple_II_labels = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
@@ -889,12 +921,12 @@ for country in countries:
                 values="Tc"
             )
             Tc = Tc[[c for c in Tc.columns if c != 'HFCE'] + ['HFCE']] #put 'HFCE' at the end
+            
             #I need a 46x46 Textrap to insert here
-            Lc, Lc_minus_I = clc_L(Tc)
+            Lcdf, Lc_minus_I = clc_L(Tc)
             #Lc from Tc - the same for all  years but differs for different countries
             T = Tc.loc[simple_II_labels,simple_II_labels].copy()
-            L, L_minus_I = clc_L(T)
-            # output extrapolated
+            Ldf, L_minus_I = clc_L(T)
             
             # GDP extrapolated
             #convert GDPj_by_xj to 46x46 
@@ -904,17 +936,47 @@ for country in countries:
             GDPj_by_xj_1country = GDPj_by_xj_1country.set_index("sector")
             GDPj_by_xj = pd.concat([ GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index != "HFCE"],
                                      GDPj_by_xj_1country.loc[GDPj_by_xj_1country.index == "HFCE"] ])
-                                        
+            # fother extrapolation                            
             dfother_sector_base_1country = dfother_sector_ratio[(dfother_sector_ratio.country==country)].copy()
             dfother_sector_base_1country.drop(columns=['country'], inplace=True)
             dfother_sector_base_1country = dfother_sector_base_1country.set_index("sector")
-            dfother_sector_base_1country.loc["employees_compensation"] = 0
+            dfother_sector_base_1country.loc["employees_compensation"] = 0 # all  final demand vectors have output 0
             #multiply by future year total other final demand
             ftot_value = dfother_total[(dfother_total.country==country) & (dfother_total.year==int(year))]["other final demand total"].values[0]
             fother = dfother_sector_base_1country.loc[:,"other final demand sector ratio"] * ftot_value
-            #II
-        else:  
+            
+            # output extrapolation
+            # ensure indices match
+            fother = fother.reindex(Lcdf.columns)
+            fother["HFCE"] = 0            # enable matrix multiplication
+            
+            outputc = Lcdf.dot(fother)
+            #x is a row vector, should have "HFCE" as the alst column, but from the multiplication it comes out "employees compensation"
+            # they are interchangeable, the output of HFCE is employees compensation
+            # but for the code I need it named "HFCE"
+            # rename index name
+            outputc = outputc.rename(index={"employees_compensation": "HFCE"})
+            outputc.index.name = "sector"
+            HFCE = Tc.HFCE*outputc.loc["HFCE"]
+            #fcdf below is OECD[simple_labels, final demand columns].sum(axis=1)
+            fcdf = fother.rename(index={"HFCE":"employees_compensation"}) + HFCE
+            fdf = fcdf.drop("employees_compensation").copy()
 
+            #here between 2011 and 20202 this is data. if I have ratio there I can use it.
+            #    E should not come from extrapolated E, but rather from Lc.
+            #    the Lc number is the correct Etot
+            #    I should use it as Etot and infer E sector from it.
+            #    by Esector/Etot
+            Etot = outputc.loc["HFCE"]
+            E = (dfEbase[dfEbase["country"] == country].drop(columns=["country"]).set_index("sector")* Etot)
+            E.loc["HFCE"] = 0
+            #output and output c should be series Name OUTPUT
+            GDP = GDPj_by_xj.GDPj_by_xj*outputc
+            print()
+
+        else:  #in data-years 1995-2020
+            E = slice_v_from_bigdf(dfE, country, year)
+            E.loc["HFCE"] = 0
             # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
             PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
 
@@ -948,11 +1010,21 @@ for country in countries:
             Tc = safe_divide(IIc, outputc)
             Lcdf, Lc_minus_I = clc_L(Tc)
             
-            
+            # GDP multipliers
+            GDPc = OECD.loc['VALU', simple_II_labels + ['HFCE']]
+            GDPj_by_xj = safe_divide_vector(GDPc, outputc)
+
+            fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
+            #there is what causes closed model to be in accuarete:
+            #fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+            #I should take HFCE inside fcdf_year2. 
+            fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
+            fcdf.loc['employees_compensation'] = 0
 
 
         # 3. calculate multipliers
         #############################
+        
         mo = Ldf.sum(axis=0)                       #dollar's worth of outcome per 1 dollar's worth of new final demand
         moc_trancated = Lcdf.iloc[:-1].sum(axis=0) #dollar's worth of outcome per 1 dollar's worth of new final demand
 
@@ -971,10 +1043,6 @@ for country in countries:
         #income multipliers second time
         Ej_by_xj = Tc.iloc[-1,:]
         
-        # GDP multipliers
-        GDPc = OECD.loc['VALU', simple_II_labels + ['HFCE']]
-        GDPj_by_xj = safe_divide_vector(GDPc, outputc)
-
         # summary of multipliers without typeI and typeII - 
         # 6 multipliers output, income, GDP, X sector2sector X simple model, closed model
         # all of the closed model multipliers are trancated (the row and column of salaries and final demand are not included)
@@ -1017,16 +1085,9 @@ for country in countries:
         #################################
         # impacts instead of multipliers
         #################################
-        fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
-        #there is what causes closed model to be in accuarete:
-        #fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
-        #I should take HFCE inside fcdf_year2. 
-        fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
-        fcdf.loc['employees_compensation'] = 0
-
         # impacts
         # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
-        scale_df_by_series(direct_o, fcdf[:-1]) # , 'Direct output impact' 
+        scale_df_by_series(direct_o, fcdf = fcdf.drop('employees_compensation')) # , 'Direct output impact' 
         #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
         #multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
         #multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
@@ -1039,9 +1100,9 @@ for country in countries:
         #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
         #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
         
-             
-        dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
-        dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
+    #  These are not working and need correcting      
+       #dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
+       # dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
         
         
 
@@ -1060,7 +1121,7 @@ print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
 # graph 1,2 for output
-if 0:
+if 1:
     # fig 1: output CAGR 
     ICT_cagr = clc_cagr(dfoutput, first_year, last_year,'output')
     # fig1: plot output CAGR

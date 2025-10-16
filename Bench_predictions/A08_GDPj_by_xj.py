@@ -836,8 +836,8 @@ currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 ################################################################################################
 # This is the important part of A08
 
-# preparing Lc and Tc for base for all future years
-# collecting Tc for base
+# preparing GDPj_by_xj for base for all future years
+# collecting GDPj_by_xj for base
 GDPj_by_xj_extrap = pd.DataFrame()  # start with empty DataFrame
 for country in countries:
     GDPj_by_xj_1country = dfGDPj_by_xj[
