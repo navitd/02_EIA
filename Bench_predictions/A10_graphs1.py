@@ -809,7 +809,7 @@ dfother_sector_ratio = pd.read_csv("Bench_predictions/A08_fother_sector_base_for
 dfother_total = pd.read_csv("Bench_predictions/A06fother_extrap.csv")     # extrapolated from gdp until 2040
 
 # upload Tc for making Tc for future years
-Tc_extrap = pd.read_csv("Bench_predictions/A08_Tc_extrap08.csv") #1 matrix for each country. this is _base_
+Tc_extrap = pd.read_csv("Bench_predictions/A08_Tc_extrap.csv") #1 matrix for each country. this is _base_
 #after I clean the files, I could upload here dfTc, make Tc_extrap below _as well as_ GDPj_by_xj, and save both, to be used in A09
 
 # upload GDPj_by_xj
@@ -827,8 +827,8 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '2013'
-last_year = '2023'
+first_year = '2014'
+last_year = '2024'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)]
 n_for_Tc=0
@@ -1116,7 +1116,7 @@ if 0:
 
 
 # graphs 1 and 2 for GDP
-if 0:
+if 1:
     # fig 1: output CAGR 
     ICT_GDP_cagr = clc_cagr(dfGDP, first_year, last_year,'GDP') 
     # fig1: plot output CAGR

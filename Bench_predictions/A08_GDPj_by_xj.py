@@ -788,7 +788,8 @@ dfE = pd.read_csv("Bench_predictions/A05_Esectors_from_Etot05.csv")
 dfE.rename(columns={"E": "Employment"}, inplace=True)
 
 # upload f other
-dff = pd.read_csv("Bench_predictions/A06_dfother_extrap06.csv")
+dfother_sector_ratio = pd.read_csv("Bench_predictions/A08_fother_sector_base_for_extrap.csv") # has sector ratio _base_, only for 1 year
+dfother_total = pd.read_csv("Bench_predictions/A06fother_extrap.csv")     # extrapolated from gdp until 2040
 
 # upload Tc for making Tc for future years
 Tc_extrap = pd.read_csv("Bench_predictions/A08_Tc_extrap08.csv") #this is here because when I wrote I did it in steps. 
@@ -813,8 +814,8 @@ first_year = '2021'
 last_year = '2021'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)]
-n_for_gdp=2
-years_for_gdp_base = [year for year in range(int(last_year)-n_for_gdp, int(last_year)+1)]
+n_for_gdp=0
+years_for_gdp_base = [year for year in range(int(2020)-n_for_gdp, int(2020)+1)]
 
 report_title = f'ICT sectors, {last_year}'
 ICT_factors = {'ICT - Manufacturing': 'C26',
@@ -870,11 +871,12 @@ dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
 dfEimpact = pd.DataFrame()
 dfGDP_for_graphs= pd.DataFrame()
+dff = pd.DataFrame()
 for country in countries:
     for year in year_range:
         print(country, year)
         
-        E = slice_v_from_bigdf(dfE)
+        E = slice_v_from_bigdf(dfE,country,year)
         E.loc["HFCE"] = 0
 
         if year in year_range2:

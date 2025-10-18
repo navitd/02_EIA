@@ -64,13 +64,15 @@ II
 # 2021-2040: Lc extrap, E extrap
 # extrap = extrapolated, mainly by gdp data from world bank. there's ARIMA in gdp and linear extrapolation in japan gdp
 
+#f extrapolation
+#A06.A collecting HFCE, fother 1995-2020 collecting sector information but fother is 1 vector
+#
+#A06.B dfother_final_demand has tot
+# writing to A06_dfother_final_demand
+# previousely part 1
+#A06.C  fother_sector / fother_tot
+# previouisely part 2
 
-
-
-
-below is a general summery of Bench marking, taken from Lcextrap07.py before I removed plotting from it.
-
-copy here Lcestrap07.py before I remove copy from here
 
 
 

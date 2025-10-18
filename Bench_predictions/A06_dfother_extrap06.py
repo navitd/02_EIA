@@ -1,3 +1,15 @@
+#f extrapolation
+#A06.A collecting HFCE, fother 1995-2020 collecting sector information but fother is 1 vector
+#
+#A06.B dfother_final_demand has tot
+# writing to A06_dfother_final_demand
+# 
+#A06.C  fother_sector / fother_tot
+# 
+#A06D extrapolationg by gdp world bank done here too
+
+
+
 import sys
 from pathlib import Path
 import os
@@ -20,7 +32,19 @@ from func_clc_L import clc_L
 
 
 
+
+
 ################################       collecting data from input-output tables      #########################################
+def collect_v(v, country, year, cols_list, dfv): # used to be collecting_year_country_data_vector
+            dftemp = pd.DataFrame()
+            dftemp = v.reset_index()
+            dftemp.columns = cols_list 
+            dftemp['country'] = country
+            dftemp['year'] = year
+            dftemp = dftemp[["country", "year"] + cols_list]
+            dfv = pd.concat([dfv, dftemp], ignore_index=True)
+            return dfv
+
 def clc_v_tot(df, value_col, col_tot):
     # add total employment per (country, year)
     df[col_tot] = df.groupby(["country", "year"])[value_col].transform("sum")
@@ -28,17 +52,6 @@ def clc_v_tot(df, value_col, col_tot):
     df[value_col+" sector ratio"] = df[value_col] / df[col_tot]
     dftotal = df[["country", "year", col_tot]].drop_duplicates()
     return df, dftotal
-
-def collecting_year_country_data_vector(country, year, dfv, v, vector_name):
-            dftemp = pd.DataFrame()
-            dftemp = v.reset_index()
-            dftemp.columns = ['sector', vector_name]
-            dftemp['country'] = country
-            dftemp['year'] = year
-            dftemp = dftemp[['country', 'year', 'sector', vector_name]]
-            dfv = pd.concat([dfv, dftemp], ignore_index=True)
-            return dfv
-
 
 def collecting_year_country_data_matrix(country, year, dfm, m, matrix_name):
             dftemp = pd.DataFrame()
@@ -129,9 +142,13 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '1995'
+first_year = '2019'
 last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
+n_for_f=0
+years_for_f_base = [year for year in range(int(2020)-n_for_f, int(2020)+1)]
+# add this to A09 etc.
+
 report_title = f'ICT sectors, {last_year}'
 ICT_factors = {'ICT - Manufacturing': 'C26',
                 'ICT - Wholesaling': 'G',
@@ -168,20 +185,17 @@ for country in countries:
         
         #################################
         # final demand
+        #A06.A collecting HFCE, fother 1995-2020 collecting sector information but fother is 1 vector
         #################################
         fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
         fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
-        fcdf.loc['employees_compensation'] = 0        
-        
-        dftemp = pd.DataFrame()
-        dftemp = fcdf.reset_index()
-        dftemp.columns = ['sector', 'final demand']
-        dftemp['country'] = country
-        dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', 'final demand']]
-        dffc = pd.concat([dffc, dftemp], ignore_index=True)
+        fcdf.loc['employees_compensation'] = 0             
+        #note: dffc collects fcdf - final_demand_columns - all 7 columns
+        dffc = collect_v(fcdf, country, year, ['sector', 'final demand'], dffc)
+        # the above is for graphs, not for extrapolation!
 
-        # building df1year (also 1 country)
+   
+        # building df1year (also 1 country) first iteration
         vector_name=final_demand_columns[1]
         ftemp = pd.DataFrame()
         dftemp = OECD.loc[simple_II_labels,vector_name].reset_index()
@@ -189,7 +203,7 @@ for country in countries:
         dftemp['country'] = country
         dftemp['year'] = year
         dftemp = dftemp[['country', 'year', 'sector', vector_name]]
-
+        #the line below means that HFCE is in "other final demand"
         df1year = dftemp.copy()
         for vector_name in final_demand_columns[2:]:
             dftemp = pd.DataFrame()
@@ -205,38 +219,41 @@ for country in countries:
                 on=['country', 'year', 'sector'],
                 how='left'
             )
-
         dfother_final_demand = pd.concat([dfother_final_demand, df1year], ignore_index=True)
-dfother_final_demand['year'] = dfother_final_demand['year'].astype(int)
+############################################################
 
+dfother_final_demand['year'] = dfother_final_demand['year'].astype(int)
 
 # switching to one column instead of 6
 dfother_final_demand['other final demand'] = dfother_final_demand[final_demand_columns[1:]].sum(axis=1)
 dfother_final_demand.drop(columns=final_demand_columns[1:], inplace=True)
 
-# Part 1
-########
+#A06.B dfother_final_demand has tot
+# writing to A06_dfother_final_demand
+#####################################
 # to get the ratio of dfother_sector / dfother_tot for data years
 dfother_final_demand, dfother_total = clc_v_tot(dfother_final_demand, 'other final demand', 'other final demand total')
 
 #print to csv
 dfother_final_demand.to_csv("Bench_predictions/A06_dfother_final_demand.csv", index=False)
+#dfother_final_demand.columns ['country', 'year', 'sector', 'other final demand','other final demand total', 'other final demand sector ratio']
+# up to here: dfother_final_demand calculates tot and sector ratio
 
 
 
-# Part 2
-########
 # to get the ratio dfother_total / gdp_total for each extrap year
-#to get one number of dff per year - for extrapolation
-# summing over sectors to get one number per country per year
+# to get one number of dff per year - for extrapolation
+# averaging over sectors to get one number per country per year
 #dfftotal = clc_v_tot(dfother_final_demand, 'other final demand', 'other final demand total')
 #get gdp data
+#A06.D extrapolating of fother_tot with gdp_tot
+##############################################
 gdp_filename = "Bench_predictions/A04_gdp_ARIMAgdp_currentUSD04.csv"
 gdp_data = pd.read_csv(gdp_filename)
 gdp_data.rename(columns={'Unnamed: 0': 'year'}, inplace=True) #renaming the column
 gdp_data['year'] = gdp_data['year'].astype(int)
 gdp_data.set_index('year', inplace=True) 
-#pivotingg gdp_data to long format (to match dfftotal format)
+#pivoting gdp_data to long format (to match dfftotal format)
 gdp_long = (
     gdp_data
     .reset_index()  # make 'year' a column instead of index
@@ -255,24 +272,28 @@ dfother_total['ratio_f_to_gdp'] = safe_divide_vector(dfother_total['other final 
 # or
 #dfftotal['ratio_f_gdp'] = dfftotal['other final demand total'] / dfftotal['gdp total']
 # if I'm sure there are no zeros in gdp total
+# dfother_final_demand.columns ['country', 'year', 'sector', 'other final demand', 'other final demand total', 'other final demand sector ratio']
+# dfother_total.columns ['country', 'year', 'other final demand total', 'gdp total', 'ratio_f_to_gdp']
 
-n_years_to_average=10
+
+#A06.C  fother_sector / fother_tot
+##################################
 stats_all = ( #average from 1995 to 2020
     dfother_total
     .groupby("country")["ratio_f_to_gdp"]
     .agg(["mean", "std"])
     .reset_index()
 )
-stats = ( # overage over n last years
+stats = ( # overage over n_for_f last years
     dfother_total
     .sort_values(["country", "year"])
     .groupby("country")
-    .tail(n_years_to_average)  # take last n rows per country
+    .tail(n_for_f+1)  # take last n_for_f+1 rows per country
     .groupby("country")["ratio_f_to_gdp"]
     .agg(["mean", "std"])
     .reset_index()
 )
-
+# dfother_extrap is the tot for future years
 dfother_extrap = pd.DataFrame(index=gdp_data.index, columns=gdp_data.columns)
 for country in gdp_data.columns:
     mean_value = stats.loc[stats['country'] == country, 'mean'].values[0]
@@ -326,7 +347,7 @@ plot_v_by_year_1panel(dfother2, countries, 'other final demand [Million USD]', "
 
 
 # print to excel - correct dataframe to print
-dfother_extrap_and_data.to_csv("Bench_predictions/A06fother_extrap.csv", index=False)
+dfother_extrap_and_data.to_csv("Bench_predictions/A06_dfother_extrap.csv", index=False)
 
 
 print('\n')
