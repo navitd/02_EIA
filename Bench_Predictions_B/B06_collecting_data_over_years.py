@@ -102,7 +102,79 @@ def slice_v_from_bigdf(bigdf, country, year):
     return v
 
 
+############# extrap and data tot2extrap most important step for this file
 
+def tot2future_by_gdp_extrapolation(dfv_total, col_name, ratio_col_name, n_for_tot2future, dfgdp_worldbank):
+    #averaging over the ratio to form the base for the extrapolation
+    stats = ( # overage over n_for_tot2future last years
+        dfv_total
+        .sort_values(["country", "year"])
+        .groupby("country")
+        .tail(n_for_tot2future+1)  # take last n_for_tot2future+1 rows per country
+        .groupby("country")[ratio_col_name]
+        .agg(["mean", "std"])
+        .reset_index()
+    )
+    # dfv_extrap is the tot for future years
+    dfv_extrap = pd.DataFrame(index=dfgdp_worldbank.index, columns=dfgdp_worldbank.columns)
+    for country in dfgdp_worldbank.columns:
+        mean_value = stats.loc[stats['country'] == country, 'mean'].values[0]
+        dfv_extrap[country] = dfgdp_worldbank[country] * mean_value
+
+    dfv_extrap_long = (
+        dfv_extrap
+        .reset_index()
+        .melt(id_vars='year', var_name='country', value_name=col_name+' total')
+    )
+    dfv_extrap_long = dfv_extrap_long[["country", "year", col_name+' total']]
+
+    # compare in the above to 2020 and 2021 data
+   
+    # last step: replace extrap with data where data is availabel
+    dfv_extrap_and_data = dfv_extrap_long.copy()
+
+    # Merge the actual data ('dfftotal') on country and year
+    dfv_extrap_and_data = dfv_extrap_and_data.merge(
+        dfv_total[["country", "year", col_name+" total"]],
+        on=["country", "year"],
+        how="left",
+        suffixes=("", " data")
+    )
+
+    # Replace extrapolated values with actual ones where available
+    dfv_extrap_and_data[col_name+" total"] = (
+        dfv_extrap_and_data[col_name+" total data"]
+        .combine_first(dfv_extrap_and_data[col_name+" total"])
+    )
+    # combine first means: If "other final demand total data" has a non-missing value, it replaces the corresponding value in "other final demand total".
+
+    # Drop the temporary column
+    dfv_extrap_and_data = dfv_extrap_and_data.drop(columns=[col_name+" total data"])
+    dfv_extrap_and_data = dfv_extrap_and_data[['year','country',col_name+' total']]
+
+    # pivot for plotting
+    dfv_wide = dfv_extrap_and_data.pivot(
+        index="year",
+        columns="country",
+        values=col_name+" total"
+    )
+    dfv_wide = dfv_wide[dfv_extrap.columns]
+    return dfv_extrap_and_data, dfv_wide
+
+################################################                  plotting                ###########################################################
+
+def plot_v_by_year_1panel(df, countries, ylabel, title):
+    plt.figure(figsize=(10,6))
+
+    for country in df.columns:
+        plt.plot(df.index, df[country], marker='o', label=country)
+
+    plt.xlabel("Year")
+    plt.ylabel(ylabel + " [Millions USD]")
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -291,15 +363,13 @@ OECD_worldbank_ratio = (dfGDP_total.merge(gdp_long,
 #
 
 dfHFCE_total, ratio_col_name_1 = ratio_with_worldbank_gdp(dfHFCE_total, gdp_long, worldbank_gdp_col_name, HFCE_col_name)
-#dfother_total, ratio_col_name_2 = ratio_with_worldbank_gdp(dfother_total, gdp_long, worldbank_gdp_col_name, other_col_name)
+dfother_total, ratio_col_name_2 = ratio_with_worldbank_gdp(dfother_total, gdp_long, worldbank_gdp_col_name, other_col_name)
 df7_total, ratio_col_name_3 = ratio_with_worldbank_gdp(df7_total, gdp_long, worldbank_gdp_col_name, f7_col_name)
 dfGDP_total, ratio_col_name_4 = ratio_with_worldbank_gdp(dfGDP_total, gdp_long, worldbank_gdp_col_name, GDP_col_name)
 dfoutput_total, ratio_col_name_5 = ratio_with_worldbank_gdp(dfoutput_total, gdp_long, worldbank_gdp_col_name, output_col_name)
 dfGDPj_by_xj_total, ratio_col_name_6 = ratio_with_worldbank_gdp(dfGDPj_by_xj_total, gdp_long, worldbank_gdp_col_name, GDPj_by_xj_col_name)
 
-
 #so far it is just the ratio. I still need the extrapolation!!
-
 
 ####################################
 #B06.D  
@@ -313,198 +383,44 @@ stats_all = ( #average from 1995 to 2020
 )
 #
 
-def tot2future_by_gdp_extrapolation(dfv_total, col_name, ratio_col_name, n_for_tot2future, dfgdp_worldbank):
-    #averaging over the ratio to form the base for the extrapolation
-    stats = ( # overage over n_for_tot2future last years
-        dfv_total
-        .sort_values(["country", "year"])
-        .groupby("country")
-        .tail(n_for_tot2future+1)  # take last n_for_tot2future+1 rows per country
-        .groupby("country")[ratio_col_name]
-        .agg(["mean", "std"])
-        .reset_index()
-    )
-    # dfv_extrap is the tot for future years
-    dfv_extrap = pd.DataFrame(index=dfgdp_worldbank.index, columns=dfgdp_worldbank.columns)
-    for country in dfgdp_worldbank.columns:
-        mean_value = stats.loc[stats['country'] == country, 'mean'].values[0]
-        dfv_extrap[country] = dfgdp_worldbank[country] * mean_value
-
-    dfv_extrap_long = (
-        dfv_extrap
-        .reset_index()
-        .melt(id_vars='year', var_name='country', value_name=col_name+' total')
-    )
-    dfv_extrap_long = dfv_extrap_long[["country", "year", col_name+' total']]
-
-    # compare in the above to 2020 and 2021 data
-   
-    # last step: replace extrap with data where data is availabel
-    dfv_extrap_and_data = dfv_extrap_long.copy()
-
-    # Merge the actual data ('dfftotal') on country and year
-    dfv_extrap_and_data = dfv_extrap_and_data.merge(
-        dfv_total[["country", "year", col_name+" total"]],
-        on=["country", "year"],
-        how="left",
-        suffixes=("", " data")
-    )
-
-    # Replace extrapolated values with actual ones where available
-    dfv_extrap_and_data[col_name+" total"] = (
-        dfv_extrap_and_data[col_name+" total data"]
-        .combine_first(dfv_extrap_and_data[col_name+" total"])
-    )
-    # combine first means: If "other final demand total data" has a non-missing value, it replaces the corresponding value in "other final demand total".
-
-    # Drop the temporary column
-    dfv_extrap_and_data = dfv_extrap_and_data.drop(columns=[col_name+" total data"])
-    dfv_extrap_and_data = dfv_extrap_and_data[['year','country',col_name+' total']]
-
-    # pivot for plotting
-    dfv_wide = dfv_extrap_and_data.pivot(
-        index="year",
-        columns="country",
-        values=col_name+" total"
-    )
-
-    return dfv_extrap_and_data, dfv_wide
+dfHFCE_extrap_and_data, dfHFCE_extrap_and_data_wide = tot2future_by_gdp_extrapolation(dfHFCE_total,HFCE_col_name, ratio_col_name_1,n_for_tot2future,dfgdp_worldbank)
+dfother_extrap_and_data, dfother_extrap_and_data_wide = tot2future_by_gdp_extrapolation(dfother_total,other_col_name, ratio_col_name_2,n_for_tot2future,dfgdp_worldbank)
+df7_extrap_and_data, df7_extrap_and_data_wide = tot2future_by_gdp_extrapolation(df7_total,f7_col_name, ratio_col_name_3,n_for_tot2future,dfgdp_worldbank)
+dfGDP_extrap_and_data, dfGDP_extrap_and_data_wide = tot2future_by_gdp_extrapolation(dfGDP_total,GDP_col_name, ratio_col_name_4,n_for_tot2future,dfgdp_worldbank)
+dfoutput_extrap_and_data, dfoutput_extrap_and_data_wide = tot2future_by_gdp_extrapolation(dfoutput_total,output_col_name, ratio_col_name_5,n_for_tot2future,dfgdp_worldbank)
+dfGDPj_by_xj_extrap_and_data, dfGDPj_by_xj_extrap_and_data_wide = tot2future_by_gdp_extrapolation(dfGDPj_by_xj_total,GDPj_by_xj_col_name, ratio_col_name_6,n_for_tot2future,dfgdp_worldbank)
 
 
-#tot2future_by_gdp_extrapolation(dfHFCE_total,HFCE_col_name, ratio_col_name_1,n_for_tot2future,dfgdp_worldbank)
-tot2future_by_gdp_extrapolation(dfoutput_total,output_col_name, ratio_col_name_5,n_for_tot2future,dfgdp_worldbank)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-stats = ( # overage over n_for_tot2future last years
-    dfother_total
-    .sort_values(["country", "year"])
-    .groupby("country")
-    .tail(n_for_tot2future+1)  # take last n_for_tot2future+1 rows per country
-    .groupby("country")[ratio_col_name_2]
-    .agg(["mean", "std"])
-    .reset_index()
-)
-# dfother_extrap is the tot for future years
-dfother_extrap = pd.DataFrame(index=dfgdp_worldbank.index, columns=dfgdp_worldbank.columns)
-for country in dfgdp_worldbank.columns:
-    mean_value = stats.loc[stats['country'] == country, 'mean'].values[0]
-    dfother_extrap[country] = dfgdp_worldbank[country] * mean_value
-
-
-dfother_extrap_long = (
-    dfother_extrap
-    .reset_index()
-    .melt(id_vars='year', var_name='country', value_name='other final demand total')
-)
-dfother_extrap_long = dfother_extrap_long[["country", "year", "other final demand total"]]
-
-# compare in the above to 2020 and 2021 data
-#Eextrap is the extrapolation E
-plot_v_by_year_1panel(dfother_extrap, countries, 'other final demand [Million USD]', "Extrapolated other final demand by Country")
-
-
-
-
-
-
-
-# last step: replaced extrap with data where data is availabel
-dfother_extrap_and_data = dfother_extrap_long.copy()
-
-# Merge the actual data ('dfftotal') on country and year
-dfother_extrap_and_data = dfother_extrap_and_data.merge(
-    dfother_total[["country", "year", "other final demand total"]],
-    on=["country", "year"],
-    how="left",
-    suffixes=("", " data")
-)
-
-# Replace extrapolated values with actual ones where available
-dfother_extrap_and_data["other final demand total"] = (
-    dfother_extrap_and_data["other final demand total data"]
-    .combine_first(dfother_extrap_and_data["other final demand total"])
-)
-# combine first means: If "other final demand total data" has a non-missing value, it replaces the corresponding value in "other final demand total".
-
-# Drop the temporary column
-dfother_extrap_and_data = dfother_extrap_and_data.drop(columns=["other final demand total data"])
-dfother_extrap_and_data = dfother_extrap_and_data[['year','country','other final demand total']]
-
-
-# pivot for plotting
-dfother2 = dfother_extrap_and_data.pivot(
-    index="year",
-    columns="country",
-    values="other final demand total"
-)
-dfother2 = dfother2[dfother_extrap.columns]
-plot_v_by_year_1panel(dfother2, countries, 'other final demand [Million USD]', "Extrapolated other final demand by Country")
-
+#plot extrapolation
+plot_v_by_year_1panel(df7_extrap_and_data_wide, countries, 'final demand [Million USD]', "Extrapolated other final demand by Country")
+plot_v_by_year_1panel(dfoutput_extrap_and_data_wide, countries, 'output [Million USD]', "Extrapolated output by Country")
+plot_v_by_year_1panel(dfGDP_extrap_and_data_wide, countries, 'GDP [Million USD]', "Extrapolated GDP by Country")
 
 # print to excel - correct dataframe to print
-dfother_extrap_and_data.to_csv("Bench_predictions/A06_dfother_extrap.csv", index=False)
+dfHFCE_extrap_and_data.to_csv("Bench_predictions_B/B06_dfHFCE_totextrap.csv", index=False)
+dfother_extrap_and_data.to_csv("Bench_predictions_B/B06_dfother_totextrap.csv", index=False)
+df7_extrap_and_data.to_csv("Bench_predictions_B/B06_df7_totextrap.csv", index=False)
+dfGDP_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDP_totextrap.csv", index=False)
+dfoutput_extrap_and_data.to_csv("Bench_predictions_B/B06_dfoutput_totextrap.csv", index=False)
+dfGDPj_by_xj_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj_totextrap.csv", index=False)
+
+
+
+#checks
+#1. GDPj_by_xj *output = GDP??
+
+
+
+
+
+
+#2. dfHFCE+dfother = df7??
+
+
+
+
+
 
 
 print('\n')
       
-
-
-'''
-      
-        # building df1year (also 1 country) first iteration
-        I did this because I wantted to collect all 6 other final demand vectors
-        but now I don't want that
-        vector_name=final_demand_columns[1]
-        ftemp = pd.DataFrame()
-        dftemp = OECD.loc[simple_II_labels,vector_name].reset_index()
-        dftemp.columns = ['sector', vector_name]
-        dftemp['country'] = country
-        dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', vector_name]]
-        #the line below means that HFCE is in "other final demand"
-        df1year = dftemp.copy()
-        for vector_name in final_demand_columns[2:]:
-            dftemp = pd.DataFrame()
-            dftemp = OECD.loc[simple_II_labels, vector_name].reset_index()
-            dftemp.columns = ['sector', vector_name]
-            dftemp['country'] = country
-            dftemp['year'] = year
-            dftemp = dftemp[['country', 'year', 'sector', vector_name]]
-            
-            # Merge dftemp as a new column into dfother_final_demand
-            df1year = df1year.merge(
-                dftemp,
-                on=['country', 'year', 'sector'],
-                how='left'
-            )
-        dfother_final_demand = pd.concat([dfother_final_demand, df1year], ignore_index=True)
-      
-      
-'''
