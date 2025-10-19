@@ -16,15 +16,17 @@ B04 multivariate E extrap: extrapolating E based on the ration with gdp. assumin
 B05 Esectors from Etot
 
 #divergence from A version
-B06 collect data 1995-2020: f, fother, Tc, output, GDPj_by_xj and everything else I may need later
-save to one file
-the problem: need separate functions for Tc and vectors
-another problem: need different name so that not confused with data colelction for graphs
-harmonise: years are numbers not strings
-decided series or dataframes ( prefer dataframes ) for all vectors
+#B06 collect data 1995-2020: f, fother, Tc, output, GDPj_by_xj and everything else I may need later
+#save to one file
+#the problem: need separate functions for Tc and vectors
+#another problem: need different name so that not confused with data colelction for graphs
+#harmonise: years are numbers not strings
+#decided series or dataframes ( prefer dataframes ) for all vectors
 
-collect also tot for everything. tot meaning summation over sectors to get vtot
-no need to do this with T
+#collect also tot for everything. tot meaning summation over sectors to get vtot
+#no need to do this with T
+
+run 1995-2020 after checks
 
 
 B07 calculation of bases for Tc (easy), and all other vectors

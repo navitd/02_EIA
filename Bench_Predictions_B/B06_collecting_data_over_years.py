@@ -392,9 +392,9 @@ dfGDPj_by_xj_extrap_and_data, dfGDPj_by_xj_extrap_and_data_wide = tot2future_by_
 
 
 #plot extrapolation
-plot_v_by_year_1panel(df7_extrap_and_data_wide, countries, 'final demand [Million USD]', "Extrapolated other final demand by Country")
-plot_v_by_year_1panel(dfoutput_extrap_and_data_wide, countries, 'output [Million USD]', "Extrapolated output by Country")
-plot_v_by_year_1panel(dfGDP_extrap_and_data_wide, countries, 'GDP [Million USD]', "Extrapolated GDP by Country")
+#plot_v_by_year_1panel(df7_extrap_and_data_wide, countries, 'final demand [Million USD]', "Extrapolated other final demand by Country")
+#plot_v_by_year_1panel(dfoutput_extrap_and_data_wide, countries, 'output [Million USD]', "Extrapolated output by Country")
+#plot_v_by_year_1panel(dfGDP_extrap_and_data_wide, countries, 'GDP [Million USD]', "Extrapolated GDP by Country")
 
 # print to excel - correct dataframe to print
 dfHFCE_extrap_and_data.to_csv("Bench_predictions_B/B06_dfHFCE_totextrap.csv", index=False)
@@ -408,13 +408,39 @@ dfGDPj_by_xj_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj_totext
 
 #checks
 #1. GDPj_by_xj *output = GDP??
-
-
-
-
-
+#the above is not true. it's true only for _xj_, not the summing of output
 
 #2. dfHFCE+dfother = df7??
+df7check= dfHFCE_extrap_and_data_wide + dfother_extrap_and_data_wide
+
+diff = np.abs(df7check - df7_extrap_and_data_wide)
+diff_ratio = diff/df7_extrap_and_data_wide
+diff_mean = diff_ratio.mean()
+
+#mask_years = lambda df: (df.index >= 2010) & (df.index <= 2021) 
+#print('df7check - result of adding HFCE+other')
+#print(df7check[mask_years(df7check)])
+#print(dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)])
+#print(dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)])
+
+#print('         HFCE       ', ' other    ', '7 by addition ', '7 from df')
+#print(pd.concat([dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)]['CAN'],
+#                 dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)]['CAN'],
+#                 df7check[mask_years(df7check)]['CAN'], 
+#                 df7_extrap_and_data_wide[mask_years(df7_extrap_and_data_wide)]['CAN']], axis=1))
+
+
+mask_years = lambda df: (df.index >= 2020) & (df.index <= 2030) 
+
+print('         HFCE       ', ' other    ', '7 by addition ', '7 from df')
+print(pd.concat([dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)]['CAN'],
+                 dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)]['CAN'],
+                 df7check[mask_years(df7check)]['CAN'], 
+                 df7_extrap_and_data_wide[mask_years(df7_extrap_and_data_wide)]['CAN']], axis=1))
+
+
+
+#
 
 
 
