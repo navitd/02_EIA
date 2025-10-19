@@ -87,8 +87,9 @@ def ratio_with_worldbank_gdp(dfv_total, gdp_long, worldbank_gdp_col_name, col_na
         on=['country', 'year'],
         how='left'
     )
-    dfv_total['ratio_'+col_name+'_to_gdp'] = safe_divide_vector(dfv_total[col_name+' total'], dfv_total[worldbank_gdp_col_name])   
-    return dfv_total
+    ratio_col_name = 'ratio of '+col_name+' to gdp'
+    dfv_total[ratio_col_name] = safe_divide_vector(dfv_total[col_name+' total'], dfv_total[worldbank_gdp_col_name])   
+    return dfv_total, ratio_col_name
 
 
 
@@ -130,11 +131,11 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '2020'
+first_year = '2010'
 last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
-n_for_f=0
-years_for_f_base = [year for year in range(int(2020)-n_for_f, int(2020)+1)]
+n_for_tot2future=0
+years_for_f_base = [year for year in range(int(2020)-n_for_tot2future, int(2020)+1)]
 # add this to A09 etc.
 
 report_title = f'ICT sectors, {last_year}'
@@ -250,7 +251,7 @@ for country in countries:
 # B06.B calculate market total 
 ############################################################
 
-# to get the ratio of dfother_sector / dfother_tot for data years
+# to get the ratio of dfother_sector / dfother_tot for data years, and also dfv_total
 dfHFCE, dfHFCE_total = clc_v_tot(dfHFCE, HFCE_col_name, HFCE_col_name+' total')
 dfother, dfother_total = clc_v_tot(dfother, other_col_name, other_col_name+' total')
 df7, df7_total = clc_v_tot(df7, f7_col_name, f7_col_name+' total')
@@ -274,7 +275,7 @@ dfGDPj_by_xj.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv", index=False)
 ##################################################
 #B06.C extrapolating of fother_tot with gdp_tot
 ##################################################
-#pivoting gdp_data to long format (to match dfftotal format)
+#pivoting dfgdp_worldbank to long format (to match dfftotal format)
 gdp_long = (
     dfgdp_worldbank
     .reset_index()  # make 'year' a column instead of index
@@ -289,42 +290,132 @@ OECD_worldbank_ratio = (dfGDP_total.merge(gdp_long,
 )
 #
 
-dfHFCE_total = ratio_with_worldbank_gdp(dfHFCE_total, gdp_long, worldbank_gdp_col_name, HFCE_col_name)
-dfother_total = ratio_with_worldbank_gdp(dfother_total, gdp_long, worldbank_gdp_col_name, other_col_name)
-df7_total = ratio_with_worldbank_gdp(df7_total, gdp_long, worldbank_gdp_col_name, f7_col_name)
-dfGDP_total = ratio_with_worldbank_gdp(dfGDP_total, gdp_long, worldbank_gdp_col_name, GDP_col_name)
-dfoutput_total = ratio_with_worldbank_gdp(dfoutput_total, gdp_long, worldbank_gdp_col_name, output_col_name)
-dfGDPj_by_xj_total = ratio_with_worldbank_gdp(dfGDPj_by_xj_total, gdp_long, worldbank_gdp_col_name, GDPj_by_xj_col_name)
+dfHFCE_total, ratio_col_name_1 = ratio_with_worldbank_gdp(dfHFCE_total, gdp_long, worldbank_gdp_col_name, HFCE_col_name)
+#dfother_total, ratio_col_name_2 = ratio_with_worldbank_gdp(dfother_total, gdp_long, worldbank_gdp_col_name, other_col_name)
+df7_total, ratio_col_name_3 = ratio_with_worldbank_gdp(df7_total, gdp_long, worldbank_gdp_col_name, f7_col_name)
+dfGDP_total, ratio_col_name_4 = ratio_with_worldbank_gdp(dfGDP_total, gdp_long, worldbank_gdp_col_name, GDP_col_name)
+dfoutput_total, ratio_col_name_5 = ratio_with_worldbank_gdp(dfoutput_total, gdp_long, worldbank_gdp_col_name, output_col_name)
+dfGDPj_by_xj_total, ratio_col_name_6 = ratio_with_worldbank_gdp(dfGDPj_by_xj_total, gdp_long, worldbank_gdp_col_name, GDPj_by_xj_col_name)
 
 
 #so far it is just the ratio. I still need the extrapolation!!
 
 
 ####################################
-#B06.D  fother_sector / fother_tot
+#B06.D  
 ####################################
+# just checking if the extrapolation is reasonable - mean value of fother/gdp don't change much whether it's a mean of 2010-2020 or only 2020
 stats_all = ( #average from 1995 to 2020
-    dfother_total
-    .groupby("country")["ratio_f_to_gdp"]
+    dfHFCE_total
+    .groupby("country")[ratio_col_name_1]
     .agg(["mean", "std"])
     .reset_index()
 )
-stats = ( # overage over n_for_f last years
+#
+
+def tot2future_by_gdp_extrapolation(dfv_total, col_name, ratio_col_name, n_for_tot2future, dfgdp_worldbank):
+    #averaging over the ratio to form the base for the extrapolation
+    stats = ( # overage over n_for_tot2future last years
+        dfv_total
+        .sort_values(["country", "year"])
+        .groupby("country")
+        .tail(n_for_tot2future+1)  # take last n_for_tot2future+1 rows per country
+        .groupby("country")[ratio_col_name]
+        .agg(["mean", "std"])
+        .reset_index()
+    )
+    # dfv_extrap is the tot for future years
+    dfv_extrap = pd.DataFrame(index=dfgdp_worldbank.index, columns=dfgdp_worldbank.columns)
+    for country in dfgdp_worldbank.columns:
+        mean_value = stats.loc[stats['country'] == country, 'mean'].values[0]
+        dfv_extrap[country] = dfgdp_worldbank[country] * mean_value
+
+    dfv_extrap_long = (
+        dfv_extrap
+        .reset_index()
+        .melt(id_vars='year', var_name='country', value_name=col_name+' total')
+    )
+    dfv_extrap_long = dfv_extrap_long[["country", "year", col_name+' total']]
+
+    # compare in the above to 2020 and 2021 data
+   
+    # last step: replace extrap with data where data is availabel
+    dfv_extrap_and_data = dfv_extrap_long.copy()
+
+    # Merge the actual data ('dfftotal') on country and year
+    dfv_extrap_and_data = dfv_extrap_and_data.merge(
+        dfv_total[["country", "year", col_name+" total"]],
+        on=["country", "year"],
+        how="left",
+        suffixes=("", " data")
+    )
+
+    # Replace extrapolated values with actual ones where available
+    dfv_extrap_and_data[col_name+" total"] = (
+        dfv_extrap_and_data[col_name+" total data"]
+        .combine_first(dfv_extrap_and_data[col_name+" total"])
+    )
+    # combine first means: If "other final demand total data" has a non-missing value, it replaces the corresponding value in "other final demand total".
+
+    # Drop the temporary column
+    dfv_extrap_and_data = dfv_extrap_and_data.drop(columns=[col_name+" total data"])
+    dfv_extrap_and_data = dfv_extrap_and_data[['year','country',col_name+' total']]
+
+    # pivot for plotting
+    dfv_wide = dfv_extrap_and_data.pivot(
+        index="year",
+        columns="country",
+        values=col_name+" total"
+    )
+
+    return dfv_extrap_and_data, dfv_wide
+
+
+#tot2future_by_gdp_extrapolation(dfHFCE_total,HFCE_col_name, ratio_col_name_1,n_for_tot2future,dfgdp_worldbank)
+tot2future_by_gdp_extrapolation(dfoutput_total,output_col_name, ratio_col_name_5,n_for_tot2future,dfgdp_worldbank)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+stats = ( # overage over n_for_tot2future last years
     dfother_total
     .sort_values(["country", "year"])
     .groupby("country")
-    .tail(n_for_f+1)  # take last n_for_f+1 rows per country
-    .groupby("country")["ratio_f_to_gdp"]
+    .tail(n_for_tot2future+1)  # take last n_for_tot2future+1 rows per country
+    .groupby("country")[ratio_col_name_2]
     .agg(["mean", "std"])
     .reset_index()
 )
 # dfother_extrap is the tot for future years
-dfother_extrap = pd.DataFrame(index=gdp_data.index, columns=gdp_data.columns)
-for country in gdp_data.columns:
+dfother_extrap = pd.DataFrame(index=dfgdp_worldbank.index, columns=dfgdp_worldbank.columns)
+for country in dfgdp_worldbank.columns:
     mean_value = stats.loc[stats['country'] == country, 'mean'].values[0]
-    dfother_extrap[country] = gdp_data[country] * mean_value
-#Eextrap is the extrapolation E
-plot_v_by_year_1panel(dfother_extrap, countries, 'other final demand [Million USD]', "Extrapolated other final demand by Country")
+    dfother_extrap[country] = dfgdp_worldbank[country] * mean_value
 
 
 dfother_extrap_long = (
@@ -333,6 +424,12 @@ dfother_extrap_long = (
     .melt(id_vars='year', var_name='country', value_name='other final demand total')
 )
 dfother_extrap_long = dfother_extrap_long[["country", "year", "other final demand total"]]
+
+# compare in the above to 2020 and 2021 data
+#Eextrap is the extrapolation E
+plot_v_by_year_1panel(dfother_extrap, countries, 'other final demand [Million USD]', "Extrapolated other final demand by Country")
+
+
 
 
 
