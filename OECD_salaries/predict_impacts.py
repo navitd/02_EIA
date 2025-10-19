@@ -537,7 +537,7 @@ income_year2 = OECDadditional_year2['employees_compensation']
 GDP_year2 = OECD_year2.loc['VALU', simple_II_labels]
 
 fdf_year2 = OECD_year2.loc[simple_II_labels, final_demand_columns].sum(axis=1)
-#there is what causes closed model to be in accuarete:
+#there is what causes closed model to be inaccuarete:
 #fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
 #I should take HFCE inside fcdf_year2. 
 fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns].sum(axis=1)

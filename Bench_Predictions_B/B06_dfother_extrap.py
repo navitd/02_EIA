@@ -1,14 +1,17 @@
-#f extrapolation
-#A06.A collecting HFCE, fother 1995-2020 collecting sector information but fother is 1 vector
-#
-#A06.B dfother_final_demand has tot
-# writing to A06_dfother_final_demand
-# 
-#A06.C  fother_sector / fother_tot
-# 
-#A06D extrapolationg by gdp world bank done here too
+# B06 data collection for prediction and extrapolation (not for graphs)
 
-
+# B version
+##########################
+# 
+# B06 collect data 1995-2020: fHFCE, fother, Tc, output, GDPj_by_xj and everything else I may need later
+# save to one file
+# the problem: need separate functions for Tc and vectors
+# another problem: need different name so that not confused with data colelction for graphs
+# harmonise: years are numbers not strings
+# decided series or dataframes ( prefer dataframes ) for all vectors
+# 
+#collect also tot for everything. tot meaning summation over sectors to get vtot
+#no need to do this with T
 
 import sys
 from pathlib import Path
@@ -25,7 +28,7 @@ from matplotlib.lines import Line2D
 
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
-from func_data_upload_OECD_salaries import data_upload_OECD_salaries
+from func_data_upload_OECD_without_E import data_upload_OECD_without_E #data_upload_OECD_salaries func_data_upload_OECD_salaries
 from func_safe_divide import safe_divide, safe_divide_vector
 from func_clc_L import clc_L
 
@@ -45,6 +48,25 @@ def collect_v(v, country, year, cols_list, dfv): # used to be collecting_year_co
             dfv = pd.concat([dfv, dftemp], ignore_index=True)
             return dfv
 
+
+def collect_m(m, country, year, m_value_name, dfm):
+    dftemp = pd.DataFrame()
+    dftemp = m.reset_index().melt(id_vars=m.index.name or 'index', 
+                                    var_name='buying_sector', 
+                                    value_name=m_value_name)
+
+    # Rename 'index' to 'selling_sector' if needed
+    dftemp.rename(columns={m.index.name or 'index': 'selling_sector'}, inplace=True)
+    # Add metadata
+    dftemp['country'] = country
+    dftemp['year'] = year
+    # Reorder columns
+    dftemp = dftemp[['country', 'year',  'selling_sector', 'buying_sector', m_value_name]]
+    # Append to the master DataFrame
+    dfm = pd.concat([dfm, dftemp], ignore_index=True)
+    return dfm
+
+
 def clc_v_tot(df, value_col, col_tot):
     # add total employment per (country, year)
     df[col_tot] = df.groupby(["country", "year"])[value_col].transform("sum")
@@ -52,23 +74,6 @@ def clc_v_tot(df, value_col, col_tot):
     df[value_col+" sector ratio"] = df[value_col] / df[col_tot]
     dftotal = df[["country", "year", col_tot]].drop_duplicates()
     return df, dftotal
-
-def collecting_year_country_data_matrix(country, year, dfm, m, matrix_name):
-            dftemp = pd.DataFrame()
-            dftemp = m.reset_index().melt(id_vars=m.index.name or 'index', 
-                                        var_name='buying_sector', 
-                                        value_name=matrix_name)
-
-            # Rename 'index' to 'selling_sector'
-            dftemp.rename(columns={m.index.name or 'index': 'selling_sector'}, inplace=True)
-            # Add metadata
-            dftemp['country'] = country
-            dftemp['year'] = year
-            # Reorder columns
-            dftemp = dftemp[['country', 'year',  'selling_sector', 'buying_sector', matrix_name]]
-            # Append to the master DataFrame
-            dfm = pd.concat([dfm, dftemp], ignore_index=True)
-            return dfm
 
 
 def slice_v_from_bigdf(bigdf, country, year):
@@ -80,61 +85,31 @@ def slice_v_from_bigdf(bigdf, country, year):
     return v
 
 
-########################################         plotting             ###############################################
-def plot_dffc(dffc, years, countries):
-
-    for country in countries:
-        for year in years:
-            subset = dffc[(dffc['country'] == country) & (dffc['year'] == str(year))]
-            if subset.empty:
-                print(f"No data found for {country} in {year}.")
-                continue
-            plt.figure(figsize=(8, 4))
-            plt.plot(subset.index, subset['final demand'], marker='o')
-            plt.title(f"Final Demand – {country}, {year}")
-            plt.xlabel("Index")
-            plt.ylabel("Final Demand")
-            plt.grid(True)
-            plt.tight_layout()
-            plt.show()
-
-def plot_dfother_final_demand(df, col_name, years, countries):
-
-    for country in ['CAN']: #countries:
-        for year in years:
-            subset = df[(df['country'] == country) & (df['year'] == str(year))][col_name]
-            if subset.empty:
-                print(f"No data found for {country} in {year}.")
-                continue
-            plt.figure(figsize=(8, 4))
-            plt.plot(subset.index, subset, marker='o')
-            plt.title(f"Final Demand – {country}, {year}")
-            plt.xlabel("Index")
-            plt.ylabel("Final Demand")
-            plt.grid(True)
-            plt.tight_layout()
-            plt.show()
-
-
-def plot_v_by_year_1panel(df, countries, ylabel, title):
-    plt.figure(figsize=(10,6))
-
-    for country in df.columns:
-        plt.plot(df.index, df[country], marker='o', label=country)
-
-    plt.xlabel("Year")
-    plt.ylabel(ylabel + " [Millions USD]")
-    plt.title(title)
-    plt.legend()
-    plt.grid(True)
-    plt.show()
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# upload gdp
+dfgdp_worldbank = pd.read_csv("Bench_predictions_B/A04_gdp_ARIMAgdp_currentUSD04.csv")
+dfgdp_worldbank.rename(columns={"Unnamed: 0": "year"}, inplace=True)
+dfgdp_worldbank.iloc[:, 1:] = dfgdp_worldbank.iloc[:, 1:] * 10**(-6)
+dfgdp_worldbank = dfgdp_worldbank.set_index('year')
 
-# 1. get dfE from input-output tables
-# later remove dfoutput etc.
+# upload E
+dfE = pd.read_csv("Bench_predictions_B/A05_Esectors_from_Etot05.csv")
+dfE.rename(columns={"E": "Employment"}, inplace=True)
+
+
+
+
+
+
+
+
+
+
+
+
 table_type = 'TTL' #or'DOM'   
 OECD_path = "../Data/" # windows style: r".\\"
 if table_type == 'DOM':
@@ -142,7 +117,7 @@ if table_type == 'DOM':
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
 
-first_year = '2019'
+first_year = '2020'
 last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 n_for_f=0
@@ -171,18 +146,89 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
 final_demand_columns = ['HFCE',	'NPISH', 'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
-
-dffc = pd.DataFrame()
-dfother_final_demand = pd.DataFrame()
+dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
+dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
+dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
+dfEimpact = pd.DataFrame()
+dfTc = pd.DataFrame()
+#dfLc = pd.DataFrame()
+dfGDPj_by_xj= pd.DataFrame()
+#dffc = pd.DataFrame()
+dfHFCE = pd.DataFrame()
+dfother = pd.DataFrame()
+df7 = pd.DataFrame()
 for country in countries:
     for year in year_range:
-        PPP_or_exch, OECD, simple_II_labels, OECDadditional, sector_description =  data_upload_OECD_salaries(year, currency_exchange_type, table_type, country)
         
+        E = slice_v_from_bigdf(dfE, country, year)
+        E.loc["HFCE"] = 0
+
+        # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
+        PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
+
         # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
         II = OECD.loc[simple_II_labels, simple_II_labels]
-        household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-        other_final_demand = OECD.loc[simple_II_labels, final_demand_columns[1:]] #exluding HFCE - household expenditure
+        fHFCE = OECD.loc[simple_II_labels, 'HFCE']
+        fHFCE   = fHFCE.rename_axis("sector")
+        fother   = OECD.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+        fother   = fother.rename_axis("sector")
+        f7      = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
+        f7   = f7.rename_axis("sector")
+        GDP         = OECD.loc['VALU', simple_II_labels]
+        GDP   = GDP.rename_axis("sector")
+        output      = OECD.loc['OUTPUT', simple_II_labels]
+        output = output.rename_axis("sector")
+        # all above vectors are series, not dataframes 
+        # first data collection
+        dfHFCE   = collect_v(fHFCE,  country, int(year), ['sector', 'HFCE'], dfHFCE)
+        dfother = collect_v(fother,  country, int(year), ['sector', 'other final demand'], dfother)
+        dfGDP    = collect_v(GDP,    country, int(year), ['sector', 'GDP'],    dfGDP)
+        dfoutput = collect_v(output, country, int(year), ['sector', 'output'], dfoutput)
+        df7      = collect_v(f7, country, int(year), ['sector', '7 final demand'], df7)
+
+        #checking data collection
+        print(year, country)
+        print('fHFCE         fother')
+        print(pd.concat([fHFCE, fother,f7], axis=1))
+
+        if isinstance(fHFCE, pd.Series):
+            print("This is a Series")
+        elif isinstance(fHFCE, pd.DataFrame):
+            print("This is a DataFrame")
+        else:
+            print("This is something else")
+
+
+        # 2. calculate L and Lc
+        ##########################
+        T = safe_divide(II, output)
+        Ldf, L_minus_I = clc_L(T)
+
+        IIc = II.copy()
+        IIc["HFCE"] = fHFCE # added a column for closed model
+        # Convert Series to a one-row DataFrame with sectors as columns
+        ET = E.T  # .T transposes to make index=0, columns=sectors
+        ET.index = ["employees_compensation"]  # name the row
+        IIc = pd.concat([IIc, ET], axis=0)
+        IIc.loc['employees_compensation', 'HFCE'] = 0 
+
+        outputc = output.copy()
+        outputc['HFCE'] = E.sum().values[0]
+        Tc = safe_divide(IIc, outputc)
+        Lcdf, Lc_minus_I = clc_L(Tc)
+
+
+        # collect Tc
+
+
+
+        # collect GDPj_by_xj
+        GDPc = OECD.loc['VALU', simple_II_labels + ['HFCE']] #delete this maybe
+        GDPj_by_xj = safe_divide_vector(GDPc, outputc)
+        dfGDPj_by_xj = collect_v(GDPj_by_xj,country, year, ["sector","GDPj_by_xj"], dfGDPj_by_xj)
         
+
+
         #################################
         # final demand
         #A06.A collecting HFCE, fother 1995-2020 collecting sector information but fother is 1 vector
@@ -195,31 +241,6 @@ for country in countries:
         # the above is for graphs, not for extrapolation!
 
    
-        # building df1year (also 1 country) first iteration
-        vector_name=final_demand_columns[1]
-        ftemp = pd.DataFrame()
-        dftemp = OECD.loc[simple_II_labels,vector_name].reset_index()
-        dftemp.columns = ['sector', vector_name]
-        dftemp['country'] = country
-        dftemp['year'] = year
-        dftemp = dftemp[['country', 'year', 'sector', vector_name]]
-        #the line below means that HFCE is in "other final demand"
-        df1year = dftemp.copy()
-        for vector_name in final_demand_columns[2:]:
-            dftemp = pd.DataFrame()
-            dftemp = OECD.loc[simple_II_labels, vector_name].reset_index()
-            dftemp.columns = ['sector', vector_name]
-            dftemp['country'] = country
-            dftemp['year'] = year
-            dftemp = dftemp[['country', 'year', 'sector', vector_name]]
-            
-            # Merge dftemp as a new column into dfother_final_demand
-            df1year = df1year.merge(
-                dftemp,
-                on=['country', 'year', 'sector'],
-                how='left'
-            )
-        dfother_final_demand = pd.concat([dfother_final_demand, df1year], ignore_index=True)
 ############################################################
 
 dfother_final_demand['year'] = dfother_final_demand['year'].astype(int)
@@ -352,3 +373,37 @@ dfother_extrap_and_data.to_csv("Bench_predictions/A06_dfother_extrap.csv", index
 
 print('\n')
       
+
+
+'''
+      
+        # building df1year (also 1 country) first iteration
+        I did this because I wantted to collect all 6 other final demand vectors
+        but now I don't want that
+        vector_name=final_demand_columns[1]
+        ftemp = pd.DataFrame()
+        dftemp = OECD.loc[simple_II_labels,vector_name].reset_index()
+        dftemp.columns = ['sector', vector_name]
+        dftemp['country'] = country
+        dftemp['year'] = year
+        dftemp = dftemp[['country', 'year', 'sector', vector_name]]
+        #the line below means that HFCE is in "other final demand"
+        df1year = dftemp.copy()
+        for vector_name in final_demand_columns[2:]:
+            dftemp = pd.DataFrame()
+            dftemp = OECD.loc[simple_II_labels, vector_name].reset_index()
+            dftemp.columns = ['sector', vector_name]
+            dftemp['country'] = country
+            dftemp['year'] = year
+            dftemp = dftemp[['country', 'year', 'sector', vector_name]]
+            
+            # Merge dftemp as a new column into dfother_final_demand
+            df1year = df1year.merge(
+                dftemp,
+                on=['country', 'year', 'sector'],
+                how='left'
+            )
+        dfother_final_demand = pd.concat([dfother_final_demand, df1year], ignore_index=True)
+      
+      
+'''

@@ -745,8 +745,6 @@ def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
                                 value_name=value).rename(columns={m.index.name or 'index': 'selling sector'})
 
 
-
-
 def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
     impact_cols = [value_col+' impact direct', value_col+' impact indirect', value_col+' impact induced', value_col+' impact total']
     dftemp2 = None
@@ -775,8 +773,6 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
 # upload gdp
 dfgdp_worldbank = pd.read_csv("Bench_predictions/A04_gdp_ARIMAgdp_currentUSD04.csv")
 dfgdp_worldbank.rename(columns={"Unnamed: 0": "year"}, inplace=True)
@@ -829,6 +825,12 @@ currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
+
+
+
+
+
+
 
 
 # 1. upload OECD intput-output tables 1995-2020

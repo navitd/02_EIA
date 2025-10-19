@@ -1,5 +1,4 @@
-# B version
-##########################
+
 
 
 B00 verbal explanation (current file)
