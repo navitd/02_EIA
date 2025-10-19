@@ -69,7 +69,7 @@ def collect_m(m, country, year, m_value_name, dfm):
 
 
 
-
+#for extrapolation - calculating market total
 def clc_v_tot(df, value_col, col_tot):
     # add total employment per (country, year)
     df[col_tot] = df.groupby(["country", "year"])[value_col].transform("sum")
@@ -77,6 +77,18 @@ def clc_v_tot(df, value_col, col_tot):
     df[value_col+" sector ratio"] = df[value_col] / df[col_tot]
     dftotal = df[["country", "year", col_tot]].drop_duplicates()
     return df, dftotal
+
+# for extrapolation - calculating ratio with worldbank gdp
+def ratio_with_worldbank_gdp(dfv_total, gdp_long, worldbank_gdp_col_name, col_name):
+        
+    # inserting gdp data to all collected vectors:
+    dfv_total = dfv_total.merge(
+        gdp_long[['country', 'year', worldbank_gdp_col_name ]],
+        on=['country', 'year'],
+        how='left'
+    )
+    dfv_total['ratio_'+col_name+'_to_gdp'] = safe_divide_vector(dfv_total[col_name+' total'], dfv_total[worldbank_gdp_col_name])   
+    return dfv_total
 
 
 
@@ -95,9 +107,12 @@ def slice_v_from_bigdf(bigdf, country, year):
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # upload gdp
 dfgdp_worldbank = pd.read_csv("Bench_predictions_B/A04_gdp_ARIMAgdp_currentUSD04.csv")
-dfgdp_worldbank.rename(columns={"Unnamed: 0": "year"}, inplace=True)
+worldbank_gdp_col_name = "gdp total world bank"
+dfgdp_worldbank.rename(columns={"Unnamed: 0": "year","gdp total": worldbank_gdp_col_name}, inplace=True)
 dfgdp_worldbank.iloc[:, 1:] = dfgdp_worldbank.iloc[:, 1:] * 10**(-6)
+dfgdp_worldbank['year'] = dfgdp_worldbank['year'].astype(int)
 dfgdp_worldbank = dfgdp_worldbank.set_index('year')
+
 
 # upload E
 dfE = pd.read_csv("Bench_predictions_B/A05_Esectors_from_Etot05.csv")
@@ -227,12 +242,9 @@ for country in countries:
         df7      = collect_v(f7c, country, int(year), ['sector', f7_col_name], df7)
         dfGDP    = collect_v(GDPc,    country, int(year), ['sector', GDP_col_name],    dfGDP)
         dfoutput = collect_v(outputc, country, int(year), ['sector', output_col_name], dfoutput)
-        dfGDPj_by_xj = collect_v(GDPj_by_xjc,country, year, ["sector",GDPj_by_xj_col_name], dfGDPj_by_xj)
+        dfGDPj_by_xj = collect_v(GDPj_by_xjc,country, int(year), ["sector",GDPj_by_xj_col_name], dfGDPj_by_xj)
         
         #I had a thought to collect all vectors from II and not OECD but it gets complicated. output and GDP must be collected from OECD. so I leave it as is
-
-        
-
    
 ############################################################
 # B06.B calculate market total 
@@ -248,7 +260,6 @@ dfGDPj_by_xj, dfGDPj_by_xj_total = clc_v_tot(dfGDPj_by_xj, GDPj_by_xj_col_name, 
 
 #clc_v_tot is accurate
 
-
 #print to csv
 dfHFCE.to_csv("Bench_predictions_B/B06_dfHFCE.csv", index=False)
 dfother.to_csv("Bench_predictions_B/B06_dfother.csv", index=False)
@@ -260,42 +271,38 @@ dfGDPj_by_xj.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv", index=False)
 
 
 # to get the ratio dfother_total / gdp_total for each extrap year
-# to get one number of dff per year - for extrapolation
-# averaging over sectors to get one number per country per year
-#dfftotal = clc_v_tot(dfother_final_demand, 'other final demand', 'other final demand total')
-#get gdp data
-#A06.D extrapolating of fother_tot with gdp_tot
-##############################################
-gdp_filename = "Bench_predictions/A04_gdp_ARIMAgdp_currentUSD04.csv"
-gdp_data = pd.read_csv(gdp_filename)
-gdp_data.rename(columns={'Unnamed: 0': 'year'}, inplace=True) #renaming the column
-gdp_data['year'] = gdp_data['year'].astype(int)
-gdp_data.set_index('year', inplace=True) 
+##################################################
+#B06.C extrapolating of fother_tot with gdp_tot
+##################################################
 #pivoting gdp_data to long format (to match dfftotal format)
 gdp_long = (
-    gdp_data
+    dfgdp_worldbank
     .reset_index()  # make 'year' a column instead of index
-    .melt(id_vars='year', var_name='country', value_name='gdp total')
+    .melt(id_vars='year', var_name='country', value_name=worldbank_gdp_col_name)
     .sort_values(['country', 'year'])
     .reset_index(drop=True)
 )
-# inserting gdp data to dfftotal
-dfother_total = dfother_total.merge(
-    gdp_long[['country', 'year', 'gdp total']],
-    on=['country', 'year'],
-    how='left'
+# this is a side stpe, to see that roughly OECD gdp is 90% of world bank gdp
+OECD_worldbank_ratio = (dfGDP_total.merge(gdp_long,
+                      on=["country", "year"],)
+    .assign(ratio=lambda x: x["GDP total"] / x[worldbank_gdp_col_name])
 )
+#
 
-dfother_total['ratio_f_to_gdp'] = safe_divide_vector(dfother_total['other final demand total'], dfother_total['gdp total'])
-# or
-#dfftotal['ratio_f_gdp'] = dfftotal['other final demand total'] / dfftotal['gdp total']
-# if I'm sure there are no zeros in gdp total
-# dfother_final_demand.columns ['country', 'year', 'sector', 'other final demand', 'other final demand total', 'other final demand sector ratio']
-# dfother_total.columns ['country', 'year', 'other final demand total', 'gdp total', 'ratio_f_to_gdp']
+dfHFCE_total = ratio_with_worldbank_gdp(dfHFCE_total, gdp_long, worldbank_gdp_col_name, HFCE_col_name)
+dfother_total = ratio_with_worldbank_gdp(dfother_total, gdp_long, worldbank_gdp_col_name, other_col_name)
+df7_total = ratio_with_worldbank_gdp(df7_total, gdp_long, worldbank_gdp_col_name, f7_col_name)
+dfGDP_total = ratio_with_worldbank_gdp(dfGDP_total, gdp_long, worldbank_gdp_col_name, GDP_col_name)
+dfoutput_total = ratio_with_worldbank_gdp(dfoutput_total, gdp_long, worldbank_gdp_col_name, output_col_name)
+dfGDPj_by_xj_total = ratio_with_worldbank_gdp(dfGDPj_by_xj_total, gdp_long, worldbank_gdp_col_name, GDPj_by_xj_col_name)
 
 
-#A06.C  fother_sector / fother_tot
-##################################
+#so far it is just the ratio. I still need the extrapolation!!
+
+
+####################################
+#B06.D  fother_sector / fother_tot
+####################################
 stats_all = ( #average from 1995 to 2020
     dfother_total
     .groupby("country")["ratio_f_to_gdp"]
