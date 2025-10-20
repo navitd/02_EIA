@@ -13,6 +13,10 @@
 #collect also tot for everything. tot meaning summation over sectors to get vtot
 #no need to do this with T
 
+#change f7 to f9
+# run again to save to files - 1995-2020
+# fixed_sectors should be changed when switching to DOM
+
 import sys
 from pathlib import Path
 import os
@@ -100,6 +104,18 @@ def slice_v_from_bigdf(bigdf, country, year):
     v.drop(columns=['country','year'], inplace=True)
     v.set_index('sector', inplace=True)
     return v
+
+
+#################### compare outputs
+#multipliers2prediction(Ldf, f7, "predicted output") and Ldf@f are equivalent
+#below change variables names to generic names
+def multipliers2prediction(s2s_mo, fdf_year2, column_name):
+    predicted_output_year2_np  = np.round(s2s_mo.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
+    
+    predicted_output_year2 = pd.DataFrame(predicted_output_year2_np, index=s2s_mo.index, columns=[column_name])
+    
+    return predicted_output_year2
+
 
 
 ############# extrap and data tot2extrap most important step for this file
@@ -200,10 +216,12 @@ table_type = 'TTL' #or'DOM'
 OECD_path = "../Data/" # windows style: r".\\"
 if table_type == 'DOM':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx'
+    final_demand_columns = ['HFCE',	'NPISH', 'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO']
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
+    final_demand_columns = ['HFCE', 'NPISH', 'GGFC', 'GFCF', 'INVNT', 'DPABR', 'CONS_NONRES', 'EXPO', 'IMPO']
 
-first_year = '2010'
+first_year = '2020'
 last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
 n_for_tot2future=0
@@ -231,7 +249,7 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 
 # 1. Get IO=II, X, GDP, from OECD, compensation of employees, more GDP and II from OECDadditional as well as taxes, incomegross surplus etc.
 ##########################################################################################################################################   
-final_demand_columns = ['HFCE',	'NPISH', 'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
+
 dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
 dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 #dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
@@ -282,7 +300,13 @@ for country in countries:
         ##########################
         II = OECD.loc[simple_II_labels, simple_II_labels]
         T = safe_divide(II, output)
-        #Ldf, L_minus_I = clc_L(T)
+        Ldf, L_minus_I = clc_L(T)
+        #check:
+        #xcheck = multipliers2prediction(Ldf, f7, "predicted output")
+        #xcheck2 = Ldf@f7
+        #diff = (xcheck2.sub(output, axis=0)).abs()
+        #print(diff)
+        #print(pd.concat([output,xcheck, xcheck2],axis=1))
 
         IIc = II.copy()
         IIc["HFCE"] = fHFCE # added a column for closed model
@@ -295,9 +319,10 @@ for country in countries:
         outputc = output.copy()
         outputc['HFCE'] = E.sum().values[0]
         Tc = safe_divide(IIc, outputc)
-        #Lcdf, Lc_minus_I = clc_L(Tc)
-   
-        dfTc    = collect_m(Tc, country, year, 'Tc', dfTc)
+        Lcdf, Lc_minus_I = clc_L(Tc)
+        
+
+        dfTc    = collect_m(Tc, country, int(year), 'Tc', dfTc)
         fHFCEc  = fHFCE.copy();   fHFCEc.loc['employees_compensation'] = 0  #should tis be sum(E)?
         fotherc = fother.copy(); fotherc.loc['employees_compensation'] = 0  
         f7c     = f7.copy();         f7c.loc['employees_compensation'] = 0  
@@ -311,14 +336,26 @@ for country in countries:
         output_col_name = 'output'
         GDPj_by_xj_col_name = "GDPj_by_xj"
         dfHFCE   = collect_v(fHFCEc,  country, int(year), ['sector', HFCE_col_name], dfHFCE)
-        dfother  = collect_v(fotherc,  country, int(year), ['sector', other_col_name], dfother)
-        df7      = collect_v(f7c, country, int(year), ['sector', f7_col_name], df7)
+        dfother  = collect_v(fotherc, country, int(year), ['sector', other_col_name], dfother)
+        df7      = collect_v(f7c,     country, int(year), ['sector', f7_col_name], df7)
         dfGDP    = collect_v(GDPc,    country, int(year), ['sector', GDP_col_name],    dfGDP)
         dfoutput = collect_v(outputc, country, int(year), ['sector', output_col_name], dfoutput)
         dfGDPj_by_xj = collect_v(GDPj_by_xjc,country, int(year), ["sector",GDPj_by_xj_col_name], dfGDPj_by_xj)
         
+
+        #check:
+        ftestc = OECD.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+        ftestc.loc['employees_compensation'] = 0
+        xcheck = multipliers2prediction(Lcdf, ftestc, "predicted output")
+        #diff = (xcheck.sub(outputc, axis=0)).abs()
+        #print('difference between Lcdf#f7c and outputc\n',diff)
+        print('                  outputc     Lcdf@ftestc\n',pd.concat([outputc, xcheck],axis=1))
+
+
+
         #I had a thought to collect all vectors from II and not OECD but it gets complicated. output and GDP must be collected from OECD. so I leave it as is
-   
+       
+
 ############################################################
 # B06.B calculate market total 
 ############################################################
@@ -334,12 +371,13 @@ dfGDPj_by_xj, dfGDPj_by_xj_total = clc_v_tot(dfGDPj_by_xj, GDPj_by_xj_col_name, 
 #clc_v_tot is accurate
 
 #print to csv
-dfHFCE.to_csv("Bench_predictions_B/B06_dfHFCE.csv", index=False)
-dfother.to_csv("Bench_predictions_B/B06_dfother.csv", index=False)
-df7.to_csv("Bench_predictions_B/B06_df7.csv", index=False)
-dfGDP.to_csv("Bench_predictions_B/B06_dfGDP.csv", index=False)
-dfoutput.to_csv("Bench_predictions_B/B06_dfoutput.csv", index=False)
-dfGDPj_by_xj.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv", index=False)
+if 0:
+    dfHFCE.to_csv("Bench_predictions_B/B06_dfHFCE.csv", index=False)
+    dfother.to_csv("Bench_predictions_B/B06_dfother.csv", index=False)
+    df7.to_csv("Bench_predictions_B/B06_df7.csv", index=False)
+    dfGDP.to_csv("Bench_predictions_B/B06_dfGDP.csv", index=False)
+    dfoutput.to_csv("Bench_predictions_B/B06_dfoutput.csv", index=False)
+    dfGDPj_by_xj.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv", index=False)
 
 
 
@@ -397,56 +435,95 @@ dfGDPj_by_xj_extrap_and_data, dfGDPj_by_xj_extrap_and_data_wide = tot2future_by_
 #plot_v_by_year_1panel(dfGDP_extrap_and_data_wide, countries, 'GDP [Million USD]', "Extrapolated GDP by Country")
 
 # print to excel - correct dataframe to print
-dfHFCE_extrap_and_data.to_csv("Bench_predictions_B/B06_dfHFCE_totextrap.csv", index=False)
-dfother_extrap_and_data.to_csv("Bench_predictions_B/B06_dfother_totextrap.csv", index=False)
-df7_extrap_and_data.to_csv("Bench_predictions_B/B06_df7_totextrap.csv", index=False)
-dfGDP_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDP_totextrap.csv", index=False)
-dfoutput_extrap_and_data.to_csv("Bench_predictions_B/B06_dfoutput_totextrap.csv", index=False)
-dfGDPj_by_xj_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj_totextrap.csv", index=False)
+if 0:
+    dfHFCE_extrap_and_data.to_csv("Bench_predictions_B/B06_dfHFCE_tot.csv", index=False)
+    dfother_extrap_and_data.to_csv("Bench_predictions_B/B06_dfother_tot.csv", index=False)
+    df7_extrap_and_data.to_csv("Bench_predictions_B/B06_df7_tot.csv", index=False)
+    dfGDP_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDP_tot.csv", index=False)
+    dfoutput_extrap_and_data.to_csv("Bench_predictions_B/B06_dfoutput_tot.csv", index=False)
+    dfGDPj_by_xj_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj_tot.csv", index=False)
 
 
+if 0:
+    #checks
+    #1. GDPj_by_xj *output = GDP??
+    #the above is not true. it's true only for _xj_, not the summing of output
 
-#checks
-#1. GDPj_by_xj *output = GDP??
-#the above is not true. it's true only for _xj_, not the summing of output
+    #2. dfHFCE+dfother = df7??
+    #df7check= dfHFCE_extrap_and_data_wide + dfother_extrap_and_data_wide
 
-#2. dfHFCE+dfother = df7??
-df7check= dfHFCE_extrap_and_data_wide + dfother_extrap_and_data_wide
+    #diff = np.abs(df7check - df7_extrap_and_data_wide)
+    #diff_ratio = diff/df7_extrap_and_data_wide
+    #diff_mean = diff_ratio.mean()
 
-diff = np.abs(df7check - df7_extrap_and_data_wide)
-diff_ratio = diff/df7_extrap_and_data_wide
-diff_mean = diff_ratio.mean()
+    #mask_years = lambda df: (df.index >= 2010) & (df.index <= 2021) 
+    #print('df7check - result of adding HFCE+other')
+    #print(df7check[mask_years(df7check)])
+    #print(dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)])
+    #print(dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)])
 
-#mask_years = lambda df: (df.index >= 2010) & (df.index <= 2021) 
-#print('df7check - result of adding HFCE+other')
-#print(df7check[mask_years(df7check)])
-#print(dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)])
-#print(dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)])
-
-#print('         HFCE       ', ' other    ', '7 by addition ', '7 from df')
-#print(pd.concat([dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)]['CAN'],
-#                 dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)]['CAN'],
-#                 df7check[mask_years(df7check)]['CAN'], 
-#                 df7_extrap_and_data_wide[mask_years(df7_extrap_and_data_wide)]['CAN']], axis=1))
-
-
-mask_years = lambda df: (df.index >= 2020) & (df.index <= 2030) 
-
-print('         HFCE       ', ' other    ', '7 by addition ', '7 from df')
-print(pd.concat([dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)]['CAN'],
-                 dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)]['CAN'],
-                 df7check[mask_years(df7check)]['CAN'], 
-                 df7_extrap_and_data_wide[mask_years(df7_extrap_and_data_wide)]['CAN']], axis=1))
+    #print('         HFCE       ', ' other    ', '7 by addition ', '7 from df')
+    #print(pd.concat([dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)]['CAN'],
+    #                 dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)]['CAN'],
+    #                 df7check[mask_years(df7check)]['CAN'], 
+    #                 df7_extrap_and_data_wide[mask_years(df7_extrap_and_data_wide)]['CAN']], axis=1))
 
 
+    #mask_years = lambda df: (df.index >= 2020) & (df.index <= 2030) 
 
-#
+    #print('         HFCE       ', ' other    ', '7 by addition ', '7 from df')
+    #print(pd.concat([dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)]['CAN'],
+    #                 dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)]['CAN'],
+    #                 df7check[mask_years(df7check)]['CAN'], 
+    #                 df7_extrap_and_data_wide[mask_years(df7_extrap_and_data_wide)]['CAN']], axis=1))
 
 
+    #
+    #check output
+    '''
+    mask_years = lambda df: (df.index >= 2020) & (df.index <= 2030) 
+
+    print('         HFCE       ', ' other    ', '7 by addition ', '7 from df')
+    print(pd.concat([dfHFCE_extrap_and_data_wide[mask_years(dfHFCE_extrap_and_data_wide)]['CAN'],
+                    dfother_extrap_and_data_wide[mask_years(dfother_extrap_and_data_wide)]['CAN'],
+                    df7check[mask_years(df7check)]['CAN'], 
+                    df7_extrap_and_data_wide[mask_years(df7_extrap_and_data_wide)]['CAN']], axis=1))
+
+    '''
+    #compare output tot:
+    year = 2020
+    country = 'CAN'
+    output_tot1 = dfoutput_extrap_and_data[(dfoutput_extrap_and_data.year==year) & (dfoutput_extrap_and_data.country==country)]['output total']
+    output_tot2 = dfoutput[(dfoutput.year==year) & (dfoutput.country==country)]["output total"]
+    print('dfoutput_extrap_and_data, dfoutput (sectors)')
+    print( pd.concat([output_tot1.iloc[[0]], output_tot2.iloc[[0]]], axis=0) )
 
 
+    year = 2020
+    country = 'JPN'
+    Tctemp = (
+        dfTc[(dfTc.country == country) & (dfTc.year == year)]
+        .pivot(index="selling_sector", columns="buying_sector", values="Tc")
+    )
+    x = dfoutput[(dfoutput.country == country) & (dfoutput.year == year)].set_index('sector')['output']
+    f = df7[(df7.country == country) & (df7.year == year)].set_index('sector')[f7_col_name]
+    f.rename(index={"employees_compensation":"HFCE"},inplace=True) #f agrees wifh f7c from above
+    Tctemp = Tctemp[[c for c in Tctemp.columns if c != 'HFCE'] + ['HFCE']] #put 'HFCE' at the end
+    Lctemp,_ = clc_L(Tctemp)
+    xcheck = multipliers2prediction(Lctemp, f,'output') #it is important to use this instead of @ because when the row names don't agree the multiplication is inaccurate  
+    Ltemp,_ = clc_L(Tctemp.iloc[:-1,:-1])
+    xcheck2 = Ltemp@f.iloc[:-1]
+    xcheck3 = multipliers2prediction(Lcdf, f7c,'output')
+    print('        xcheck   ',' xcheck2', '   x dfoutput',  '    Ldf@f7 ', '   output','   xcheck3')
+    print(pd.concat([xcheck.iloc[:-1].round(), xcheck2.round(), x.iloc[:-1].round(),  Ldf@f7, output, xcheck3], axis=1))
 
+    #print(' Lcdf from above,    Lctemp from collection\n')
+    #print(pd.concat([pd.DataFrame(Lcdf.to_numpy().flatten(), columns=['L']), pd.DataFrame(Lctemp.to_numpy().flatten(), columns=['Ltemp'])], axis=1))
+    #print('\n')
+    #print('            f    and f7 from above \n',pd.concat([f,f7], axis=1))
 
+    #print(pd.concat([pd.DataFrame(Tc.to_numpy().flatten(), columns=['Tc']), pd.DataFrame(Tctemp.to_numpy().flatten(), columns=['Tctemp'])], axis=1))
 
+    
 print('\n')
       

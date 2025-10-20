@@ -26,7 +26,7 @@ B05 Esectors from Etot
 #collect also tot for everything. tot meaning summation over sectors to get vtot
 #no need to do this with T
 
-run 1995-2020 after checks
+#run 1995-2020 after checks
 
 
 B07 calculation of bases for Tc (easy), and all other vectors

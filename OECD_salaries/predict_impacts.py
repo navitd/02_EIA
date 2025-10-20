@@ -550,7 +550,9 @@ predicted_incomec_year2 = multipliers2prediction(s2s_mhc, fcdf_year2, 'Predicted
 predicted_GDP_year2 = multipliers2prediction(s2s_mg, fdf_year2, 'Predicted_GDP') 
 predicted_GDPc_year2 = multipliers2prediction(s2s_mgc, fcdf_year2, 'Predicted_GDP') 
 output_year2      = OECD_year2.loc['OUTPUT', simple_II_labels]
+diff  = (predicted_output_year2.sub(output, axis=0)).abs()
 
+print(diff)
 
 def multipliers_by_f(M, fcdf_year2, title):
     fcdf_year2 = fcdf_year2.values.reshape(-1, 1) if isinstance(fcdf_year2, pd.Series) else fcdf_year2
