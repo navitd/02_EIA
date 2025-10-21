@@ -179,12 +179,12 @@ dfoutput = pd.read_csv("Bench_predictions_B/B06_dfoutput.csv")
 dfGDPj_by_xj = pd.read_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv")
 
 # to delete
-#dfHFCE_tot       = pd.read_csv("Bench_predictions_B/B06_dfHFCE_tot.csv")
-#df8_tot          = pd.read_csv("Bench_predictions_B/B06_df8_tot.csv")
-#df9_tot          = pd.read_csv("Bench_predictions_B/B06_df9_tot.csv")
-#dfGDP_tot        = pd.read_csv("Bench_predictions_B/B06_dfGDP_tot.csv")
+dfHFCE_tot       = pd.read_csv("Bench_predictions_B/B06_dfHFCE_tot.csv")
+df8_tot          = pd.read_csv("Bench_predictions_B/B06_df8_tot.csv")
+df9_tot          = pd.read_csv("Bench_predictions_B/B06_df9_tot.csv")
+dfGDP_tot        = pd.read_csv("Bench_predictions_B/B06_dfGDP_tot.csv")
 dfoutput_tot     = pd.read_csv("Bench_predictions_B/B06_dfoutput_tot.csv") # needed to get future years
-#dfGDPj_by_xj_tot = pd.read_csv("Bench_predictions_B/B06_dfGDPj_by_xj_tot.csv")
+dfGDPj_by_xj_tot = pd.read_csv("Bench_predictions_B/B06_dfGDPj_by_xj_tot.csv")
 
 
 
@@ -295,15 +295,15 @@ for var1, var2 in zip(
 #if n_years_for_base=0 I could simply take the data from 2020
 
 
-move to unfolding from tot to numbers
-if 0:
-    dfother_sector_base_1country = dfother_sector_base_for_extrap[(dfother_sector_base_for_extrap.country==country)].copy()
-    dfother_sector_base_1country.drop(columns=['country'], inplace=True)
-    dfother_sector_base_1country = dfother_sector_base_1country.set_index("sector")
-    dfother_sector_base_1country.loc["employees_compensation"] = 0
-    #multiply by future year total other final demand
-    ftot_value = dfother_total[(dfother_total.country==country) & (dfother_total.year==int(year))]["other final demand total"].values[0]
-    fother = dfother_sector_base_1country * ftot_value
+#move to unfolding from tot to numbers
+some have employees_compensation some have HFCE at the end
+base_1country = HFCE_base[(HFCE_base.country==country)].copy()
+base_1country.drop(columns=['country'], inplace=True)
+base_1country = base_1country.set_index("sector")
+base_1country.loc["employees_compensation"] = 0
+#multiply by future year total other final demand
+ftot_value = dfHFCE_tot[(dfHFCE_tot.country==country) & (dfHFCE_tot.year==int(year))][+" total"].values[0]
+result = base_1country * ftot_value
         
 
 
