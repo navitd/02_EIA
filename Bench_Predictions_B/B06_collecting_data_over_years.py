@@ -367,7 +367,8 @@ dfGDPj_by_xj, dfGDPj_by_xj_total = clc_v_tot(dfGDPj_by_xj, GDPj_by_xj_col_name, 
 #clc_v_tot is accurate
 
 #print to csv
-if 0:
+if 1:
+    dfTc.to_csv("Bench_predictions_B/B06_dfTc.csv", index=False)
     dfHFCE.to_csv("Bench_predictions_B/B06_dfHFCE.csv", index=False)
     df8.to_csv("Bench_predictions_B/B06_df8.csv", index=False)
     df9.to_csv("Bench_predictions_B/B06_df9.csv", index=False)

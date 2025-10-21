@@ -9,7 +9,6 @@
 
 # https://www.oecd.org/en/data/datasets/input-output-tables.html
 
-
 import sys
 from pathlib import Path
 import os
