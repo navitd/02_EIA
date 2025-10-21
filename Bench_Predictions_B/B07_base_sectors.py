@@ -811,13 +811,17 @@ table_type = 'TTL' #or'DOM'
 OECD_path = "../Data/" # windows style: r".\\"
 if table_type == 'DOM':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_matrices.xlsx'
+    final_demand_columns = ['HFCE',	'NPISH', 'GGFC',	'GFCF',	'INVNT', 'CONS_NONRES', 'EXPO']
 elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
+    final_demand_columns = ['HFCE', 'NPISH', 'GGFC', 'GFCF', 'INVNT', 'DPABR', 'CONS_NONRES', 'EXPO', 'IMPO']
 
 first_year = '1995'
 last_year = '2020'
 year_range = [str(year) for year in range(int(first_year), int(last_year) + 1)]
-year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)]
+year_range_with_future = dfoutput_tot.year.unique()
+#year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)]
+
 report_title = f'ICT sectors, {last_year}'
 ICT_factors = {'ICT - Manufacturing': 'C26',
                 'ICT - Wholesaling': 'G',
@@ -835,18 +839,12 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 
+
 # 1. upload OECD intput-output tables 1995-2020
 ###############################################   
-#copied from Benchmarking/Employment.py
 
-final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
 
-dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
-dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
-dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
-dfEimpact = pd.DataFrame()
-dfTc = pd.DataFrame()
-dfLc = pd.DataFrame()
+
 for country in countries:
     for year in year_range:
         print(country, year)
