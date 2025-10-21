@@ -245,8 +245,6 @@ if 0:
             .reset_index()
         )
         Tc_base = pd.concat([Tc_base, Tc_country_mean], ignore_index=True)
-
-    Tc_base.to_csv(f"Bench_predictions_B/B07_Tc_base_{n_years_for_base+1}years.csv", index=False)
         
 
 # B07.2 calculate all vector bases
@@ -254,12 +252,17 @@ if 0:
 HFCE_base = make_base_v(dfHFCE,"HFCE sector ratio",countries, years_for_base)
 f8_base = make_base_v(df8,"8 final demand sector ratio",countries, years_for_base)
 f9_base = make_base_v(df9,"9 final demand sector ratio",countries, years_for_base)
-fGDP_base = make_base_v(dfGDP,"GDP sector ratio",countries, years_for_base)
+GDP_base = make_base_v(dfGDP,"GDP sector ratio",countries, years_for_base)
 output_base = make_base_v(dfoutput,"output sector ratio",countries, years_for_base)
-fGDPj_by_xj_base = make_base_v(dfGDPj_by_xj,"GDPj_by_xj sector ratio",countries, years_for_base)
+GDPj_by_xj_base = make_base_v(dfGDPj_by_xj,"GDPj_by_xj sector ratio",countries, years_for_base)
 
-
-#dfother_sector_base_for_extrap.to_csv("Bench_predictions_B/A08__fother_sector_base_for_extrap.csv", index=False)
+Tc_base.to_csv(f"Bench_predictions_B/B07_Tc_base_{n_years_for_base+1}years.csv", index=False)
+HFCE_base.to_csv(f"Bench_predictions_B/B07_HFCE_base_{n_years_for_base+1}years.csv", index=False)
+f8_base.to_csv(f"Bench_predictions_B/B07_f8_base_{n_years_for_base+1}years.csv", index=False)
+f9_base.to_csv(f"Bench_predictions_B/B07_f9_base_{n_years_for_base+1}years.csv", index=False)
+GDP_base.to_csv(f"Bench_predictions_B/B07_GDP_base_{n_years_for_base+1}years.csv", index=False)
+output_base.to_csv(f"Bench_predictions_B/B07_output_base_{n_years_for_base+1}years.csv", index=False)
+GDPj_by_xj_base.to_csv(f"Bench_predictions_B/B07_GDPj_by_xj_base_{n_years_for_base+1}years.csv", index=False)
 #################################################################################################
 #################################################################################################
 
@@ -289,10 +292,10 @@ for var1, var2 in zip(
     print(f"\n=== Differences for {col_name} ===")
     print(merged[["sector", "diff"]])
 
-#print( pd.concat([df9[(df9.country=='CAN') & (df9.year==2020)]["9 final demand sector ratio"].reset_index(),f9_base.loc[f9_base.country=='CAN]['9 final demand sector ratio'].reset_index()], axis=1) )
-
 #if n_years_for_base=0 I could simply take the data from 2020
 
+
+move to unfolding from tot to numbers
 if 0:
     dfother_sector_base_1country = dfother_sector_base_for_extrap[(dfother_sector_base_for_extrap.country==country)].copy()
     dfother_sector_base_1country.drop(columns=['country'], inplace=True)
