@@ -36,37 +36,7 @@ from func_plot_real_vs_predicted import plot_real_vs_predicted
 
 
 ##########################################         functions from Benchmarking/Employment.py       ##########################################
-def make_base_v(df,col_name,countries, years_for_base):
-    dfbase = pd.DataFrame()  # start with empty DataFrame
-    for country in countries:
-        f_1country = df[
-            (df['country'] == country) & 
-            (df['year'].isin(years_for_base))
-        ]
-        f_country_mean = (
-            f_1country
-            .groupby(["country", "sector"])[col_name]
-            .mean()
-            .reset_index()
-        )
-        #reordering position of HFCE if exists:
-        f_country_mean = f_country_mean.set_index("sector")
-        if "HFCE" in f_country_mean.index:
-            # Move 'HFCE' to the end
-            hfce_row = f_country_mean.loc[["HFCE"]]
-            f_country_mean = f_country_mean.drop("HFCE")
-            f_country_mean = pd.concat([f_country_mean, hfce_row])
-        # Move sector back to a column
-        f_country_mean = f_country_mean.reset_index()
-
-        # Reorder columns
-        first_cols = ["country", "sector"]
-        f_country_mean = f_country_mean[[c for c in first_cols if c in f_country_mean.columns] +
-                                        [c for c in f_country_mean.columns if c not in first_cols]]
-        dfbase = pd.concat([dfbase, f_country_mean], ignore_index=True)
-
-    return dfbase
-
+#the plotting functions from Employment are not needed here, they are to be moved to 08 file
 
 def get_mask(df, country, year):
             return (df["country"] == country) & (df["year"] == year)
@@ -100,7 +70,7 @@ def collect_m(m, country, year, m_value_name, dfm):
     # Append to the master DataFrame
     dfm = pd.concat([dfm, dftemp], ignore_index=True)
     return dfm
-
+'''
 ####################################################         functions that plot       ######################################################
 
 ##################################################        functions that calculate        ######################################################
@@ -150,7 +120,7 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
     dftemp2 = dftemp2[cols]
     dfimpact = pd.concat([dfimpact, dftemp2], ignore_index=True)
     return dfimpact
-'''
+
 
 
 
@@ -204,7 +174,7 @@ elif table_type == 'TTL':
 #first_year = 1995 delete
 #last_year = 2020  delete
 #year_range = [int(year) for year in range(int(first_year), int(last_year) + 1)] delete
-n_years_for_base = 0
+n_years_for_base = 2
 years_for_base = [year for year in range(int(2020)-n_years_for_base, int(2020)+1)] 
 year_range_with_future = dfoutput_tot.year.unique()
 #year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)] delete
@@ -225,104 +195,6 @@ currency_exchange_type = 'EXCH' #'EXCH' or 'PPP'
 fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15', 'C16', 'C17_18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24', 
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
-
-
-
-# B07.1 calculate Tc base
-#########################
-if 0:
-    # collecting Tc for base
-    Tc_base = pd.DataFrame()  # start with empty DataFrame
-    for country in countries:
-        Tc_1country = dfTc[
-            (dfTc['country'] == country) & 
-            (dfTc['year'].isin(years_for_base))
-        ]
-        Tc_country_mean = (
-            Tc_1country
-            .groupby(["country", "selling_sector", "buying_sector"])["Tc"]
-            .mean()
-            .reset_index()
-        )
-        Tc_base = pd.concat([Tc_base, Tc_country_mean], ignore_index=True)
-
-    Tc_base.to_csv(f"Bench_predictions_B/B07_Tc_base_{n_years_for_base+1}years.csv", index=False)
-        
-
-# B07.2 calculate all vector bases
-####################################
-HFCE_base = make_base_v(dfHFCE,"HFCE sector ratio",countries, years_for_base)
-f8_base = make_base_v(df8,"8 final demand sector ratio",countries, years_for_base)
-f9_base = make_base_v(df9,"9 final demand sector ratio",countries, years_for_base)
-fGDP_base = make_base_v(dfGDP,"GDP sector ratio",countries, years_for_base)
-output_base = make_base_v(dfoutput,"output sector ratio",countries, years_for_base)
-fGDPj_by_xj_base = make_base_v(dfGDPj_by_xj,"GDPj_by_xj sector ratio",countries, years_for_base)
-
-
-#dfother_sector_base_for_extrap.to_csv("Bench_predictions_B/A08__fother_sector_base_for_extrap.csv", index=False)
-#################################################################################################
-#################################################################################################
-
-
-# check with n_years_for_base=0
-for var1, var2 in zip(
-    [dfHFCE, df8, df9, dfGDP, dfoutput, dfGDPj_by_xj],
-    [HFCE_base, f8_base, f9_base, fGDP_base, output_base, fGDPj_by_xj_base],
-):
-    # find the column that ends with " sector ratio"
-    col_name = [c for c in var1.columns if c.endswith(" sector ratio")][0]
-
-    temp1 = (
-        var1[(var1.country == "CAN") & (var1.year == 2020)]
-        [["sector", col_name]]
-        .reset_index(drop=True)
-    )
-    temp2 = (
-        var2.loc[var2.country == "CAN"][["sector", col_name]]
-        .reset_index(drop=True)
-    )
-
-    # Align by sector before subtracting
-    merged = pd.merge(temp1, temp2, on="sector", suffixes=("_orig", "_base"))
-    merged["diff"] = (merged[f"{col_name}_orig"] - merged[f"{col_name}_base"]).round()
-
-    print(f"\n=== Differences for {col_name} ===")
-    print(merged[["sector", "diff"]])
-
-#print( pd.concat([df9[(df9.country=='CAN') & (df9.year==2020)]["9 final demand sector ratio"].reset_index(),f9_base.loc[f9_base.country=='CAN]['9 final demand sector ratio'].reset_index()], axis=1) )
-
-#if n_years_for_base=0 I could simply take the data from 2020
-
-if 0:
-    dfother_sector_base_1country = dfother_sector_base_for_extrap[(dfother_sector_base_for_extrap.country==country)].copy()
-    dfother_sector_base_1country.drop(columns=['country'], inplace=True)
-    dfother_sector_base_1country = dfother_sector_base_1country.set_index("sector")
-    dfother_sector_base_1country.loc["employees_compensation"] = 0
-    #multiply by future year total other final demand
-    ftot_value = dfother_total[(dfother_total.country==country) & (dfother_total.year==int(year))]["other final demand total"].values[0]
-    fother = dfother_sector_base_1country * ftot_value
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # 1. upload OECD intput-output tables 1995-2020
@@ -351,105 +223,4 @@ for country in countries:
         E.set_index('sector', inplace=True)
         E.loc["HFCE"] = 0
         
-
-
-
-
-
-
- 
-        '''
-        for GDP impact
-        # . calculate multipliers
-        #############################
-        mo = Ldf.sum(axis=0)                       #dollar's worth of outcome per 1 dollar's worth of new final demand
-        moc_trancated = Lcdf.iloc[:-1].sum(axis=0) #dollar's worth of outcome per 1 dollar's worth of new final demand
-
-        # income multipliers mh
-        Ej_by_xj = Tc.iloc[-1,:-1] #hosehold income received per dollar's worth of sector output  
-        income_F_multipliers = Ldf.mul(Ej_by_xj, axis=0) #household income recieved per dollar's worth of secotr final demand
-        # Ej/xj*Ljk - Ljk is how much output was sold from j to k. and j is the sector that paid the salaries, so Ej/xj is used.
-        sum_income_F_multipliers = income_F_multipliers.sum(axis=0) 
-        # m(h)_k = sum_j(Ej/xj*Ljk) - sum over j of the detailed income_F_multipliers - sum over the rows
-        # an additional dolar of final demand in sector k generates m(h)_k dollars of new household income when all direct and
-        # indirect effects are converted into dollar estimates of income.
-        # income_F_multipliers is the details for each sector - how much income is generated by an additional dollar of final demand in sector k for each of the other sectors
-        # the above is only direct+indirect effects
-        # direct + indirect + induced effect - same calculation but with Lcdf
-
-        #income multipliers second time
-        Ej_by_xj = Tc.iloc[-1,:]
         
-        # GDP multipliers
-        GDPc = OECD.loc['VALU', simple_II_labels + ['HFCE']]
-        GDPj_by_xj = safe_divide_vector(GDPc, outputc)
-
-        # summary of multipliers without typeI and typeII - 
-        # 6 multipliers output, income, GDP, X sector2sector X simple model, closed model
-        # all of the closed model multipliers are trancated (the row and column of salaries and final demand are not included)
-        s2s_mo = Ldf                       # direct + indirect effect
-        s2s_moc = Lcdf                     # direct + indirect + iduced effect
-        s2s_mh = Ldf.mul(Ej_by_xj.iloc[ :-1 ], axis=0) 
-        s2s_mhc = Lcdf.mul(Ej_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
-        s2s_mg =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
-        s2s_mgc = Lcdf.mul(GDPj_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
-        #sector2market multipliers
-        #mo = s2s_mo.sum(axis=0)
-        #moc = s2s_moc.sum(axis=0)
-        #mh = s2s_mh.sum(axis=0)
-        #mhc = s2s_mhc.sum(axis=0)
-        #mg = s2s_mg.sum(axis=0)
-        #mgc = s2s_mgc.sum(axis=0)
-
-
-        ###################################################
-        # multipliers: direct, indirect, induced separately
-        ###################################################
-        n = T.shape[0]
-        # direct
-        direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
-        direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
-        np.fill_diagonal(direct_h.values, Ej_by_xj.values)
-        direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
-        np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
-        #indirect
-        indirect_o = s2s_mo - direct_o
-        #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
-        indirect_h  = s2s_mh - direct_h
-        #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
-        indirect_g  = s2s_mg - direct_g
-        #induced
-        induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
-        induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
-        induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
-
-        #################################
-        # impacts instead of multipliers
-        #################################
-        
-        # impacts
-        # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
-        scale_df_by_series(direct_o, f8c.iloc[:-1]) # , 'Direct output impact' 
-        #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
-        #multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
-        #multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
-        #multipliers_by_f(direct_h, fcdf[:-1], 'Direct income impact'), 
-        #multipliers_by_f(indirect_h, fcdf[:-1], 'Indirect income impact'),
-        #multipliers_by_f(induced_h, fcdf[:-1], 'Induced income impact'),  
-        #multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf[:-1], 'Total income impact'),
-        #multipliers_by_f(direct_g, fcdf[:-1], 'Direct GDP impact'), 
-        #multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
-        #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
-        #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
-        
-             
-        dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
-        dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
-        '''
-        
-
-
-end_time = time.time()
-print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
-
-
