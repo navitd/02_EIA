@@ -201,14 +201,17 @@ elif table_type == 'TTL':
     output_filename = '/mnt/c/NavitComputer24/2024_NES/Economics/Textbook_EIA/OECD_salaries/EIA_TTL_matrices.xlsx'
     final_demand_columns = ['HFCE', 'NPISH', 'GGFC', 'GFCF', 'INVNT', 'DPABR', 'CONS_NONRES', 'EXPO', 'IMPO']
 
-#first_year = 1995 delete
-#last_year = 2020  delete
-#year_range = [int(year) for year in range(int(first_year), int(last_year) + 1)] delete
+# data years
+first_year = 1995 
+last_year = 2020  
+year_range = [int(year) for year in range(int(first_year), int(last_year) + 1)]
+# base years
 n_years_for_base = 0
-years_for_base = [year for year in range(int(2020)-n_years_for_base, int(2020)+1)] 
-year_range_with_future = dfoutput_tot.year.unique()
-#year_range2 = [str(year) for year in range(int(2021), int(2040) + 1)] delete
-
+years_for_base = [year for year in range(int(2020)-n_years_for_base, int(2020)+1)]
+# future years
+max_future_year = dfoutput_tot.year.unique().max()
+year_range_future = [int(year) for year in range(int(last_year+1), max_future_year+1)]
+#(I don't extrapolate backwards here beacuse the base yyear should be different)
 #report_title = f'ICT sectors, {last_year}'
 ICT_factors = {'ICT - Manufacturing': 'C26',
                 'ICT - Wholesaling': 'G',
@@ -230,7 +233,7 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 
 # B07.1 calculate Tc base
 #########################
-if 0:
+if 1:
     # collecting Tc for base
     Tc_base = pd.DataFrame()  # start with empty DataFrame
     for country in countries:
@@ -266,7 +269,7 @@ GDPj_by_xj_base.to_csv(f"Bench_predictions_B/B07_GDPj_by_xj_base_{n_years_for_ba
 #################################################################################################
 #################################################################################################
 
-
+'''
 # check with n_years_for_base=0
 for var1, var2 in zip(
     [dfHFCE, df8, df9, dfGDP, dfoutput, dfGDPj_by_xj],
@@ -293,25 +296,78 @@ for var1, var2 in zip(
     print(merged[["sector", "diff"]])
 
 #if n_years_for_base=0 I could simply take the data from 2020
+'''
 
+#B07.3 unfolding from tot to numbers
+#some have employees_compensation some have HFCE at the end
+dfHFCE_data_and_extrap = dfHFCE.copy()
+for country in countries:
+    for year in year_range_future:
+        dftemp = pd.DataFrame()  # create a new temp DataFrame each iteration
 
-#move to unfolding from tot to numbers
-some have employees_compensation some have HFCE at the end
-base_1country = HFCE_base[(HFCE_base.country==country)].copy()
-base_1country.drop(columns=['country'], inplace=True)
-base_1country = base_1country.set_index("sector")
-base_1country.loc["employees_compensation"] = 0
-#multiply by future year total other final demand
-ftot_value = dfHFCE_tot[(dfHFCE_tot.country==country) & (dfHFCE_tot.year==int(year))][+" total"].values[0]
-result = base_1country * ftot_value
-        
+        # select base for country
+        base_1country = HFCE_base[HFCE_base.country == country].copy()
+        base_1country.drop(columns=["country"], inplace=True)
+        base_1country = base_1country.set_index("sector")
 
+        # add HFCE or employees_compensation
+        if "employees_compensation" in base_1country.index:
+            base_1country.loc["employees_compensation"] = 0
+        elif "HFCE" in base_1country.index:
+            base_1country.loc["HFCE"] = 0
 
+        # ftot_value is the total value comes from extrapolation
+        ftot_value = dfHFCE_tot[(dfHFCE_tot.country == country) & (dfHFCE_tot.year == int(year))]["HFCE total"].values[0]
+        #building a dataframe to concatenate with existing data
+        dftemp["HFCE"] = base_1country * ftot_value      
+        dftemp["HFCE total"] = ftot_value
+        dftemp["HFCE sector ratio"] = base_1country
+        dftemp["country"] = country
+        dftemp["year"] = year
+        # reset index to turn sector index into a column
+        dftemp.reset_index(inplace=True)
+        #reorder columns
+        dftemp = dftemp[dfHFCE.columns]
+        # concatenate, continuing the index automatically
+        dfHFCE_data_and_extrap = pd.concat([dfHFCE_data_and_extrap, dftemp], axis=0, ignore_index=True)
 
+#generalize the above to all other vectors
+#fixe E below
+#save to files
+#add past years 1975-1995 by extrapolating with 1995
 
+print()
+#Is this needed?
+#I thought we already ahve Esectors
+#should I add E
+################################################################################################
+################################################################################################
+# This is the important part of A08
+# preparing  for base for all future years
+# collecting E for base
 
+dfEbase_temp = dfE[dfE["year"].isin(years_for_E_base)].reset_index(drop=True).copy()
+dfEbase_temp["E_tot"] = (dfEbase_temp.groupby(["country", "year"])["Employment"].transform("sum"))
+dfEbase_temp["E sector to tot ratio"] = dfEbase_temp.Employment / dfEbase_temp.E_tot
+dfEbase_temp.drop(columns=["Employment", "E_tot"], inplace=True)
+dfEbase = pd.DataFrame()
+for country in countries:
+    dfEbase_1country = dfEbase_temp[
+        (dfEbase_temp['country'] == country) & 
+        (dfEbase_temp['year'].isin(years_for_gdp_base))
+    ]
+    dfEbase_1country_mean = (
+        dfEbase_1country
+        .groupby(["country", "sector"])["E sector to tot ratio"]
+        .mean()
+        .reset_index()
+    )
+    dfEbase = pd.concat([dfEbase, dfEbase_1country_mean], ignore_index=True)
 
-
+dfEbase.to_csv("Bench_predictions/A08_dfEbase.csv", index=False)
+#dfEbase: 1 country, mean over years, base for later getting Esector from Etot
+#################################################################################################
+#################################################################################################
 
 
 
