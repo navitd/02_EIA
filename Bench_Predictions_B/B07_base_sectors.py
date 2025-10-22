@@ -35,7 +35,7 @@ from func_multipliers_by_f import multipliers_by_f
 from func_plot_real_vs_predicted import plot_real_vs_predicted
 
 
-##########################################         functions from Benchmarking/Employment.py       ##########################################
+##########################################         functions       ##########################################
 def make_base_v(df,col_name,countries, years_for_base):
     dfbase = pd.DataFrame()  # start with empty DataFrame
     for country in countries:
@@ -70,6 +70,43 @@ def make_base_v(df,col_name,countries, years_for_base):
 
 def get_mask(df, country, year):
             return (df["country"] == country) & (df["year"] == year)
+
+
+
+#from base to sectors using tot
+def base_to_sectors(df_base, df_tot, var_name, cols_list, countries, year_range_future):
+    df_extrap = pd.DataFrame()
+    for country in countries:
+        for year in year_range_future:
+            dftemp = pd.DataFrame()  # create a new temp DataFrame each iteration
+
+            # select base for country
+            base_1country = df_base[df_base.country == country].copy()
+            base_1country.drop(columns=["country"], inplace=True)
+            base_1country = base_1country.set_index("sector")
+
+            # add HFCE or employees_compensation
+            if "employees_compensation" in base_1country.index:
+                base_1country.loc["employees_compensation"] = 0
+            elif "HFCE" in base_1country.index:
+                base_1country.loc["HFCE"] = 0
+
+            # ftot_value is the total value comes from extrapolation
+            ftot_value = df_tot[(df_tot.country == country) & (df_tot.year == int(year))][var_name+" total"].values[0]
+            #building a dataframe to concatenate with existing data
+            dftemp[var_name] = base_1country * ftot_value      
+            dftemp[var_name+" total"] = ftot_value
+            dftemp[var_name+" sector ratio"] = base_1country
+            dftemp["country"] = country
+            dftemp["year"] = year
+            # reset index to turn sector index into a column
+            dftemp.reset_index(inplace=True)
+            #reorder columns
+            dftemp = dftemp[cols_list]
+            # concatenate, continuing the index automatically
+            df_extrap = pd.concat([df_extrap, dftemp], axis=0, ignore_index=True)
+    return df_extrap
+
 
 
 '''
@@ -178,7 +215,6 @@ dfGDP  = pd.read_csv("Bench_predictions_B/B06_dfGDP.csv")
 dfoutput = pd.read_csv("Bench_predictions_B/B06_dfoutput.csv")
 dfGDPj_by_xj = pd.read_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv")
 
-# to delete
 dfHFCE_tot       = pd.read_csv("Bench_predictions_B/B06_dfHFCE_tot.csv")
 df8_tot          = pd.read_csv("Bench_predictions_B/B06_df8_tot.csv")
 df9_tot          = pd.read_csv("Bench_predictions_B/B06_df9_tot.csv")
@@ -300,41 +336,24 @@ for var1, var2 in zip(
 
 #B07.3 unfolding from tot to numbers
 #some have employees_compensation some have HFCE at the end
-dfHFCE_data_and_extrap = dfHFCE.copy()
-for country in countries:
-    for year in year_range_future:
-        dftemp = pd.DataFrame()  # create a new temp DataFrame each iteration
 
-        # select base for country
-        base_1country = HFCE_base[HFCE_base.country == country].copy()
-        base_1country.drop(columns=["country"], inplace=True)
-        base_1country = base_1country.set_index("sector")
+dfHFCE_data_and_extrap = pd.concat([dfHFCE.copy(), base_to_sectors(HFCE_base, dfHFCE_tot, 'HFCE', list(dfHFCE.columns), countries, year_range_future) ], axis=0, ignore_index=True)
+df8_data_and_extrap = pd.concat([df8.copy(), base_to_sectors(f8_base, df8_tot, '8 final demand', list(df8.columns), countries, year_range_future) ], axis=0, ignore_index=True)
+df9_data_and_extrap = pd.concat([df9.copy(), base_to_sectors(f9_base, df9_tot, '9 final demand', list(df9.columns), countries, year_range_future) ], axis=0, ignore_index=True)
+dfGDP_data_and_extrap = pd.concat([dfGDP.copy(), base_to_sectors(GDP_base, dfGDP_tot, 'GDP', list(dfGDP.columns), countries, year_range_future) ], axis=0, ignore_index=True)
+dfoutput_data_and_extrap = pd.concat([dfoutput.copy(), base_to_sectors(output_base, dfoutput_tot, 'output', list(dfoutput.columns), countries, year_range_future) ], axis=0, ignore_index=True)
+dfGDPj_by_xj_data_and_extrap = pd.concat([dfGDPj_by_xj.copy(), base_to_sectors(GDPj_by_xj_base, dfGDPj_by_xj_tot, 'GDPj_by_xj', list(dfGDPj_by_xj.columns), countries, year_range_future) ], axis=0, ignore_index=True)
 
-        # add HFCE or employees_compensation
-        if "employees_compensation" in base_1country.index:
-            base_1country.loc["employees_compensation"] = 0
-        elif "HFCE" in base_1country.index:
-            base_1country.loc["HFCE"] = 0
-
-        # ftot_value is the total value comes from extrapolation
-        ftot_value = dfHFCE_tot[(dfHFCE_tot.country == country) & (dfHFCE_tot.year == int(year))]["HFCE total"].values[0]
-        #building a dataframe to concatenate with existing data
-        dftemp["HFCE"] = base_1country * ftot_value      
-        dftemp["HFCE total"] = ftot_value
-        dftemp["HFCE sector ratio"] = base_1country
-        dftemp["country"] = country
-        dftemp["year"] = year
-        # reset index to turn sector index into a column
-        dftemp.reset_index(inplace=True)
-        #reorder columns
-        dftemp = dftemp[dfHFCE.columns]
-        # concatenate, continuing the index automatically
-        dfHFCE_data_and_extrap = pd.concat([dfHFCE_data_and_extrap, dftemp], axis=0, ignore_index=True)
 
 #generalize the above to all other vectors
 #fixe E below
 #save to files
 #add past years 1975-1995 by extrapolating with 1995
+
+#after I finish this - move to cagrs and gdpimpact graphs?
+#delete files I no longer need
+#document stages of B version (Later I will need to add things to the flow, document the flow) can I run them as 4 scripts?
+
 
 print()
 #Is this needed?
