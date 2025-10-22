@@ -85,12 +85,6 @@ def base_to_sectors(df_base, df_tot, var_name, cols_list, countries, year_range_
             base_1country.drop(columns=["country"], inplace=True)
             base_1country = base_1country.set_index("sector")
 
-            # add HFCE or employees_compensation
-            if "employees_compensation" in base_1country.index:
-                base_1country.loc["employees_compensation"] = 0
-            elif "HFCE" in base_1country.index:
-                base_1country.loc["HFCE"] = 0
-
             # ftot_value is the total value comes from extrapolation
             ftot_value = df_tot[(df_tot.country == country) & (df_tot.year == int(year))][var_name+" total"].values[0]
             #building a dataframe to concatenate with existing data
@@ -345,7 +339,7 @@ dfoutput_data_and_extrap = pd.concat([dfoutput.copy(), base_to_sectors(output_ba
 dfGDPj_by_xj_data_and_extrap = pd.concat([dfGDPj_by_xj.copy(), base_to_sectors(GDPj_by_xj_base, dfGDPj_by_xj_tot, 'GDPj_by_xj', list(dfGDPj_by_xj.columns), countries, year_range_future) ], axis=0, ignore_index=True)
 
 
-#generalize the above to all other vectors
+#output(HFCE) possibley output(f8) is not zero. it should be zero
 #fixe E below
 #save to files
 #add past years 1975-1995 by extrapolating with 1995
