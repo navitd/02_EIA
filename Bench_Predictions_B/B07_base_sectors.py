@@ -288,7 +288,7 @@ GDP_base = make_base_v(dfGDP,"GDP sector ratio",countries, years_for_base)
 output_base = make_base_v(dfoutput,"output sector ratio",countries, years_for_base)
 GDPj_by_xj_base = make_base_v(dfGDPj_by_xj,"GDPj_by_xj sector ratio",countries, years_for_base)
 
-#Tc_base.to_csv(f"Bench_predictions_B/B07_Tc_base_{n_years_for_base+1}years.csv", index=False)
+Tc_base.to_csv(f"Bench_predictions_B/B07_Tc_base_{n_years_for_base+1}years.csv", index=False)
 #correct the above- save Tc_base_wide. but how? it is different for each country
 HFCE_base.to_csv(f"Bench_predictions_B/B07_HFCE_base_{n_years_for_base+1}years.csv", index=False)
 f8_base.to_csv(f"Bench_predictions_B/B07_f8_base_{n_years_for_base+1}years.csv", index=False)
@@ -338,7 +338,14 @@ dfGDP_data_and_extrap = pd.concat([dfGDP.copy(), base_to_sectors(GDP_base, dfGDP
 dfoutput_data_and_extrap = pd.concat([dfoutput.copy(), base_to_sectors(output_base, dfoutput_tot, 'output', list(dfoutput.columns), countries, year_range_future) ], axis=0, ignore_index=True)
 dfGDPj_by_xj_data_and_extrap = pd.concat([dfGDPj_by_xj.copy(), base_to_sectors(GDPj_by_xj_base, dfGDPj_by_xj_tot, 'GDPj_by_xj', list(dfGDPj_by_xj.columns), countries, year_range_future) ], axis=0, ignore_index=True)
 
-#make E_data_and_extrap from Tc or from Ebase?
+
+
+dfHFCE_data_and_extrap.to_csv(f"Bench_predictions_B/B07_HFCE_data_and_extrap.csv", index=False)
+df8_data_and_extrap.to_csv(f"Bench_predictions_B/B07_df8_data_and_extrap.csv", index=False)
+df9_data_and_extrap.to_csv(f"Bench_predictions_B/B07_df9_data_and_extrap.csv", index=False)
+dfGDP_data_and_extrap.to_csv(f"Bench_predictions_B/B07_dfGDP_data_and_extrap.csv", index=False)
+dfoutput_data_and_extrap.to_csv(f"Bench_predictions_B/B07_dfoutput_data_and_extrap.csv", index=False)
+dfGDPj_by_xj_data_and_extrap.to_csv(f"Bench_predictions_B/B07_GDPj_by_xj_data_and_extrap.csv", index=False)
 
 
 
@@ -372,8 +379,9 @@ if 0:
 
 
 
-#fixe E below
+
 #save to files
+#correct the above- save Tc_base_wide. but how? it is different for each country
 #add past years 1975-1995 by extrapolating with 1995
 
 #after I finish this - move to cagrs and gdpimpact graphs?
@@ -382,175 +390,5 @@ if 0:
 
 
 print()
-
-################################################################################################
-################################################################################################
-# need to get Esector from Etot for - ? 
-# collecting E for base
-
-dfEbase_temp = dfE[dfE["year"].isin(years_for_E_base)].reset_index(drop=True).copy()
-dfEbase_temp["E_tot"] = (dfEbase_temp.groupby(["country", "year"])["Employment"].transform("sum"))
-dfEbase_temp["E sector to tot ratio"] = dfEbase_temp.Employment / dfEbase_temp.E_tot
-dfEbase_temp.drop(columns=["Employment", "E_tot"], inplace=True)
-dfEbase = pd.DataFrame()
-for country in countries:
-    dfEbase_1country = dfEbase_temp[
-        (dfEbase_temp['country'] == country) & 
-        (dfEbase_temp['year'].isin(years_for_gdp_base))
-    ]
-    dfEbase_1country_mean = (
-        dfEbase_1country
-        .groupby(["country", "sector"])["E sector to tot ratio"]
-        .mean()
-        .reset_index()
-    )
-    dfEbase = pd.concat([dfEbase, dfEbase_1country_mean], ignore_index=True)
-
-dfEbase.to_csv("Bench_predictions/B08_dfEbase.csv", index=False)
-#dfEbase: 1 country, mean over years, base for later getting Esector from Etot
-#################################################################################################
-#################################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 1. upload OECD intput-output tables 1995-2020
-###############################################   
-for country in countries:
-    for year in years_for_base:
-        print(country, year)
-        # data upload
-        Tc = (
-            dfTc.loc[get_mask(dfTc,country,year)]
-            .pivot(index="selling_sector", columns="buying_sector", values="Tc")
-            .copy()
-        )    
-        T = Tc.iloc[:-1,:-1].copy()
-        outputc = dfoutput.loc[get_mask(dfoutput, country, year)].copy()
-        GDPc = dfGDP.loc[get_mask(dfGDP, country, year)].copy()
-        fHFCEc = dfHFCE.loc[get_mask(dfHFCE,country,year)].copy() 
-        f8c = df8.loc[get_mask(df8, country, year)].copy()
-        f9c = df9.loc[get_mask(df9, country, year)].copy()
-        GDPj_by_xjc = dfGDPj_by_xj.loc[get_mask(dfGDPj_by_xj,country,year)].copy()
-        E = dfE.loc[get_mask(dfE, country, year)].copy()
-        #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
-        # I do this to E because E doesn't have Etot etc. 
-        # dfE already has data until 2040 - base extrapolation already done.
-        E.drop(columns=['country','year'], inplace=True)
-        E.set_index('sector', inplace=True)
-        E.loc["HFCE"] = 0
-        
-
-
-
-
-
-
- 
-        '''
-        for GDP impact
-        # . calculate multipliers
-        #############################
-        mo = Ldf.sum(axis=0)                       #dollar's worth of outcome per 1 dollar's worth of new final demand
-        moc_trancated = Lcdf.iloc[:-1].sum(axis=0) #dollar's worth of outcome per 1 dollar's worth of new final demand
-
-        # income multipliers mh
-        Ej_by_xj = Tc.iloc[-1,:-1] #hosehold income received per dollar's worth of sector output  
-        income_F_multipliers = Ldf.mul(Ej_by_xj, axis=0) #household income recieved per dollar's worth of secotr final demand
-        # Ej/xj*Ljk - Ljk is how much output was sold from j to k. and j is the sector that paid the salaries, so Ej/xj is used.
-        sum_income_F_multipliers = income_F_multipliers.sum(axis=0) 
-        # m(h)_k = sum_j(Ej/xj*Ljk) - sum over j of the detailed income_F_multipliers - sum over the rows
-        # an additional dolar of final demand in sector k generates m(h)_k dollars of new household income when all direct and
-        # indirect effects are converted into dollar estimates of income.
-        # income_F_multipliers is the details for each sector - how much income is generated by an additional dollar of final demand in sector k for each of the other sectors
-        # the above is only direct+indirect effects
-        # direct + indirect + induced effect - same calculation but with Lcdf
-
-        #income multipliers second time
-        Ej_by_xj = Tc.iloc[-1,:]
-        
-        # GDP multipliers
-        GDPc = OECD.loc['VALU', simple_II_labels + ['HFCE']]
-        GDPj_by_xj = safe_divide_vector(GDPc, outputc)
-
-        # summary of multipliers without typeI and typeII - 
-        # 6 multipliers output, income, GDP, X sector2sector X simple model, closed model
-        # all of the closed model multipliers are trancated (the row and column of salaries and final demand are not included)
-        s2s_mo = Ldf                       # direct + indirect effect
-        s2s_moc = Lcdf                     # direct + indirect + iduced effect
-        s2s_mh = Ldf.mul(Ej_by_xj.iloc[ :-1 ], axis=0) 
-        s2s_mhc = Lcdf.mul(Ej_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
-        s2s_mg =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
-        s2s_mgc = Lcdf.mul(GDPj_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
-        #sector2market multipliers
-        #mo = s2s_mo.sum(axis=0)
-        #moc = s2s_moc.sum(axis=0)
-        #mh = s2s_mh.sum(axis=0)
-        #mhc = s2s_mhc.sum(axis=0)
-        #mg = s2s_mg.sum(axis=0)
-        #mgc = s2s_mgc.sum(axis=0)
-
-
-        ###################################################
-        # multipliers: direct, indirect, induced separately
-        ###################################################
-        n = T.shape[0]
-        # direct
-        direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
-        direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
-        np.fill_diagonal(direct_h.values, Ej_by_xj.values)
-        direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
-        np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
-        #indirect
-        indirect_o = s2s_mo - direct_o
-        #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
-        indirect_h  = s2s_mh - direct_h
-        #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
-        indirect_g  = s2s_mg - direct_g
-        #induced
-        induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
-        induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
-        induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
-
-        #################################
-        # impacts instead of multipliers
-        #################################
-        
-        # impacts
-        # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
-        scale_df_by_series(direct_o, f8c.iloc[:-1]) # , 'Direct output impact' 
-        #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
-        #multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
-        #multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
-        #multipliers_by_f(direct_h, fcdf[:-1], 'Direct income impact'), 
-        #multipliers_by_f(indirect_h, fcdf[:-1], 'Indirect income impact'),
-        #multipliers_by_f(induced_h, fcdf[:-1], 'Induced income impact'),  
-        #multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf[:-1], 'Total income impact'),
-        #multipliers_by_f(direct_g, fcdf[:-1], 'Direct GDP impact'), 
-        #multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
-        #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
-        #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
-        
-             
-        dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
-        dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
-        '''
-        
-
-
-end_time = time.time()
-print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 
 
