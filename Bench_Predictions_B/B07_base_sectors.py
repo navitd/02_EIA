@@ -288,14 +288,14 @@ GDP_base = make_base_v(dfGDP,"GDP sector ratio",countries, years_for_base)
 output_base = make_base_v(dfoutput,"output sector ratio",countries, years_for_base)
 GDPj_by_xj_base = make_base_v(dfGDPj_by_xj,"GDPj_by_xj sector ratio",countries, years_for_base)
 
-Tc_base.to_csv(f"Bench_predictions_B/B07_Tc_base_{n_years_for_base+1}years.csv", index=False)
+Tc_base.to_csv(f"Bench_predictions_B/B071_Tc_base_{n_years_for_base+1}years.csv", index=False)
 #correct the above- save Tc_base_wide. but how? it is different for each country
-HFCE_base.to_csv(f"Bench_predictions_B/B07_HFCE_base_{n_years_for_base+1}years.csv", index=False)
-f8_base.to_csv(f"Bench_predictions_B/B07_f8_base_{n_years_for_base+1}years.csv", index=False)
-f9_base.to_csv(f"Bench_predictions_B/B07_f9_base_{n_years_for_base+1}years.csv", index=False)
-GDP_base.to_csv(f"Bench_predictions_B/B07_GDP_base_{n_years_for_base+1}years.csv", index=False)
-output_base.to_csv(f"Bench_predictions_B/B07_output_base_{n_years_for_base+1}years.csv", index=False)
-GDPj_by_xj_base.to_csv(f"Bench_predictions_B/B07_GDPj_by_xj_base_{n_years_for_base+1}years.csv", index=False)
+HFCE_base.to_csv(f"Bench_predictions_B/B071_HFCE_base_{n_years_for_base+1}years.csv", index=False)
+f8_base.to_csv(f"Bench_predictions_B/B071_f8_base_{n_years_for_base+1}years.csv", index=False)
+f9_base.to_csv(f"Bench_predictions_B/B071_f9_base_{n_years_for_base+1}years.csv", index=False)
+GDP_base.to_csv(f"Bench_predictions_B/B071_GDP_base_{n_years_for_base+1}years.csv", index=False)
+output_base.to_csv(f"Bench_predictions_B/B071_output_base_{n_years_for_base+1}years.csv", index=False)
+GDPj_by_xj_base.to_csv(f"Bench_predictions_B/B071_GDPj_by_xj_base_{n_years_for_base+1}years.csv", index=False)
 #################################################################################################
 #################################################################################################
 
@@ -340,12 +340,12 @@ dfGDPj_by_xj_data_and_extrap = pd.concat([dfGDPj_by_xj.copy(), base_to_sectors(G
 
 
 
-dfHFCE_data_and_extrap.to_csv(f"Bench_predictions_B/B07_HFCE_data_and_extrap.csv", index=False)
-df8_data_and_extrap.to_csv(f"Bench_predictions_B/B07_df8_data_and_extrap.csv", index=False)
-df9_data_and_extrap.to_csv(f"Bench_predictions_B/B07_df9_data_and_extrap.csv", index=False)
-dfGDP_data_and_extrap.to_csv(f"Bench_predictions_B/B07_dfGDP_data_and_extrap.csv", index=False)
-dfoutput_data_and_extrap.to_csv(f"Bench_predictions_B/B07_dfoutput_data_and_extrap.csv", index=False)
-dfGDPj_by_xj_data_and_extrap.to_csv(f"Bench_predictions_B/B07_GDPj_by_xj_data_and_extrap.csv", index=False)
+dfHFCE_data_and_extrap.to_csv(f"Bench_predictions_B/B072_HFCE_data_and_extrap.csv", index=False)
+df8_data_and_extrap.to_csv(f"Bench_predictions_B/B072_df8_data_and_extrap.csv", index=False)
+df9_data_and_extrap.to_csv(f"Bench_predictions_B/B072_df9_data_and_extrap.csv", index=False)
+dfGDP_data_and_extrap.to_csv(f"Bench_predictions_B/B072_dfGDP_data_and_extrap.csv", index=False)
+dfoutput_data_and_extrap.to_csv(f"Bench_predictions_B/B072_dfoutput_data_and_extrap.csv", index=False)
+dfGDPj_by_xj_data_and_extrap.to_csv(f"Bench_predictions_B/B072_GDPj_by_xj_data_and_extrap.csv", index=False)
 
 
 
@@ -380,7 +380,7 @@ if 0:
 
 
 
-#save to files
+
 #correct the above- save Tc_base_wide. but how? it is different for each country
 #add past years 1975-1995 by extrapolating with 1995
 
