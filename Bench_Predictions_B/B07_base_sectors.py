@@ -135,7 +135,7 @@ def collect_m(m, country, year, m_value_name, dfm):
 ####################################################         functions that plot       ######################################################
 
 ##################################################        functions that calculate        ######################################################
-
+'''
 def multipliers2prediction(s2s_mo, fdf_year2, column_name):
     predicted_output_year2_np  = np.round(s2s_mo.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
     
@@ -181,7 +181,6 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
     dftemp2 = dftemp2[cols]
     dfimpact = pd.concat([dfimpact, dftemp2], ignore_index=True)
     return dfimpact
-'''
 
 
 
@@ -289,7 +288,8 @@ GDP_base = make_base_v(dfGDP,"GDP sector ratio",countries, years_for_base)
 output_base = make_base_v(dfoutput,"output sector ratio",countries, years_for_base)
 GDPj_by_xj_base = make_base_v(dfGDPj_by_xj,"GDPj_by_xj sector ratio",countries, years_for_base)
 
-Tc_base.to_csv(f"Bench_predictions_B/B07_Tc_base_{n_years_for_base+1}years.csv", index=False)
+#Tc_base.to_csv(f"Bench_predictions_B/B07_Tc_base_{n_years_for_base+1}years.csv", index=False)
+#correct the above- save Tc_base_wide. but how? it is different for each country
 HFCE_base.to_csv(f"Bench_predictions_B/B07_HFCE_base_{n_years_for_base+1}years.csv", index=False)
 f8_base.to_csv(f"Bench_predictions_B/B07_f8_base_{n_years_for_base+1}years.csv", index=False)
 f9_base.to_csv(f"Bench_predictions_B/B07_f9_base_{n_years_for_base+1}years.csv", index=False)
@@ -338,8 +338,40 @@ dfGDP_data_and_extrap = pd.concat([dfGDP.copy(), base_to_sectors(GDP_base, dfGDP
 dfoutput_data_and_extrap = pd.concat([dfoutput.copy(), base_to_sectors(output_base, dfoutput_tot, 'output', list(dfoutput.columns), countries, year_range_future) ], axis=0, ignore_index=True)
 dfGDPj_by_xj_data_and_extrap = pd.concat([dfGDPj_by_xj.copy(), base_to_sectors(GDPj_by_xj_base, dfGDPj_by_xj_tot, 'GDPj_by_xj', list(dfGDPj_by_xj.columns), countries, year_range_future) ], axis=0, ignore_index=True)
 
+#make E_data_and_extrap from Tc or from Ebase?
 
-#output(HFCE) possibley output(f8) is not zero. it should be zero
+
+
+# check relationship between f8 and outputc
+if 0:
+    countrytemp='USA'
+    yeartemp = 2040
+    #check from B06
+    f8_col_name = "8 final demand"
+    f9_col_name = "9 final demand"
+    Tc_1country = dfTc[ (dfTc['country'] == countrytemp) & (dfTc['year']==(2020 if yeartemp>=2020 else yeartemp)) ]
+    Tc_base_wide = Tc_1country.pivot(index="selling_sector", columns="buying_sector", values="Tc") #I need to calculate base again because a different year (I want to see accuracy)
+    Tc_base_wide = Tc_base_wide[[c for c in Tc_base_wide.columns if c != 'HFCE'] + ['HFCE']]
+
+    f8temp = df8_data_and_extrap[(df8_data_and_extrap.country == countrytemp) & (df8_data_and_extrap.year == yeartemp)].set_index('sector')[f8_col_name]
+    f8temp.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+    f9temp = df9_data_and_extrap[(df9_data_and_extrap.country == countrytemp) & (df9_data_and_extrap.year == yeartemp)].set_index('sector')[f9_col_name]
+    f9temp.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+
+    Lcdftemp,_ = clc_L(Tc_base_wide)
+    xchecktemp = multipliers2prediction(Lcdftemp, f8temp, "predicted output")
+    xchecktemp.rename(index={'employees_compensation':"HFCE"},inplace=True)
+
+    outputctemp = dfoutput_data_and_extrap[(dfoutput_data_and_extrap.country==countrytemp) & (dfoutput_data_and_extrap.year==yeartemp)][['sector','output']].set_index('sector')
+    temp = outputctemp.merge(xchecktemp, left_index=True, right_index=True)
+    temp["diff"] = (temp.iloc[:,0] - temp.iloc[:,1]).abs()
+    print(temp)
+
+    #good! the extrapolated f8, base Tc and extrapolated output agree for 2024 and other future years!
+    print()
+
+
+
 #fixe E below
 #save to files
 #add past years 1975-1995 by extrapolating with 1995
@@ -350,13 +382,10 @@ dfGDPj_by_xj_data_and_extrap = pd.concat([dfGDPj_by_xj.copy(), base_to_sectors(G
 
 
 print()
-#Is this needed?
-#I thought we already ahve Esectors
-#should I add E
+
 ################################################################################################
 ################################################################################################
-# This is the important part of A08
-# preparing  for base for all future years
+# need to get Esector from Etot for - ? 
 # collecting E for base
 
 dfEbase_temp = dfE[dfE["year"].isin(years_for_E_base)].reset_index(drop=True).copy()
@@ -377,7 +406,7 @@ for country in countries:
     )
     dfEbase = pd.concat([dfEbase, dfEbase_1country_mean], ignore_index=True)
 
-dfEbase.to_csv("Bench_predictions/A08_dfEbase.csv", index=False)
+dfEbase.to_csv("Bench_predictions/B08_dfEbase.csv", index=False)
 #dfEbase: 1 country, mean over years, base for later getting Esector from Etot
 #################################################################################################
 #################################################################################################

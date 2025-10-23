@@ -344,7 +344,7 @@ for country in countries:
         #check:
         #xcheck = multipliers2prediction(Lcdf, f8c, "predicted output")
         #diff = (xcheck.sub(outputc, axis=0)).abs()
-        #print('difference between Lcdf#f7c and outputc\n',diff)
+        #print('difference between Lcdf#f8c and outputc\n',diff)
         #print('                  outputc     Lcdf@ftestc\n',pd.concat([outputc, xcheck],axis=1))
         #print()
 
@@ -441,7 +441,7 @@ if 0:
     dfGDPj_by_xj_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj_tot.csv", index=False)
 
 
-if 0:
+if 1:
     #checks
     #1. GDPj_by_xj *output = GDP??
     #the above is not true. it's true only for _xj_, not the summing of output
@@ -496,8 +496,8 @@ if 0:
     #print( pd.concat([output_tot1.iloc[[0]], output_tot2.iloc[[0]]], axis=0) )
 
 
-    year = 2020
-    country = 'DEU'
+    year = 2018
+    country = 'USA'
     Tctemp = (
         dfTc[(dfTc.country == country) & (dfTc.year == year)]
         .pivot(index="selling_sector", columns="buying_sector", values="Tc")
