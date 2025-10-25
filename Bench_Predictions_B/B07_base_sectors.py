@@ -340,12 +340,12 @@ dfGDPj_by_xj_data_and_extrap = pd.concat([dfGDPj_by_xj.copy(), base_to_sectors(G
 
 
 
-dfHFCE_data_and_extrap.to_csv(f"Bench_predictions_B/B072_HFCE_data_and_extrap.csv", index=False)
+dfHFCE_data_and_extrap.to_csv(f"Bench_predictions_B/B072_dfHFCE_data_and_extrap.csv", index=False)
 df8_data_and_extrap.to_csv(f"Bench_predictions_B/B072_df8_data_and_extrap.csv", index=False)
 df9_data_and_extrap.to_csv(f"Bench_predictions_B/B072_df9_data_and_extrap.csv", index=False)
 dfGDP_data_and_extrap.to_csv(f"Bench_predictions_B/B072_dfGDP_data_and_extrap.csv", index=False)
 dfoutput_data_and_extrap.to_csv(f"Bench_predictions_B/B072_dfoutput_data_and_extrap.csv", index=False)
-dfGDPj_by_xj_data_and_extrap.to_csv(f"Bench_predictions_B/B072_GDPj_by_xj_data_and_extrap.csv", index=False)
+dfGDPj_by_xj_data_and_extrap.to_csv(f"Bench_predictions_B/B072_dfGDPj_by_xj_data_and_extrap.csv", index=False)
 
 
 

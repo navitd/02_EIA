@@ -19,6 +19,11 @@ from func_clc_L import clc_L
 from func_safe_divide import safe_divide, safe_divide_vector
 
 
+note: some of the functions plotting to xlsx had minor changes in graph1_check_shares which are not updated household_expenditure
+should I update here or change the names of the functions there?
+I still need to decide
+
+
 
 def print_impacts_to_excel( year,
     direct_o: pd.DataFrame, indirect_o: pd.DataFrame, induced_o: pd.DataFrame, s2s_moc: pd.DataFrame,

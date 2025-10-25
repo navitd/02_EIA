@@ -33,6 +33,8 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 from openpyxl.cell.cell import MergedCell
+import inspect
+
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
 from func_data_upload_OECD_without_E import data_upload_OECD_without_E
@@ -631,112 +633,99 @@ def plot_stacked_ict_impact(backward_df, forward_df, year, value_col, title):
 
 
 
-# fig. 5 GDP impact on Education and Health
-# fig. 5
-def get_one_year_imapct_on_sector(df, year, forward_or_backward, impacting_sectors, impacted_sectors, value_column):
-    if forward_or_backward == 'backward':
-        col = 'buying sector'
-    else:
-        col = 'selling sector'
-    #first slicing 
-    one_year_impact = df[
-        (df['year'] == year) & 
-        (df[col].isin(impacting_sectors))       
-    ][['country', 'year', 'selling sector', 'buying sector', value_column, 'national GDP']]
-    # division
-    one_year_impact[value_column] = ( one_year_impact[value_column] / one_year_impact['national GDP'] )
-    one_year_impact.drop(columns=['national GDP'], inplace=True)
-    one_year_impact = one_year_impact[one_year_impact['buying sector'].isin(impacted_sectors)]
-    # grouping
-    one_year_impact_grouped = one_year_impact.groupby(['country', 'year'], as_index=False)[value_column].sum()
-    one_year_impact_grouped = one_year_impact_grouped.sort_values(by='GDP impact total', ascending=False).reset_index(drop=True)
+
+##################################################           print to excel            ############################################
+
+def create_excel_file_with_title(ws_title: str, filename) -> int:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = ws_title
+
+    # Styles
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    # Merge title box over first 4 columns and 3 rows
+    ws.merge_cells(start_row=1, start_column=1, end_row=3, end_column=4)
+    cell = ws.cell(row=1, column=1)
+    cell.value = f"EIA details - {ws_title}"
+    cell.fill = green
+    cell.font = bold_font
+    cell.alignment = center_align
+    cell.border = black_border
+
+    wb.save(filename)
+
+    return 1  # Next available column after title box
+
+
+
+def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col: int, filename, title_size=3) -> int:
+    # Infer matrix name from variable name if not provided
+    if matrix_name is None:
+        frame = inspect.currentframe().f_back
+        matrix_name = next((name for name, val in frame.f_locals.items() if val is df), "UnnamedMatrix")
     
-    return one_year_impact_grouped
+    wb = load_workbook(filename)
+    if worksheet_name not in wb.sheetnames:
+        raise ValueError(f"Sheet named '{worksheet_name}' does not exist. Create it first using create_excel_file_with_title.")
+    ws = wb[worksheet_name]
 
-
-
-def plot_impact_with_table(df_first, df_last, value_column, graph_title):
-    # Extract and validate years
-    unique_years_first = df_first['year'].unique()
-    unique_years_last = df_last['year'].unique()
-
-    if len(unique_years_first) != 1:
-        raise ValueError(f"df_first contains multiple years: {unique_years_first}")
-    if len(unique_years_last) != 1:
-        raise ValueError(f"df_last contains multiple years: {unique_years_last}")
-
-    first_year = unique_years_first[0]
-    last_year = unique_years_last[0]
-
-    # Merge and sort
-    merged = df_last[['country', value_column]].merge(
-        df_first[['country', value_column]],
-        on='country',
-        suffixes=('_last', '_first')
+    # Styles
+    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
     )
-    merged = merged.sort_values(by=f'{value_column}_last', ascending=False).reset_index(drop=True)
-    merged['Rank'] = merged.index + 1
 
-    # Convert to percent
-    merged[f'{value_column}_first'] *= 100
-    merged[f'{value_column}_last'] *= 100
+    # Convert DataFrame to rows (including index and header)
+    rows = list(dataframe_to_rows(df, index=True, header=True))
+    n_rows = len(rows)
+    n_cols = len(rows[0])  # includes index
 
-    # Prepare table data with % symbols
-    table_data = merged[['Rank', 'country', f'{value_column}_first', f'{value_column}_last']].copy()
-    table_data[f'{value_column}_first'] = table_data[f'{value_column}_first'].map(lambda x: f'{x:.2f}%')
-    table_data[f'{value_column}_last'] = table_data[f'{value_column}_last'].map(lambda x: f'{x:.2f}%')
-    table_vals = table_data.values.tolist()
+    # Green title merged over up to 4 columns
+    merge_end_col = min(start_col + title_size, start_col + n_cols - 1)
+    if merge_end_col > start_col:
+        ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
+    title_cell = ws.cell(row=4, column=start_col)
+    title_cell.value = matrix_name
+    title_cell.fill = green
+    title_cell.font = bold_font
+    title_cell.alignment = center_align
 
-    column_labels = ['Rank', 'Country', str(first_year), str(last_year)]
+    # Write the matrix below the title
+    for r_idx, row in enumerate(rows, start=5):
+        for c_idx, val in enumerate(row):
+            col = start_col + c_idx
+            cell = ws.cell(row=r_idx, column=col, value=val)
+            if r_idx == 5 or c_idx == 0:  # header or index
+                cell.fill = light_blue
+                cell.font = bold_font
+            cell.border = black_border
+            cell.alignment = center_align
 
-    countries = merged['country']
-    values_first = merged[f'{value_column}_first_raw'] = merged[f'{value_column}_first']
-    values_last = merged[f'{value_column}_last_raw'] = merged[f'{value_column}_last']
-    x = np.arange(len(countries))
-    bar_width = 0.4
+    # Add a black separator column
+    sep_col = start_col + n_cols
+    for r in range(4, 5 + n_rows):
+        cell = ws.cell(row=r, column=sep_col)
+        cell.border = black_border
+        cell.alignment = center_align
 
-    fig = plt.figure(figsize=(16, 6))
-    spec = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[1, 3], wspace=0.3)
+    wb.save(filename)
 
-    # Table
-    ax_table = fig.add_subplot(spec[0])
-    table = ax_table.table(
-        cellText=table_vals,
-        colLabels=column_labels,
-        cellLoc='center',
-        loc='center'
-    )
-    ax_table.set_title('Education\nICT Forward GDP Impact Ranking', pad=30, fontsize=12)
-    ax_table.axis('off')
-
-    # Bar chart
-    ax_bar = fig.add_subplot(spec[1])
-    color_first = ['lightgreen' if c == 'CAN' else 'lightblue' for c in countries]
-    color_last = ['darkgreen' if c == 'CAN' else 'blue' for c in countries]
-
-    bars1 = ax_bar.bar(x - bar_width/2, values_first, width=bar_width, color=color_first, label=str(first_year))
-    bars2 = ax_bar.bar(x + bar_width/2, values_last, width=bar_width, color=color_last, label=str(last_year))
-
-    # Annotations
-    for i in range(len(countries)):
-        ax_bar.text(x[i] - bar_width/2, values_first[i] + 0.3, f'{values_first[i]:.2f}%', ha='center', va='bottom', fontsize=8)
-        ax_bar.text(x[i] + bar_width/2, values_last[i] + 0.3, f'{values_last[i]:.2f}%', ha='center', va='bottom', fontsize=8)
-
-    ax_bar.set_xticks(x)
-    ax_bar.set_xticklabels(countries, rotation=45, ha='right')
-    ax_bar.set_ylabel('GDP Impact (%)')
-    ax_bar.set_title(graph_title)
-
-    max_height = max(max(values_first), max(values_last))
-    ax_bar.set_ylim(0, max_height * 1.15)
-
-    dummy1 = plt.Rectangle((0,0),1,1,color='lightblue')
-    dummy2 = plt.Rectangle((0,0),1,1,color='blue')
-    ax_bar.legend([dummy1, dummy2], [str(first_year), str(last_year)], loc='upper right')
-
-    plt.tight_layout()
-    plt.show()
-
+    return sep_col + 1  # Return column to start the next matrix (skip separator too)
 
 
 
@@ -861,35 +850,30 @@ simple_II_labels = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T1
                  'C25', 'C26', 'C27', 'C28', 'C29', 'C30', 'C31T33', 'D', 'E', 'F', 'G', 'H49', 'H50', 'H51', 'H52', 'H53', 'I', 'J58T60', 'J61',
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 
-
-
-
 first_year_4graph = 2014
 last_year_4graph = 2024
 dfoutput_4graph = dfoutput[(dfoutput.year >= first_year_4graph) & (dfoutput.year <= last_year_4graph) ].copy()
 
 
-
-
-
-
 ##########################################             Benchmark  plots            ######################################################
 
+
 print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
-# graph 1,2 for output
-
-# fig 1: output CAGR 
-ICT_cagr = clc_cagr(dfoutput_4graph, first_year_4graph, last_year_4graph,'output')
-# fig1: plot output CAGR
-#plot_cagr(ICT_cagr, f'Average CAGR for ICT sectors ({first_year_4graph}–{last_year_4graph})')
-
-#print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year_4graph}-{last_year_4graph})')
 
 
 # fig 2: average ICT sector share in total output 2010-2020
 # data manipulation for figure 2: output share of ICT sectors
 output_shares, ICT_output_shares = get_share(dfoutput_4graph, first_year_4graph, last_year_4graph, ICTsectors,'output')
 
+#print to an excel file
+xlsx_filename = "Bench_predictions_B/B10 output shares graph1.xlsx"
+worksheet_name = f"output shares {first_year_4graph}-{last_year_4graph}"
+start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
+start_col = append_styled_matrix_to_excel(output_shares, 'output_shares', worksheet_name, start_col, filename=xlsx_filename)
+start_col = append_styled_matrix_to_excel(ICT_output_shares, 'ICT_output_shares', worksheet_name, start_col, filename=xlsx_filename)
+
+value_column = "output"
+title = f'Stacked Average ICT output Share by Country, {first_year_4graph}-{last_year_4graph}'
 # Invert dictionary ICT_factors
 sector_to_category = {}
 for category, sectors in ICT_factors.items():
@@ -901,54 +885,57 @@ for category, sectors in ICT_factors.items():
 
 # Filter for ICT sectors
 ICTsectors = list(sector_to_category.keys())
-ICT_output_shares = output_shares.loc[output_shares['sector'].isin(ICTsectors), ['country', 'sector', f'average_{'output'}_share']].copy()
+ICT_shares = ICT_output_shares.loc[ICT_output_shares['sector'].isin(ICTsectors), ['country', 'sector', f'average_{value_column}_share']].copy()
 
 # Map to ICT category
-ICT_output_shares['ICT_category'] = ICT_output_shares['sector'].map(sector_to_category)
+ICT_shares['ICT_category'] = ICT_shares['sector'].map(sector_to_category)
 
 # Group by country and ICT_category, sum average_output_share
-grouped = ICT_output_shares.groupby(['country', 'ICT_category'])[f'average_output_share'].sum().unstack(fill_value=0)
+grouped = ICT_shares.groupby(['country', 'ICT_category'])[f'average_{value_column}_share'].sum().unstack(fill_value=0)
                                                                                         # country and ICT_category are the index. unstack will create columns for each ICT_category
-                                                                                        # fill_value=0 will fill NaN with 0
+                                                                                        # fill_value=0 will fill NaN with 0                                                                                    
 # Reorder columns for consistent stacking: bottom to top
 desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services']
 
-group_level='category'
-value_column='output'
-value_col = f'average_{value_column}_share'
-
-if group_level == 'category':
-    group_cols = ['country', 'ICT_category']
-    label_col = 'ICT_category'
-    title_suffix = 'ICT Categories'
-else:
-    group_cols = ['country', 'sector']
-    label_col = 'sector'
-    title_suffix = 'ICT Sectors'
-
-
-# Sort countries by total share
+# Sum across ICT categories to get total ICT share per country, then sort descending
 grouped['total'] = grouped.sum(axis=1)
 grouped = grouped.sort_values('total', ascending=False).drop(columns='total')
 
-# Plot grouped bars
-n_countries = len(grouped.index)
-n_groups = len(grouped.columns)
-x = np.arange(n_countries)
-width = 0.8 / n_groups
+start_col = append_styled_matrix_to_excel(grouped, 'ICT_output_shares by category', worksheet_name, start_col, filename=xlsx_filename) 
 
+# Now `countries` is updated to match the new order
+countries = grouped.index.tolist()
+
+# Continue with plotting as before
+#colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0']  # old colrs
+#colors = ['#4CAF50', '#CD7F32', '#FFC107', '#2196F3']  # green - Manufacturing, bronze - wholeselling, yellow - software, blue- comm.
+#colors = ['#4CAF50', '#B75C2B', '#FFC107', '#2196F3']  # green, reddish bronze, yellow, blue
+colors = ['#4CAF50', '#B75C2B', '#FFEB3B', '#5F9EA0']  # green, reddish bronze, light yellow, blue-gray
+
+bottom = np.zeros(len(countries))
 plt.figure(figsize=(10, 6))
-for i, col in enumerate(grouped.columns):
-    plt.bar(x + i * width, grouped[col] * 100, width, label=col)
 
-plt.xticks(x + width * (n_groups - 1) / 2, grouped.index, rotation=45, ha='right')
+for idx, category in enumerate(desired_order):
+    values = grouped[category].values
+    #bars = plt.bar(countries, values, bottom=bottom, color=colors[idx], label=category)
+    bars = plt.bar(countries, values * 100, bottom=bottom * 100, color=colors[idx], label=category)
+    bottom += values
+    
+# Add % labels on top
+for i, total in enumerate(bottom):
+    plt.text(i, total * 100 + 0.2, f"{total * 100:.1f}%", ha='center', va='bottom', fontsize=9)
+
+#plt.ylabel('Average ICT Output Share')
 plt.ylabel(f'Average ICT {value_column} Share (%)')
-plt.title(f'ICT Shares by {title_suffix}')
-plt.legend(title=title_suffix, bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.title(title)
+plt.xticks(rotation=45, ha='right')
+plt.legend(title="ICT Category", bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.tight_layout()
 plt.show()
 
-
+#from print2xls3
+print()
+#start_col = append_styled_series_to_excel(outputc, 'outputc', year, start_col, filename=output_filename )
 
 
 
@@ -987,218 +974,3 @@ if 0:
 
 print('graphs 1 and 2 are done')
 
-
-
-
-'''
-# 1. collect data for graphs
-############################  
- 
-# dataframes for plotting (not for extrapolation)
-dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
-dfEimpact = pd.DataFrame()
-
-for country in countries:
-    for year in year_range:
-        print(country, year)
-        
-        # Tc,T,Lc,L extrapolated
-        #convert Tc to 46x46 to fid into clc_L
-        # slice Tc - not with slice_m becuase no year
-        Tc_1country = Tc_extrap[(Tc_extrap.country==country)].copy()
-        Tc_1country.drop(columns=['country'], inplace=True)
-        Tc = Tc_1country.pivot(
-            index="selling_sector",
-            columns="buying_sector",
-            values="Tc"
-        )
-        Tc = Tc[[c for c in Tc.columns if c != 'HFCE'] + ['HFCE']] #put 'HFCE' at the end
-        
-        #I need a 46x46 Textrap to insert here
-        Lcdf, Lc_minus_I = clc_L(Tc)
-        #Lc from Tc - the same for all  years but differs for different countries
-        T = Tc.loc[simple_II_labels,simple_II_labels].copy()
-        Ldf, L_minus_I = clc_L(T)
-            
-            
-#other vectors I need to slice from the big dfs, not collect
-#here between 2011 and 20202 this is data. if I have ratio there I can use it.
-#    E should not come from extrapolated E, but rather from Lc.
-#    the Lc number is the correct Etot
-#    I should use it as Etot and infer E sector from it.
-#    by Esector/Etot
-Etot = outputc.loc["HFCE"]
-E = (dfEbase[dfEbase["country"] == country].drop(columns=["country"]).set_index("sector")* Etot)
-E.loc["HFCE"] = 0
-            
-
-
-        # 3. calculate multipliers
-        #############################
-        
-        mo = Ldf.sum(axis=0)                       #dollar's worth of outcome per 1 dollar's worth of new final demand
-        moc_trancated = Lcdf.iloc[:-1].sum(axis=0) #dollar's worth of outcome per 1 dollar's worth of new final demand
-
-        # income multipliers mh
-        Ej_by_xj = Tc.iloc[-1,:-1] #hosehold income received per dollar's worth of sector output  
-        income_F_multipliers = Ldf.mul(Ej_by_xj, axis=0) #household income recieved per dollar's worth of secotr final demand
-        # Ej/xj*Ljk - Ljk is how much output was sold from j to k. and j is the sector that paid the salaries, so Ej/xj is used.
-        sum_income_F_multipliers = income_F_multipliers.sum(axis=0) 
-        # m(h)_k = sum_j(Ej/xj*Ljk) - sum over j of the detailed income_F_multipliers - sum over the rows
-        # an additional dolar of final demand in sector k generates m(h)_k dollars of new household income when all direct and
-        # indirect effects are converted into dollar estimates of income.
-        # income_F_multipliers is the details for each sector - how much income is generated by an additional dollar of final demand in sector k for each of the other sectors
-        # the above is only direct+indirect effects
-        # direct + indirect + induced effect - same calculation but with Lcdf
-
-        #income multipliers second time
-        Ej_by_xj = Tc.iloc[-1,:]
-        
-        # summary of multipliers without typeI and typeII - 
-        # 6 multipliers output, income, GDP, X sector2sector X simple model, closed model
-        # all of the closed model multipliers are trancated (the row and column of salaries and final demand are not included)
-        s2s_mo = Ldf                       # direct + indirect effect
-        s2s_moc = Lcdf                     # direct + indirect + iduced effect
-        s2s_mh = Ldf.mul(Ej_by_xj.iloc[ :-1 ], axis=0) 
-        s2s_mhc = Lcdf.mul(Ej_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
-        s2s_mg =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
-        s2s_mgc = Lcdf.mul(GDPj_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
-        #sector2market multipliers
-        #mo = s2s_mo.sum(axis=0)
-        #moc = s2s_moc.sum(axis=0)
-        #mh = s2s_mh.sum(axis=0)
-        #mhc = s2s_mhc.sum(axis=0)
-        #mg = s2s_mg.sum(axis=0)
-        #mgc = s2s_mgc.sum(axis=0)
-
-
-        ###################################################
-        # multipliers: direct, indirect, induced separately
-        ###################################################
-        n = T.shape[0]
-        # direct
-        direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
-        direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
-        np.fill_diagonal(direct_h.values, Ej_by_xj.values)
-        direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
-        np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
-        #indirect
-        indirect_o = s2s_mo - direct_o
-        #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
-        indirect_h  = s2s_mh - direct_h
-        #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
-        indirect_g  = s2s_mg - direct_g
-        #induced
-        induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
-        induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
-        induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
-
-        #################################
-        # impacts instead of multipliers
-        #################################
-        # impacts
-        # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
-        scale_df_by_series(direct_o, fcdf = fcdf.drop('employees_compensation')) # , 'Direct output impact' 
-        #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
-        #multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
-        #multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
-        #multipliers_by_f(direct_h, fcdf[:-1], 'Direct income impact'), 
-        #multipliers_by_f(indirect_h, fcdf[:-1], 'Indirect income impact'),
-        #multipliers_by_f(induced_h, fcdf[:-1], 'Induced income impact'),  
-        #multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf[:-1], 'Total income impact'),
-        #multipliers_by_f(direct_g, fcdf[:-1], 'Direct GDP impact'), 
-        #multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
-        #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
-        #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
-        
-    #  These are not working and need correcting      
-       #dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
-       # dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
-        
-        
-
-
-end_time = time.time()
-print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
-
-
-
-
-
-
-
-
-# graph 3: GDP impact of ICT sectors total, 5 graphs
-if 0:
-    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
-    ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
-    ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
-    ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
-    plot_GDPimpact_top_bottom( ICT_first_year_backward_impact, ICT_last_year_backward_impact,
-                            ICT_first_year_forward_impact, ICT_last_year_forward_impact,
-                            'GDP impact total','ICT' )
-
-    for sector_label, sector_list in ICT_factors.items():
-        if isinstance(sector_list, str):
-            sector_list = [sector_list]
-        plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, 'GDP impact total', sector_label)
-        # plot_GDPimpact_top_bottom is inside it
-
-# graph 4 GDP stacked backward forward
-if 0:
-    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
-    ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
-    ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
-    ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
-    plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'GDP impact total', 'ICT GDP Impact')
-
-if 0:
-    # fig 5. Education graphs
-    ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
-    ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
-
-    plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Education')
-
-    # fig 6. Health graphs
-    ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
-    ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
-    plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Health')
-
-
-# fig 7: Employment stacked backward forward
-# graph 4 GDP stacked backward forward
-if 0:
-    ICT_last_year_backward_impact = get_one_year_value(dfEimpact, last_year,'backward', ICTsectors, 'Employment impact total')
-    ICT_last_year_forward_impact = get_one_year_value(dfEimpact, last_year,'forward', ICTsectors, 'Employment impact total')
-    plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'Employment impact total', 'ICT Employment Impact')
-
-#Japan is missing 2020 Employment data (from the SUT file)
-print(dfEimpact)
-
-
-
-
-print('')
-
-
-##############################  calculating and plotting predictions  ################################
-        predicted_output = multipliers2prediction(s2s_mo, fdf, 'Predicted_Output')
-        predicted_outputc = multipliers2prediction(s2s_moc, fcdf, 'Predicted_Output')
-        predicted_income = multipliers2prediction(s2s_mh, fdf, 'Predicted_Income')  
-        predicted_incomec = multipliers2prediction(s2s_mhc, fcdf, 'Predicted_Income') 
-        predicted_GDP = multipliers2prediction(s2s_mg, fdf, 'Predicted_GDP') 
-        predicted_GDPc = multipliers2prediction(s2s_mgc, fcdf, 'Predicted_GDP') 
-
-        plot_real_vs_predicted(output, predicted_output,
-                       OECDadditional['employees_compensation'], predicted_income,
-                       GDP, predicted_GDP,  
-                       year, year,'Simple Model')
-
-        plot_real_vs_predicted(output, predicted_outputc.iloc[:-1],
-                       OECDadditional['employees_compensation'], predicted_incomec.iloc[:-1],
-                       GDP, predicted_GDPc.iloc[:-1],  
-                       year, year,'Closed Model')
-
-
-print('')
-'''

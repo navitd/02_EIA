@@ -29,8 +29,8 @@ B05 Esectors from Etot
 #run 1995-2020 after checks
 
 
-B07 calculation of bases for Tc (easy), and all other vectors
-bases are the fixed ratio vsector/vtot
+#B07 calculation of bases for Tc (easy), and all other vectors
+#bases are the fixed ratio vsector/vtot
 
 no B8, B9
 
