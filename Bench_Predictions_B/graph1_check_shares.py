@@ -267,7 +267,7 @@ def plot_stacked_shares(shares, ICT_factors, title, value_column):
     countries = grouped.index.tolist()
 
     # Continue with plotting as before
-    colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0']  # distinct colors
+    colors = ['#4CAF50', '#CD7F32', '#FFC107', '#2196F3'] 
     bottom = np.zeros(len(countries))
     plt.figure(figsize=(10, 6))
 
@@ -289,6 +289,7 @@ def plot_stacked_shares(shares, ICT_factors, title, value_column):
     plt.tight_layout()
     plt.show()
 
+    
 #fig 2C: plot ICT GDP stacked share, comparison of first and last year
 
 def plot_share_compare_frist_last_year(shares, first_year, last_year, value_column, title):
@@ -666,7 +667,6 @@ def create_excel_file_with_title(ws_title: str, filename) -> int:
     return 1  # Next available column after title box
 
 
-
 def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col: int, filename, title_size=3) -> int:
     # Infer matrix name from variable name if not provided
     if matrix_name is None:
@@ -729,6 +729,66 @@ def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col: in
 
 
 
+def append_styled_series_to_excel(series: pd.Series, series_name, year: str, start_col: int, filename: str = "output.xlsx") -> int:
+    # Infer series name from variable name if not provided
+    if series_name is None:
+        frame = inspect.currentframe().f_back
+        series_name = next((name for name, val in frame.f_locals.items() if val is series), "UnnamedSeries")
+
+    wb = load_workbook(filename)
+    if year not in wb.sheetnames:
+        raise ValueError(f"Sheet named '{year}' does not exist. Create it first using create_excel_file_with_title.")
+    ws = wb[year]
+
+    # Convert Series to DataFrame for uniformity
+    df = series.to_frame(name=series.name if series.name else "Value")
+    rows = list(dataframe_to_rows(df, index=True, header=True))
+    n_rows = len(rows)
+    n_cols = len(rows[0])  # Should be 2: index and value
+
+    # Styles
+    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    # Green title merged over up to 2 columns
+    merge_end_col = min(start_col + 1, start_col + n_cols - 1)
+    if merge_end_col > start_col:
+        ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
+    title_cell = ws.cell(row=4, column=start_col)
+    title_cell.value = series_name
+    title_cell.fill = green
+    title_cell.font = bold_font
+    title_cell.alignment = center_align
+
+    # Write the series below the title
+    for r_idx, row in enumerate(rows, start=5):
+        for c_idx, val in enumerate(row):
+            col = start_col + c_idx
+            cell = ws.cell(row=r_idx, column=col, value=val)
+            if r_idx == 5 or c_idx == 0:  # header or index
+                cell.fill = light_blue
+                cell.font = bold_font
+            cell.border = black_border
+            cell.alignment = center_align
+
+    # Add a black separator column
+    sep_col = start_col + n_cols
+    for r in range(4, 5 + n_rows):
+        cell = ws.cell(row=r, column=sep_col)
+        cell.border = black_border
+        cell.alignment = center_align
+
+    wb.save(filename)
+    return sep_col + 1
+
 ##################################################        functions that calculate        ######################################################
 
 def multipliers2prediction(s2s_mo, fdf_year2, column_name):
@@ -775,6 +835,66 @@ def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_v
     return dfimpact
 
 
+
+
+def plot_stacked_shares_with_printing(shares, ICT_factors, title, value_column,worksheet_name, start_col, filename):
+
+    # Invert dictionary ICT_factors
+    sector_to_category = {}
+    for category, sectors in ICT_factors.items():
+        if isinstance(sectors, list):
+            for sector in sectors:
+                sector_to_category[sector] = category
+        else:
+            sector_to_category[sectors] = category
+
+    # Filter for ICT sectors
+    ICTsectors = list(sector_to_category.keys())
+    ICT_shares = shares.loc[shares['sector'].isin(ICTsectors), ['country', 'sector', f'average_{value_column}_share']].copy()
+
+    # Map to ICT category
+    ICT_shares['ICT_category'] = ICT_shares['sector'].map(sector_to_category)
+
+    # Group by country and ICT_category, sum average_output_share
+    grouped = ICT_shares.groupby(['country', 'ICT_category'])[f'average_{value_column}_share'].sum().unstack(fill_value=0)
+                                                                                            # country and ICT_category are the index. unstack will create columns for each ICT_category
+                                                                                            # fill_value=0 will fill NaN with 0
+    # Reorder columns for consistent stacking: bottom to top
+    desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services']
+
+    # Sum across ICT categories to get total ICT share per country, then sort descending
+    grouped['total'] = grouped.sum(axis=1)
+    grouped = grouped.sort_values('total', ascending=False).drop(columns='total')
+
+    start_col = append_styled_matrix_to_excel(grouped, 'grouped', worksheet_name, start_col, filename=xlsx_filename)
+
+    # Now `countries` is updated to match the new order
+    countries = grouped.index.tolist()
+
+    # Continue with plotting as before
+    colors = ['#4CAF50', '#CD7F32', '#FFC107', '#2196F3'] 
+    bottom = np.zeros(len(countries))
+    plt.figure(figsize=(10, 6))
+
+    for idx, category in enumerate(desired_order):
+        values = grouped[category].values
+        #bars = plt.bar(countries, values, bottom=bottom, color=colors[idx], label=category)
+        bars = plt.bar(countries, values * 100, bottom=bottom * 100, color=colors[idx], label=category)
+        bottom += values
+        
+    # Add % labels on top
+    for i, total in enumerate(bottom):
+        plt.text(i, total * 100 + 0.2, f"{total * 100:.1f}%", ha='center', va='bottom', fontsize=9)
+
+    #plt.ylabel('Average ICT Output Share')
+    plt.ylabel(f'Average ICT {value_column} Share (%)')
+    plt.title(title)
+    plt.xticks(rotation=45, ha='right')
+    plt.legend(title="ICT Category", bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    plt.show()
+
+    return start_col
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -866,89 +986,26 @@ print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_yea
 output_shares, ICT_output_shares = get_share(dfoutput_4graph, first_year_4graph, last_year_4graph, ICTsectors,'output')
 
 #print to an excel file
-xlsx_filename = "Bench_predictions_B/B10 output shares graph1.xlsx"
+xlsx_filename = "Bench_predictions_B/B10 output shares graph1 data.xlsx"
 worksheet_name = f"output shares {first_year_4graph}-{last_year_4graph}"
 start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
 start_col = append_styled_matrix_to_excel(output_shares, 'output_shares', worksheet_name, start_col, filename=xlsx_filename)
 start_col = append_styled_matrix_to_excel(ICT_output_shares, 'ICT_output_shares', worksheet_name, start_col, filename=xlsx_filename)
 
-value_column = "output"
-title = f'Stacked Average ICT output Share by Country, {first_year_4graph}-{last_year_4graph}'
-# Invert dictionary ICT_factors
-sector_to_category = {}
-for category, sectors in ICT_factors.items():
-    if isinstance(sectors, list):
-        for sector in sectors:
-            sector_to_category[sector] = category
-    else:
-        sector_to_category[sectors] = category
-
-# Filter for ICT sectors
-ICTsectors = list(sector_to_category.keys())
-ICT_shares = ICT_output_shares.loc[ICT_output_shares['sector'].isin(ICTsectors), ['country', 'sector', f'average_{value_column}_share']].copy()
-
-# Map to ICT category
-ICT_shares['ICT_category'] = ICT_shares['sector'].map(sector_to_category)
-
-# Group by country and ICT_category, sum average_output_share
-grouped = ICT_shares.groupby(['country', 'ICT_category'])[f'average_{value_column}_share'].sum().unstack(fill_value=0)
-                                                                                        # country and ICT_category are the index. unstack will create columns for each ICT_category
-                                                                                        # fill_value=0 will fill NaN with 0                                                                                    
-# Reorder columns for consistent stacking: bottom to top
-desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling', 'ICT - Software and computer services', 'ICT - Communications services']
-
-# Sum across ICT categories to get total ICT share per country, then sort descending
-grouped['total'] = grouped.sum(axis=1)
-grouped = grouped.sort_values('total', ascending=False).drop(columns='total')
-
-start_col = append_styled_matrix_to_excel(grouped, 'ICT_output_shares by category', worksheet_name, start_col, filename=xlsx_filename) 
-
-# Now `countries` is updated to match the new order
-countries = grouped.index.tolist()
-
-# Continue with plotting as before
-#colors = ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0']  # old colrs
-#colors = ['#4CAF50', '#CD7F32', '#FFC107', '#2196F3']  # green - Manufacturing, bronze - wholeselling, yellow - software, blue- comm.
-#colors = ['#4CAF50', '#B75C2B', '#FFC107', '#2196F3']  # green, reddish bronze, yellow, blue
-colors = ['#4CAF50', '#B75C2B', '#FFEB3B', '#5F9EA0']  # green, reddish bronze, light yellow, blue-gray
-
-bottom = np.zeros(len(countries))
-plt.figure(figsize=(10, 6))
-
-for idx, category in enumerate(desired_order):
-    values = grouped[category].values
-    #bars = plt.bar(countries, values, bottom=bottom, color=colors[idx], label=category)
-    bars = plt.bar(countries, values * 100, bottom=bottom * 100, color=colors[idx], label=category)
-    bottom += values
-    
-# Add % labels on top
-for i, total in enumerate(bottom):
-    plt.text(i, total * 100 + 0.2, f"{total * 100:.1f}%", ha='center', va='bottom', fontsize=9)
-
-#plt.ylabel('Average ICT Output Share')
-plt.ylabel(f'Average ICT {value_column} Share (%)')
-plt.title(title)
-plt.xticks(rotation=45, ha='right')
-plt.legend(title="ICT Category", bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.tight_layout()
-plt.show()
-
-#from print2xls3
-print()
-#start_col = append_styled_series_to_excel(outputc, 'outputc', year, start_col, filename=output_filename )
+#country_avg = ICT_output_shares.groupby('country')[f'average_output_share'].mean().sort_values(ascending=False)
+#start_col = append_styled_matrix_to_excel(country_avg, 'country average', worksheet_name, start_col+1, filename=xlsx_filename)
+for year in year_range:
+    for country in countries: 
+        start_col = append_styled_matrix_to_excel(dfoutput[(dfoutput.country==country) & (dfoutput.year==year)], 'output', worksheet_name, start_col, filename=xlsx_filename )
 
 
-
-
-
-
-
-#plot_share(ICT_output_shares, f'Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output')
+plot_share(ICT_output_shares, f'Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output')
 #the above is average of average - average over the 6 ICT sectorsa as well as over the years
 
 # fig2B: stacked output share
 #this is the average of each category (factor) - stacked. 
-#plot_stacked_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output')
+start_col = plot_stacked_shares_with_printing(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output',worksheet_name, start_col, xlsx_filename)
+
 
 
 # graphs 1 and 2 for GDP
