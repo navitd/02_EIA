@@ -10,11 +10,8 @@
 # https://www.oecd.org/en/data/datasets/input-output-tables.html
 
 
-
-#I know I have GDP extrapolated from world bank - but - there is 10% difference between world bank GDP and OECD GDP
-#so I used fixed year GDP 2020 divided by output, as per EIA method, and will multiply by extrapolated output of each future year
-
-
+#graph directory
+# My compuer/ubuntu/home/orih/python_graph_Navit
 
 
 import sys
@@ -1116,6 +1113,7 @@ if 0:
 
 
 # graphs 1 and 2 for GDP
+# 28.10.25 we don't need graph 1 but only graph 2. no shares, only shares stacked. we need CAGR
 if 1:
     # fig 1: GDP CAGR 
     ICT_GDP_cagr = clc_cagr(dfGDP_4graph, first_year, last_year,'GDP') 
@@ -1124,7 +1122,8 @@ if 1:
 
     # fig 2: average ICT sector share in GDP 2011-2020
     GDP_shares, ICT_GDP_shares = get_share(dfGDP_4graph, first_year, last_year, ICTsectors,'GDP')
-    plot_share(ICT_GDP_shares, f'Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
+    # the following is not needed because there's no need to show the average over sectors
+    #plot_share(ICT_GDP_shares, f'Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
 
     # fig2B: stacked output share
     #this is the average of each category (factor) - stacked. 
@@ -1135,13 +1134,13 @@ if 1:
         GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
         plot_share_compare_frist_last_year(GDP_shares, first_year, last_year, 'GDP', f'ICT GDP {first_year} and {last_year} Share by Country')
 
-    xlsx_filename = "Bench_predictions_B/B10_graph1_GDP_data.xlsx"
+    xlsx_filename = f"Bench_predictions_B/B10_graph1_GDP_data {first_year}-{last_year}.xlsx"
     worksheet_name = f"GDP shares {first_year}-{last_year}"
     name = 'GDP'
     ICT = 'ICT'
     package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP, GDP_shares, ICT_GDP_shares, GDP_ICT_share_category, name, ICT, highlighted, ICT_factors)
 
-    print('graphs 1 and 2 are done')
+    print('graphs GDP 1 and 2 are done')
 
 
 
