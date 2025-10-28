@@ -33,6 +33,8 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 from openpyxl.cell.cell import MergedCell
+import inspect
+
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
 from func_data_upload_OECD_without_E import data_upload_OECD_without_E
@@ -41,7 +43,7 @@ from func_clc_L import clc_L
 from func_safe_divide import safe_divide, safe_divide_vector
 from func_multipliers_by_f import multipliers_by_f
 from func_plot_real_vs_predicted import plot_real_vs_predicted
-
+       
 
 ##########################################         functions from Benchmarking/Employment.py       ##########################################
 #the plotting functions from Employment are not needed here, they are to be moved to 08 file
@@ -286,7 +288,7 @@ def plot_stacked_shares(shares, ICT_factors, title, value_column):
     plt.legend(title="ICT Category", bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.tight_layout()
     plt.show()
-
+    return grouped
 #fig 2C: plot ICT GDP stacked share, comparison of first and last year
 
 def plot_share_compare_frist_last_year(shares, first_year, last_year, value_column, title):
@@ -820,15 +822,7 @@ def create_excel_file_with_title(ws_title: str, filename) -> int:
     return 1  # Next available column after title box
 
 
-def append_styled_matrix_to_excel(
-    df,
-    matrix_name,
-    worksheet_name,
-    start_col: int,
-    filename,
-    title_size=3,
-    highlighted_sectors=None  
-) -> int:
+def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col: int, filename, title_size=3, highlighted_sectors=None ) -> int:
     
     # Infer matrix name from variable name if not provided
     if matrix_name is None:
@@ -898,6 +892,87 @@ def append_styled_matrix_to_excel(
             cell.alignment = center_align
 
     # Add a black separator column
+    sep_col = start_col + n_cols
+    for r in range(4, 5 + n_rows):
+        cell = ws.cell(row=r, column=sep_col)
+        cell.border = black_border
+        cell.alignment = center_align
+
+    wb.save(filename)
+    return sep_col + 1
+
+
+
+def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matrix_name, start_col, ICT_factors, highlighted, title_size=3):
+    
+    # Infer matrix name if not provided
+    if matrix_name is None:
+        frame = inspect.currentframe().f_back
+        matrix_name = next((name for name, val in frame.f_locals.items() if val is df), "UnnamedMatrix")
+
+    wb = load_workbook(filename)
+    if worksheet_name not in wb.sheetnames:
+        raise ValueError(f"Sheet named '{worksheet_name}' does not exist.")
+    ws = wb[worksheet_name]
+
+    # === Styles ===
+    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    # === Derive category colors from ICT_factors and highlighted ===
+    category_colors = {}
+    for category, sectors in ICT_factors.items():
+        if isinstance(sectors, list):
+            for s in sectors:
+                if s in highlighted:
+                    category_colors[category] = highlighted[s]
+                    break
+        else:
+            if sectors in highlighted:
+                category_colors[category] = highlighted[sectors]
+
+    # === Title ===
+    rows = list(dataframe_to_rows(df, index=True, header=True))
+    n_rows = len(rows)
+    n_cols = len(rows[0])
+    merge_end_col = min(start_col + title_size, start_col + n_cols - 1)
+    if merge_end_col > start_col:
+        ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
+
+    title_cell = ws.cell(row=4, column=start_col)
+    title_cell.value = matrix_name
+    title_cell.fill = green
+    title_cell.font = bold_font
+    title_cell.alignment = center_align
+
+    # === Write matrix with formatting ===
+    for r_idx, row in enumerate(rows, start=5):
+        for c_idx, val in enumerate(row):
+            col = start_col + c_idx
+            cell = ws.cell(row=r_idx, column=col, value=val)
+            col_name = df.columns[c_idx - 1] if (r_idx > 5 and c_idx > 0 and c_idx - 1 < len(df.columns)) else None
+
+            # Header or index
+            if r_idx == 5 or c_idx == 0:
+                cell.fill = light_blue
+                cell.font = bold_font
+            # Column-based background color (below header)
+            elif col_name in category_colors:
+                fill = PatternFill(start_color=category_colors[col_name], end_color=category_colors[col_name], fill_type="solid")
+                cell.fill = fill
+
+            cell.border = black_border
+            cell.alignment = center_align
+
+    # === Add separator column ===
     sep_col = start_col + n_cols
     for r in range(4, 5 + n_rows):
         cell = ws.cell(row=r, column=sep_col)
@@ -1028,17 +1103,7 @@ if 0:
 
     # fig2B: stacked output share
     #this is the average of each category (factor) - stacked. 
-    plot_stacked_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output')
-
-
-
-
-
-
-
-
-
-
+    ICT_share_category = plot_stacked_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output')
 
 
 # graphs 1 and 2 for GDP
@@ -1054,25 +1119,34 @@ if 1:
 
     # fig2B: stacked output share
     #this is the average of each category (factor) - stacked. 
-    plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
+    GDP_ICT_share_category = plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
 
     #GDP share stacked, not average but comparison between 2011 and 2020
     if 0:
         GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
         plot_share_compare_frist_last_year(GDP_shares, first_year, last_year, 'GDP', f'ICT GDP {first_year} and {last_year} Share by Country')
 
-    if print_to_excel: # move this to a function
-        #print to an excel file
-        worksheet_name = f"GDP shares {first_year}-{last_year}"
+    worksheet_name = f"GDP shares {first_year}-{last_year}"
+    name = 'GDP'
+    ICT = 'ICT'
+    def package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP, name, ICT, highlighted, ICT_factors): 
+                
         start_col = 1
         start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
         for year in year_range:
             for country in countries: 
-                start_col = append_styled_matrix_to_excel(dfGDP[(dfGDP.country==country) & (dfGDP.year==year)], 'GDP', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted )
+                start_col = append_styled_matrix_to_excel(dfGDP[(dfGDP.country==country) & (dfGDP.year==year)], name, worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted )
         
-        start_col = append_styled_matrix_to_excel(GDP_shares, 'GDP_shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
-        start_col = append_styled_matrix_to_excel(ICT_GDP_shares, 'ICT_GDP_shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
+        start_col = append_styled_matrix_to_excel(GDP_shares, name+'_shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
+        start_col = append_styled_matrix_to_excel(ICT_GDP_shares, ICT+name+' shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
         
+        start_col = append_styled_matrix_to_excel(GDP_ICT_share_category, ICT+name+' shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
+ 
+        start_col = append_styled_matrix_by_category_to_excel(GDP_ICT_share_category, xlsx_filename, worksheet_name, name+ICT+' by category',start_col, ICT_factors, highlighted, title_size=3)
+
+
+    package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP, name, ICT, highlighted, ICT_factors)
+
     print('graphs 1 and 2 are done')
 
 
