@@ -821,7 +821,6 @@ def create_excel_file_with_title(ws_title: str, filename) -> int:
 
     return 1  # Next available column after title box
 
-
 def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col: int, filename, title_size=3, highlighted_sectors=None ) -> int:
     
     # Infer matrix name from variable name if not provided
@@ -900,8 +899,6 @@ def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col: in
 
     wb.save(filename)
     return sep_col + 1
-
-
 
 def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matrix_name, start_col, ICT_factors, highlighted, title_size=3):
     
@@ -982,6 +979,18 @@ def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matr
     wb.save(filename)
     return sep_col + 1
 
+def package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP, GDP_shares, ICT_GDP_shares, GDP_ICT_share_category,name, ICT, highlighted, ICT_factors): 
+                
+    start_col = 1
+    start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
+    for year in year_range:
+        for country in countries: 
+            start_col = append_styled_matrix_to_excel(dfGDP[(dfGDP.country==country) & (dfGDP.year==year)], name, worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted )
+    
+    start_col = append_styled_matrix_to_excel(GDP_shares, name+'_shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
+    start_col = append_styled_matrix_to_excel(ICT_GDP_shares, ICT+name+' shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
+
+    start_col = append_styled_matrix_by_category_to_excel(GDP_ICT_share_category, xlsx_filename, worksheet_name, name+ICT+' by category',start_col, ICT_factors, highlighted, title_size=3)
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -1060,7 +1069,7 @@ dfoutput_4graph = dfoutput[(dfoutput.year >= first_year) & (dfoutput.year <= las
 dfGDP_4graph = dfGDP[(dfGDP.year >= first_year) & (dfGDP.year <= last_year) ].copy()
 
 print_to_excel = 1
-xlsx_filename = "Bench_predictions_B/B10_graph1_data.xlsx"
+
 highlighted = {
     "C26": "90EE90",   # light green
     "G": "CD7F32",     # bronze
@@ -1126,26 +1135,11 @@ if 1:
         GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
         plot_share_compare_frist_last_year(GDP_shares, first_year, last_year, 'GDP', f'ICT GDP {first_year} and {last_year} Share by Country')
 
+    xlsx_filename = "Bench_predictions_B/B10_graph1_GDP_data.xlsx"
     worksheet_name = f"GDP shares {first_year}-{last_year}"
     name = 'GDP'
     ICT = 'ICT'
-    def package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP, name, ICT, highlighted, ICT_factors): 
-                
-        start_col = 1
-        start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
-        for year in year_range:
-            for country in countries: 
-                start_col = append_styled_matrix_to_excel(dfGDP[(dfGDP.country==country) & (dfGDP.year==year)], name, worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted )
-        
-        start_col = append_styled_matrix_to_excel(GDP_shares, name+'_shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
-        start_col = append_styled_matrix_to_excel(ICT_GDP_shares, ICT+name+' shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
-        
-        start_col = append_styled_matrix_to_excel(GDP_ICT_share_category, ICT+name+' shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
- 
-        start_col = append_styled_matrix_by_category_to_excel(GDP_ICT_share_category, xlsx_filename, worksheet_name, name+ICT+' by category',start_col, ICT_factors, highlighted, title_size=3)
-
-
-    package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP, name, ICT, highlighted, ICT_factors)
+    package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP, GDP_shares, ICT_GDP_shares, GDP_ICT_share_category, name, ICT, highlighted, ICT_factors)
 
     print('graphs 1 and 2 are done')
 
