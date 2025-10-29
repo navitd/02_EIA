@@ -130,30 +130,26 @@ def clc_cagr(dfoutput, first_year, last_year, value_column):
 
 # fig 1: plot CAGR
 def plot_cagr(ICT_cagr, title):
-        # Rename for plotting
     ICT_cagr.index = [country_map[c] for c in ICT_cagr.index]
 
-    # Plot
     fig, ax = plt.subplots(figsize=(10, 6))
     x = np.arange(len(ICT_cagr))
     bars = ax.bar(x, ICT_cagr.values, color=[
         'red' if country_map.get(code, code) == 'Canada' else 'blue' for code in ICT_cagr.index
     ])
 
-    # Add labels
     for i, bar in enumerate(bars):
         height = bar.get_height()
         ax.text(bar.get_x() + bar.get_width()/2, height + 0.002,
                 f'{height*100:.1f}%', ha='center', va='bottom', fontsize=9)
 
-    # Formatting
     ax.set_xticks(x)
     ax.set_xticklabels([country_map.get(code, code) for code in ICT_cagr.index], rotation=45, ha='right')
     ax.set_ylabel('Average CAGR [%]')
     ax.set_title(title)
+    fig.tight_layout()
 
-    plt.tight_layout()
-    plt.show()
+    return fig
 
 
 # Fig 2: output share data manipulation
@@ -233,7 +229,6 @@ def plot_share(ICT_shares, title,value_column):
 # fig2B: plot stacked output share
 #old version of plot_stacked_shares is in B10_graphs1
 def plot_stacked_shares(shares, ICT_factors, title, value_column, highlighted):
-    # --- Build mapping from sector → category ---
     sector_to_category = {}
     for category, sectors in ICT_factors.items():
         if isinstance(sectors, list):
@@ -242,31 +237,25 @@ def plot_stacked_shares(shares, ICT_factors, title, value_column, highlighted):
         else:
             sector_to_category[sectors] = category
 
-    # --- Filter ICT sectors ---
     ICTsectors = list(sector_to_category.keys())
     ICT_shares = shares.loc[shares['sector'].isin(ICTsectors),
                             ['country', 'sector', f'average_{value_column}_share']].copy()
     ICT_shares['ICT_category'] = ICT_shares['sector'].map(sector_to_category)
 
-    # --- Group by country + ICT_category ---
     grouped = (ICT_shares
                .groupby(['country', 'ICT_category'])[f'average_{value_column}_share']
                .sum()
                .unstack(fill_value=0))
 
-    # --- Order and sort ---
     desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
                      'ICT - Software and computer services', 'ICT - Communications services']
     grouped['total'] = grouped.sum(axis=1)
     grouped = grouped.sort_values('total', ascending=False).drop(columns='total')
-
     countries = grouped.index.tolist()
 
-    # --- Determine color per category ---
     category_colors = {}
     for category, sectors in ICT_factors.items():
         if isinstance(sectors, list):
-            # Use the first sector that appears in `highlighted`
             color_hex = None
             for s in sectors:
                 if s in highlighted:
@@ -278,31 +267,29 @@ def plot_stacked_shares(shares, ICT_factors, title, value_column, highlighted):
             color_hex = "#" + highlighted.get(s, "CCCCCC").lstrip("#")
             category_colors[category] = color_hex
 
-    # --- Plot ---
-    plt.figure(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 6))
     bottom = np.zeros(len(countries))
 
     for category in desired_order:
         if category in grouped.columns:
             values = grouped[category].values
             color = category_colors.get(category, "#CCCCCC")
-            plt.bar(countries, values * 100, bottom=bottom * 100,
-                    color=color, label=category)
+            ax.bar(countries, values * 100, bottom=bottom * 100,
+                   color=color, label=category)
             bottom += values
 
-    # --- Labels & style ---
     for i, total in enumerate(bottom):
-        plt.text(i, total * 100 + 0.2, f"{total * 100:.1f}%",
-                 ha='center', va='bottom', fontsize=9)
+        ax.text(i, total * 100 + 0.2, f"{total * 100:.1f}%",
+                ha='center', va='bottom', fontsize=9)
 
-    plt.ylabel(f'Average ICT {value_column} Share (%)')
-    plt.title(title)
-    plt.xticks(rotation=45, ha='right')
-    plt.legend(title="ICT Category", bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()
-    plt.show()
+    ax.set_ylabel(f'Average ICT {value_column} Share (%)')
+    ax.set_title(title)
+    ax.set_xticks(range(len(countries)))
+    ax.set_xticklabels(countries, rotation=45, ha='right')
+    ax.legend(title="ICT Category", bbox_to_anchor=(1.05, 1), loc='upper left')
+    fig.tight_layout()
 
-    return grouped
+    return fig, grouped
 
 
 
@@ -1018,19 +1005,15 @@ def embed_plots_in_excel(xlsx_filename, worksheet_name,
     
     # === 1. Create both plots and save to in-memory buffers ===
     # CAGR plot
-    fig1 = plt.figure()
-    plot_cagr(ICT_cagr, cagr_title)
+    fig1 = plot_cagr(ICT_cagr, cagr_title)
     buf1 = BytesIO()
     fig1.savefig(buf1, format='png', bbox_inches='tight', dpi=200)
-    plt.close(fig1)
     buf1.seek(0)
 
     # Stacked shares plot
-    fig2 = plt.figure()
-    _ = plot_stacked_shares(shares, ICT_factors, shares_title, value_column, highlighted)
+    fig2, _ = plot_stacked_shares(shares, ICT_factors, shares_title, value_column, highlighted)
     buf2 = BytesIO()
     fig2.savefig(buf2, format='png', bbox_inches='tight', dpi=200)
-    plt.close(fig2)
     buf2.seek(0)
 
     # === 2. Open Excel workbook and worksheet ===
@@ -1205,7 +1188,7 @@ if 1:
     # fig2B: stacked output share
     #this is the average of each category (factor) - stacked. 
     stacked_shares_title = f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}'
-    GDP_ICT_share_category = plot_stacked_shares(GDP_shares, ICT_factors, stacked_shares_title,'GDP',highlighted)
+    _, GDP_ICT_share_category = plot_stacked_shares(GDP_shares, ICT_factors, stacked_shares_title,'GDP',highlighted)
     #to delete:
     #GDP_ICT_share_category, start_col = plot_stacked_shares_with_printing(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output',worksheet_name, start_col, xlsx_filename)
 
