@@ -231,7 +231,7 @@ def plot_share(ICT_shares, title,value_column):
 
 # fig2B: plot stacked output share
 #def plot_stacked_output_shares(output_shares, ICT_factors, title):
-def plot_stacked_shares(shares, ICT_factors, title, value_column):
+def plot_stacked_shares(shares, ICT_factors, title, value_column,highlighted):
 
     # Invert dictionary ICT_factors
     sector_to_category = {}
@@ -288,7 +288,10 @@ def plot_stacked_shares(shares, ICT_factors, title, value_column):
     return grouped
 #fig 2C: plot ICT GDP stacked share, comparison of first and last year
 
-
+#29.10.25
+#the change: I want the stacked graph to have the same colors as highlighted, and also to print the categories data to the excel.
+# the problem is that now the package of printing to the excel file is done after plotting stacked_shares
+#I'll try first to change plot_stacked_shares so that I provide the colors in the dictionary "highlighted"
 def plot_stacked_shares_with_printing(shares, ICT_factors, title, value_column,worksheet_name, start_col, filename):
 
     # Invert dictionary ICT_factors
@@ -1177,7 +1180,7 @@ if 1:
     # fig 1: GDP CAGR 
     ICT_GDP_cagr = clc_cagr(dfGDP_4graph, first_year, last_year,'GDP') 
     # fig1: plot output CAGR
-    plot_cagr(ICT_GDP_cagr, f'Average GDP CAGR for ICT sectors ({first_year}–{last_year})')
+    #plot_cagr(ICT_GDP_cagr, f'Average GDP CAGR for ICT sectors ({first_year}–{last_year})')
 
     # fig 2: average ICT sector share in GDP 2011-2020
     GDP_shares, ICT_GDP_shares = get_share(dfGDP_4graph, first_year, last_year, ICTsectors,'GDP')
@@ -1186,8 +1189,8 @@ if 1:
 
     # fig2B: stacked output share
     #this is the average of each category (factor) - stacked. 
-    #GDP_ICT_share_category = plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
-    GDP_ICT_share_category, start_col = plot_stacked_shares_with_printing(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output',worksheet_name, start_col, xlsx_filename)
+    GDP_ICT_share_category = plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP',highlighted)
+    #GDP_ICT_share_category, start_col = plot_stacked_shares_with_printing(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output',worksheet_name, start_col, xlsx_filename)
 
 
     #GDP share stacked, not average but comparison between 2011 and 2020
