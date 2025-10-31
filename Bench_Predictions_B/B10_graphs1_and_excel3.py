@@ -31,6 +31,12 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 from openpyxl.cell.cell import MergedCell
 import inspect
+from io import BytesIO
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.utils import get_column_letter
+
+
+
 
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
@@ -191,41 +197,6 @@ def get_share(dfoutput, first_year, last_year, ICTsectors, value_column):
 
     return shares, ICT_shares
 
-# plot fig 2: output share - to delete (average over sectors is not needed)
-#to delete:
-def plot_share(ICT_shares, title,value_column):
-    # Group by country and sort
-    country_avg = ICT_shares.groupby('country')[f'average_{value_column}_share'].mean().sort_values(ascending=False)
-
-    # Define colors
-    colors = ['red' if country == 'CAN' else 'blue' for country in country_avg.index]
-
-    # Plot
-    plt.figure(figsize=(10, 6))
-    bars = plt.bar(country_avg.index, country_avg.values, color=colors)
-
-    # Adjust y-axis limit for label space
-    max_height = country_avg.max()
-    plt.ylim(0, max_height * 1.15)
-
-    # Add percentage labels
-    for bar in bars:
-        height = bar.get_height()
-        plt.text(
-            bar.get_x() + bar.get_width() / 2,
-            height + max_height * 0.015,
-            f'{height * 100:.1f}%',
-            ha='center',
-            va='bottom',
-            fontsize=9
-        )
-
-    plt.ylabel(f'Average ICT {value_column} Share (%)')
-    plt.title(title)
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.show()
-
 # fig2B: plot stacked output share
 #old version of plot_stacked_shares is in B10_graphs1
 def plot_stacked_shares(shares, ICTcategories, title, value_column, highlighted):
@@ -290,11 +261,6 @@ def plot_stacked_shares(shares, ICTcategories, title, value_column, highlighted)
     fig.tight_layout()
 
     return fig, grouped
-
-
-
-
-
 
 #fig 2C: plot ICT GDP stacked share, comparison of first and last year
 def plot_share_compare_frist_last_year(shares, first_year, last_year, value_column, title):
@@ -391,6 +357,8 @@ def plot_share_compare_frist_last_year(shares, first_year, last_year, value_colu
 
     plt.tight_layout()
     plt.show()
+
+
 # fig 3
 def get_one_year_value(df, year, forward_or_backward, sector_list, value_column):
     if forward_or_backward == 'backward':
@@ -907,7 +875,7 @@ def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col: in
     return sep_col + 1
 
 # the following is a special printing of the category matrix. it is different because categoris are in columns, not rows. it prints well.
-def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matrix_name, start_col, ICTcategories, highlighted, title_size=3):
+def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matrix_name, start_col, ICTcategories, highlighted, title_size=6):
     
     # Infer matrix name if not provided
     if matrix_name is None:
@@ -988,68 +956,9 @@ def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matr
 
 
 
-import matplotlib.pyplot as plt
-from io import BytesIO
-from openpyxl import load_workbook
-from openpyxl.drawing.image import Image as XLImage
-from openpyxl.utils import get_column_letter
 
 
-def embed_plots_in_excel(xlsx_filename, worksheet_name,
-                         start_col, start_row,
-                         ICT_cagr, shares, ICTcategories,
-                         cagr_title, shares_title,
-                         value_column, highlighted):
     
-    col_letter = get_column_letter(start_col)
-    
-    # === 1. Create both plots and save to in-memory buffers ===
-    # CAGR plot
-    fig1 = plot_cagr(ICT_cagr, cagr_title)
-    buf1 = BytesIO()
-    fig1.savefig(buf1, format='png', bbox_inches='tight', dpi=200)
-    buf1.seek(0)
-
-    # Stacked shares plot
-    fig2, _ = plot_stacked_shares(shares, ICTcategories, shares_title, value_column, highlighted)
-    buf2 = BytesIO()
-    fig2.savefig(buf2, format='png', bbox_inches='tight', dpi=200)
-    buf2.seek(0)
-
-    # === 2. Open Excel workbook and worksheet ===
-    wb = load_workbook(xlsx_filename)
-    ws = wb[worksheet_name]
-
-    # === 3. Insert both plots ===
-    img1 = XLImage(buf1)
-    img1.anchor = f"{col_letter}{start_row}"
-    ws.add_image(img1)
-
-    img2 = XLImage(buf2)
-    img2.anchor = f"{col_letter}{start_row+30}"
-    ws.add_image(img2)
-
-    # === 4. Save the Excel workbook ===
-    wb.save(xlsx_filename)
-    print(f"✅ Two plots were embedded into '{worksheet_name}' of '{xlsx_filename}'.")
-
-
-
-
-def package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP, GDP_shares, ICT_GDP_shares, GDP_ICT_share_category,name, ICT, highlighted, ICTcategories): 
-                
-    start_col = 1
-    start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
-    for year in year_range:
-        for country in countries: 
-            start_col = append_styled_matrix_to_excel(dfGDP[(dfGDP.country==country) & (dfGDP.year==year)], name, worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted )
-    
-    start_col = append_styled_matrix_to_excel(GDP_shares, name+'_shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
-    start_col = append_styled_matrix_to_excel(ICT_GDP_shares, ICT+name+' shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
-
-    start_col = append_styled_matrix_by_category_to_excel(GDP_ICT_share_category, xlsx_filename, worksheet_name, name+ICT+' by category',start_col, ICTcategories, highlighted, title_size=3)
-    return start_col
-
 
 
 
@@ -1173,85 +1082,121 @@ if 0:
 
 # graphs 1 and 2 for GDP
 # 28.10.25 we don't need shares, only shares stacked. we need CAGR
+graphnumber=1
 varname = 'GDP'
-cagr_title = f'Average GDP CAGR for ICT sectors ({first_year}–{last_year})'
-stacked_shares_title = f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}'
-end_years_title = f'Stacked yearly comparison {first_year}, {last_year}'
-xlsx_filename = f"Bench_predictions_B/B10_graph1_GDP_data {first_year}-{last_year}.xlsx"
-worksheet_name = f"GDP shares {first_year}-{last_year}"
 ICT = 'ICT'
-embed_or_plot=0 #0: embed, 1: plot, 2: both
-if 1:
-    print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year, 
-                            ICTsectors,
-                            ICTcategories,
-                            highlighted,
-                            cagr_title,
-                            stacked_shares_title,
-                            end_years_title,
-                            xlsx_filename,
-                            worksheet_name,
-                            ICT
-                            plot_or_embed
-    )
+cagr_title = f'Average GDP CAGR for ICT sectors ({first_year}–{last_year})'
+end_years_title = f'{ICT} {varname} {first_year} and {last_year} Share by Country'
+stacked_shares_title = f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}'
+xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_{varname}_data {first_year}-{last_year}.xlsx"
+worksheet_name = f"{varname} shares {first_year}-{last_year}"
+embed_or_plot = 0 #0: embed, 1: plot, 2: both
+start_row=5
 
-
-GDP_shares, ICT_GDP_shares
-fig2, GDP_ICT_share_category
-
-
-
+#below remove all GDP in var names
+def package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year, year_range, countries,
+                        ICTsectors,
+                        ICTcategories,
+                        highlighted,
+                        cagr_title,
+                        stacked_shares_title,
+                        end_years_title,
+                        xlsx_filename,
+                        worksheet_name,
+                        start_row,
+                        ICT,
+                        embed_or_plot):
+    
     # fig 1: GDP CAGR 
-    ICT_GDP_cagr = clc_cagr(dfGDP_4graph, first_year, last_year,'GDP') 
-    # fig1: plot output CAGR
-    cagr_title = f'Average GDP CAGR for ICT sectors ({first_year}–{last_year})'
-    #plot_cagr(ICT_GDP_cagr, cagr_title)
+    cagr = clc_cagr(dfGDP_4graph, first_year, last_year, varname) 
+    if embed_or_plot>0:
+        # fig1: plot output CAGR
+        plot_cagr(cagr, cagr_title)
 
-    # fig 2: average ICT sector share in GDP 2011-2020
-    GDP_shares, ICT_GDP_shares = get_share(dfGDP_4graph, first_year, last_year, ICTsectors,'GDP')
-    # the following is not needed because there's no need to show the average over sectors
-    #plot_share(ICT_GDP_shares, f'Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
+    GDP_shares, ICT_GDP_shares = get_share(dfGDP_4graph, first_year, last_year, ICTsectors,varname)
+    if embed_or_plot>0:
+        # fig2B: stacked output share
+        #this is the average of each category - stacked. 
+        _, GDP_ICT_share_category = plot_stacked_shares(GDP_shares, ICTcategories, stacked_shares_title,varname,highlighted)
 
-    # fig2B: stacked output share
-    #this is the average of each category (factor) - stacked. 
-    stacked_shares_title = f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}'
-    _, GDP_ICT_share_category = plot_stacked_shares(GDP_shares, ICTcategories, stacked_shares_title,'GDP',highlighted)
-    #to delete:
-    #GDP_ICT_share_category, start_col = plot_stacked_shares_with_printing(output_shares, ICTcategories,f'Stacked Average ICT Output Share by Country, {first_year_4graph}-{last_year_4graph}','output',worksheet_name, start_col, xlsx_filename)
+    # fig 2C: end years comparison compare first_year with last_year, stacked
+    if embed_or_plot>0:
+        plot_share_compare_frist_last_year(GDP_shares, first_year, last_year, varname, end_years_title)
+
+    # print data to excel (if I take it out of the if statement it will print every time it runs)
+    if embed_or_plot==0:
+        # next 10 lines: previousely the function "package print shares to excel"
+        start_col = 1
+        start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
+        for year in year_range:
+            for country in countries: 
+                start_col = append_styled_matrix_to_excel(dfGDP_4graph[(dfGDP_4graph.country==country) & (dfGDP_4graph.year==year)], 
+                                                          varname, worksheet_name, start_col, xlsx_filename, highlighted )
+        
+        start_col = append_styled_matrix_to_excel(GDP_shares, varname+'_shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
+        start_col = append_styled_matrix_to_excel(ICT_GDP_shares, ICT+varname+' shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
+
+        start_col = append_styled_matrix_by_category_to_excel(GDP_ICT_share_category, xlsx_filename, worksheet_name, varname+ICT+' by category',start_col, ICTcategories, highlighted, title_size=3)
+        
+
+        # embed plots to excel
+        col_letter = get_column_letter(start_col)
+         
+        # === embed1. Create both plots and save to in-memory buffers ===
+        # CAGR plot
+        fig1 = plot_cagr(ICT_cagr, cagr_title)
+        buf1 = BytesIO()
+        fig1.savefig(buf1, format='png', bbox_inches='tight', dpi=200)
+        buf1.seek(0)
+
+        # Stacked shares plot
+        fig2, _ = plot_stacked_shares(shares, ICTcategories, shares_title, value_column, highlighted)
+        buf2 = BytesIO()
+        fig2.savefig(buf2, format='png', bbox_inches='tight', dpi=200)
+        buf2.seek(0)
+
+        # === embed2. Open Excel workbook and worksheet ===
+        wb = load_workbook(xlsx_filename)
+        ws = wb[worksheet_name]
+
+        # === embed3. Insert both plots ===
+        img1 = XLImage(buf1)
+        img1.anchor = f"{col_letter}{start_row}"
+        ws.add_image(img1)
+
+        img2 = XLImage(buf2)
+        img2.anchor = f"{col_letter}{start_row+30}"
+        ws.add_image(img2)
+
+        # === embed4. Save the Excel workbook ===
+        wb.save(xlsx_filename)
+        print(f"✅ Two plots were embedded into '{worksheet_name}' of '{xlsx_filename}'.")
 
 
-    #GDP share stacked, not average but comparison between 2011 and 2020
-    if 0:
-        GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
-        plot_share_compare_frist_last_year(GDP_shares, first_year, last_year, 'GDP', f'ICT GDP {first_year} and {last_year} Share by Country')
 
-    xlsx_filename = f"Bench_predictions_B/B10_graph1_GDP_data {first_year}-{last_year}.xlsx"
-    worksheet_name = f"GDP shares {first_year}-{last_year}"
-    name = 'GDP'
-    ICT = 'ICT'
-    start_col = package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP_4graph, GDP_shares, ICT_GDP_shares, GDP_ICT_share_category , name, ICT, highlighted, ICTcategories)
-    ICTcategories
 
-    start_row = 5 #the first row where the graphs is embedded
-    embed_plots_in_excel(
-    xlsx_filename,
-    worksheet_name,
-    start_col, start_row,
-    ICT_cagr=ICT_GDP_cagr,
-    shares=GDP_shares,
-    ICT_factICTcategoriesors=ICTcategories,
-    cagr_title=cagr_title,
-    shares_title=stacked_shares_title,
-    value_column=varname,
-    highlighted=highlighted
+
+
+
+
+
+
+
+package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year, year_range, countries,
+                        ICTsectors,
+                        ICTcategories,
+                        highlighted,
+                        cagr_title,
+                        stacked_shares_title,
+                        end_years_title,
+                        xlsx_filename,
+                        worksheet_name,
+                        start_row,
+                        ICT,
+                        embed_or_plot
 )
-    # the problem is that I keep on transferring variable from function to function and if I by mistake transfer the wrong variable GDP intead of output I'll be in trouble
-    #it should be one function that does it all.
-    #it should be one function that does it all and returns the variables out.
-    B10_graphs1_and_excel2 embeds figures in excel, figures are too big, and variables are passed from function to function. need one function that does it all, but the little function sshould sill work."
 
-
-    print('graphs GDP 1 and 2 are done')
+print('graphs GDP 1 and 2 are done')
 
 
 
