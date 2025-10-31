@@ -1202,7 +1202,7 @@ if 1:
     worksheet_name = f"GDP shares {first_year}-{last_year}"
     name = 'GDP'
     ICT = 'ICT'
-    start_col = package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP, GDP_shares, ICT_GDP_shares, GDP_ICT_share_category , name, ICT, highlighted, ICT_factors)
+    start_col = package_print_shares_to_excel(xlsx_filename, worksheet_name,dfGDP_4graph, GDP_shares, ICT_GDP_shares, GDP_ICT_share_category , name, ICT, highlighted, ICT_factors)
     
 
     start_row = 5 #the first row where the graphs is embedded
@@ -1221,6 +1221,7 @@ if 1:
     # the problem is that I keep on transferring variable from function to function and if I by mistake transfer the wrong variable GDP intead of output I'll be in trouble
     #it should be one function that does it all.
     #it should be one function that does it all and returns the variables out.
+    B10_graphs1_and_excel2 embeds figures in excel, figures are too big, and variables are passed from function to function. need one function that does it all, but the little function sshould sill work."
 
 
     print('graphs GDP 1 and 2 are done')
