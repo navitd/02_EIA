@@ -199,7 +199,7 @@ def get_share(dfoutput, first_year, last_year, ICTsectors, value_column):
 
 # fig2B: plot stacked output share
 #old version of plot_stacked_shares is in B10_graphs1
-def plot_stacked_shares(shares, ICTcategories, title, value_column, highlighted):
+def get_share_by_category(shares, value_column, ICTcategories, desired_order, countries):
     sector_to_category = {}
     for category, sectors in ICTcategories.items():
         if isinstance(sectors, list):
@@ -218,11 +218,16 @@ def plot_stacked_shares(shares, ICTcategories, title, value_column, highlighted)
                .sum()
                .unstack(fill_value=0))
 
-    desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
-                     'ICT - Software and computer services', 'ICT - Communications services']
+    
     grouped['total'] = grouped.sum(axis=1)
     grouped = grouped.sort_values('total', ascending=False).drop(columns='total')
     countries = grouped.index.tolist()
+    return grouped
+
+
+def plot_stacked_shares(shares, value_column, ICTcategories, desired_order, title,  highlighted):
+    
+    grouped = get_share_by_category(shares, value_column, ICTcategories, desired_order)
 
     category_colors = {}
     for category, sectors in ICTcategories.items():
@@ -795,7 +800,7 @@ def create_excel_file_with_title(ws_title: str, filename) -> int:
 
     return 1  # Next available column after title box
 
-def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col: int, filename, title_size=3, highlighted_sectors=None ) -> int:
+def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col, filename, highlighted_sectors, title_size ) -> int:
     
     # Infer matrix name from variable name if not provided
     if matrix_name is None:
@@ -875,7 +880,7 @@ def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col: in
     return sep_col + 1
 
 # the following is a special printing of the category matrix. it is different because categoris are in columns, not rows. it prints well.
-def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matrix_name, start_col, ICTcategories, highlighted, title_size=6):
+def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matrix_name, start_col, ICTcategories, highlighted, title_size):
     
     # Infer matrix name if not provided
     if matrix_name is None:
@@ -1071,7 +1076,7 @@ if 0:
     #the above is average of average - average over the 6 ICT sectorsa as well as over the years
 
     # fig2B: stacked output share
-    output_ICT_share_category = plot_stacked_shares(output_shares, ICTcategories,f'Stacked Average ICT Output Share by Country, {first_year}-{last_year}','output', highlighted)
+    output_ICT_share_category = plot_stacked_shares(output_shares,'output', ICTcategories,f'Stacked Average ICT Output Share by Country, {first_year}-{last_year}', highlighted)
     
 
     xlsx_filename = f"Bench_predictions_B/B10_graph1_output_data {first_year}-{last_year}.xlsx"
@@ -1092,7 +1097,8 @@ xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_{varname}_data {fir
 worksheet_name = f"{varname} shares {first_year}-{last_year}"
 embed_or_plot = 0 #0: embed, 1: plot, 2: both
 start_row=5
-
+desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
+                     'ICT - Software and computer services', 'ICT - Communications services']
 #below remove all GDP in var names
 def package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year, year_range, countries,
                         ICTsectors,
@@ -1107,6 +1113,7 @@ def package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year
                         ICT,
                         embed_or_plot):
     
+    title_size=6
     # fig 1: GDP CAGR 
     cagr = clc_cagr(dfGDP_4graph, first_year, last_year, varname) 
     if embed_or_plot>0:
@@ -1114,10 +1121,11 @@ def package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year
         plot_cagr(cagr, cagr_title)
 
     GDP_shares, ICT_GDP_shares = get_share(dfGDP_4graph, first_year, last_year, ICTsectors,varname)
+    GDP_ICT_share_category = get_share_by_category()
     if embed_or_plot>0:
         # fig2B: stacked output share
         #this is the average of each category - stacked. 
-        _, GDP_ICT_share_category = plot_stacked_shares(GDP_shares, ICTcategories, stacked_shares_title,varname,highlighted)
+        _, GDP_ICT_share_category = plot_stacked_shares(GDP_shares, varname, ICTcategories, stacked_shares_title, highlighted)
 
     # fig 2C: end years comparison compare first_year with last_year, stacked
     if embed_or_plot>0:
@@ -1131,13 +1139,14 @@ def package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year
         for year in year_range:
             for country in countries: 
                 start_col = append_styled_matrix_to_excel(dfGDP_4graph[(dfGDP_4graph.country==country) & (dfGDP_4graph.year==year)], 
-                                                          varname, worksheet_name, start_col, xlsx_filename, highlighted )
+                                                          varname, worksheet_name, start_col, xlsx_filename, highlighted, title_size )
+                 
         
-        start_col = append_styled_matrix_to_excel(GDP_shares, varname+'_shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
-        start_col = append_styled_matrix_to_excel(ICT_GDP_shares, ICT+varname+' shares', worksheet_name, start_col, filename=xlsx_filename,highlighted_sectors=highlighted)
+        start_col = append_styled_matrix_to_excel(GDP_shares, varname+'_shares', worksheet_name, start_col, filename=xlsx_filename, highlighted_sectors=highlighted, title_size=title_size)
+        start_col = append_styled_matrix_to_excel(ICT_GDP_shares, ICT+varname+' shares', worksheet_name, start_col, filename=xlsx_filename, highlighted_sectors=highlighted, title_size=title_size)
 
-        start_col = append_styled_matrix_by_category_to_excel(GDP_ICT_share_category, xlsx_filename, worksheet_name, varname+ICT+' by category',start_col, ICTcategories, highlighted, title_size=3)
-        
+        start_col = append_styled_matrix_by_category_to_excel(GDP_ICT_share_category, xlsx_filename, worksheet_name, varname+ICT+' by category',start_col, ICTcategories, highlighted, title_size=title_size)
+        #                                                     (df,                     filename,      worksheet_name,  matrix_name,              start_col, ICTcategories, highlighted, title_size)
 
         # embed plots to excel
         col_letter = get_column_letter(start_col)
@@ -1150,7 +1159,7 @@ def package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year
         buf1.seek(0)
 
         # Stacked shares plot
-        fig2, _ = plot_stacked_shares(shares, ICTcategories, shares_title, value_column, highlighted)
+        fig2, _ = plot_stacked_shares(shares, value_column, ICTcategories, shares_title, highlighted)
         buf2 = BytesIO()
         fig2.savefig(buf2, format='png', bbox_inches='tight', dpi=200)
         buf2.seek(0)
