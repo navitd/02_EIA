@@ -32,11 +32,9 @@ B05 Esectors from Etot
 #B07 calculation of bases for Tc (easy), and all other vectors
 #bases are the fixed ratio vsector/vtot
 
-no B8, B9
+#no B8, B9
 
+#B10 extracting actual extrapolated data from all the above
+#plotting graph 1 cagr and graph 2 shares for output and GDP
 
-B10 extracting actual extrapolated data from all the above
-
-B11 comparing for 2020 - extrapolated and real data. should be the same if all bases rely on 2020 alone.all
-
-B12 plot benchmarking graphs
+B12 GDP impact

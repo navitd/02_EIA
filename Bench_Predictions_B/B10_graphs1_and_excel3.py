@@ -974,16 +974,8 @@ def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matr
 
 
 def package_print_embed_plot_option(df_4graph, varname, first_year, last_year, year_range, countries,
-                        ICTsectors,
-                        ICTcategories,
-                        highlighted,
-                        cagr_title,
-                        stacked_shares_title,
-                        end_years_title,
-                        xlsx_filename,
-                        worksheet_name,
-                        start_row,
-                        ICT,
+                        ICTsectors, ICTcategories, highlighted, cagr_title, stacked_shares_title,
+                        end_years_title, xlsx_filename, worksheet_name, start_row, ICT,
                         embed_or_plot):
     
     title_size=6
@@ -1137,13 +1129,11 @@ simple_II_labels = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T1
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 
 
-first_year = 2008 
-last_year = 2018  
+first_year = 2025 
+last_year = 2034  
 year_range = [int(year) for year in range(int(first_year), int(last_year) + 1)]
 dfoutput_4graph = dfoutput[(dfoutput.year >= first_year) & (dfoutput.year <= last_year) ].copy()
 dfGDP_4graph = dfGDP[(dfGDP.year >= first_year) & (dfGDP.year <= last_year) ].copy()
-
-
 
 highlighted = {
     "C26": "90EE90",   # light green
@@ -1156,65 +1146,113 @@ highlighted = {
 ##########################################             Benchmark  plots            ######################################################
 
 # graphs 1 and 2 for output
-graphnumber=1
-varname = 'output'
-ICT = 'ICT'
-cagr_title = f'Average {varname} CAGR for {ICT} sectors ({first_year}–{last_year})'
-end_years_title = f'{ICT} {varname} {first_year} and {last_year} Share by Country'
-stacked_shares_title = f'Stacked Average {ICT} {varname} Share by Country, {first_year}-{last_year}'
-#xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_{varname}_data {first_year}-{last_year}.xlsx"
-xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_data {first_year}-{last_year}.xlsx"
-worksheet_name = f"{varname} shares {first_year}-{last_year}"
-embed_or_plot = 2 #0: embed, 1: plot, 2: both
-start_row=5
-desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
-                     'ICT - Software and computer services', 'ICT - Communications services']
+if 0:
+    graphnumber=1
+    varname = 'output'
+    ICT = 'ICT'
+    cagr_title = f'Average {varname} CAGR for {ICT} sectors ({first_year}–{last_year})'
+    end_years_title = f'{ICT} {varname} {first_year} and {last_year} Share by Country'
+    stacked_shares_title = f'Stacked Average {ICT} {varname} Share by Country, {first_year}-{last_year}'
+    #xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_{varname}_data {first_year}-{last_year}.xlsx"
+    xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_data {first_year}-{last_year}.xlsx"
+    worksheet_name = f"{varname} shares {first_year}-{last_year}"
+    embed_or_plot = 2 #0: embed, 1: plot, 2: both
+    start_row=5
+    desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
+                        'ICT - Software and computer services', 'ICT - Communications services']
 
 
-package_print_embed_plot_option(dfoutput_4graph, varname, first_year, last_year, year_range, countries,
-                        ICTsectors,
-                        ICTcategories,
-                        highlighted,
-                        cagr_title,
-                        stacked_shares_title,
-                        end_years_title,
-                        xlsx_filename,
-                        worksheet_name,
-                        start_row,
-                        ICT,
-                        embed_or_plot
-)
+    package_print_embed_plot_option(dfoutput_4graph, varname, first_year, last_year, year_range, countries,
+                            ICTsectors,
+                            ICTcategories,
+                            highlighted,
+                            cagr_title,
+                            stacked_shares_title,
+                            end_years_title,
+                            xlsx_filename,
+                            worksheet_name,
+                            start_row,
+                            ICT,
+                            embed_or_plot
+    )
+
+if 0:
+    # graphs 1 and 2 for GDP
+    graphnumber=1
+    varname = 'GDP'
+    ICT = 'ICT'
+    cagr_title = f'Average {varname} CAGR for ICT sectors ({first_year}–{last_year})'
+    end_years_title = f'{ICT} {varname} {first_year} and {last_year} Share by Country'
+    stacked_shares_title = f'Stacked Average ICT {varname} Share by Country, {first_year}-{last_year}'
+    xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_data {first_year}-{last_year}.xlsx"
+    worksheet_name = f"{varname} shares {first_year}-{last_year}"
+    embed_or_plot = 2 #0: embed, 1: plot, 2: both
+    start_row=5
+    desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
+                        'ICT - Software and computer services', 'ICT - Communications services']
+
+
+    package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year, year_range, countries,
+                            ICTsectors,
+                            ICTcategories,
+                            highlighted,
+                            cagr_title,
+                            stacked_shares_title,
+                            end_years_title,
+                            xlsx_filename,
+                            worksheet_name,
+                            start_row,
+                            ICT,
+                            embed_or_plot
+    )
+
+#one file for both
+
+if 1:
+    graphnumber=1
+    xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_data_{first_year}-{last_year}.xlsx"
+    ICT = 'ICT'
+    embed_or_plot = 0 #0: embed, 1: plot, 2: both
+    start_row=5
+    desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
+                        'ICT - Software and computer services', 'ICT - Communications services']
+    
+    varname = 'output'
+    cagr_title = f'Average {varname} CAGR for {ICT} sectors ({first_year}–{last_year})'
+    end_years_title = f'{ICT} {varname} {first_year} and {last_year} Share by Country'
+    stacked_shares_title = f'Stacked Average {ICT} {varname} Share by Country, {first_year}-{last_year}'
+    worksheet_name = f"{varname} shares {first_year}-{last_year}"
+    
+    package_print_embed_plot_option(dfoutput_4graph, varname, first_year, last_year, year_range, countries,
+                            ICTsectors, ICTcategories, highlighted, cagr_title, stacked_shares_title,
+                            end_years_title, xlsx_filename, worksheet_name, start_row, ICT,
+                            embed_or_plot
+    )
+
+
+    varname = 'GDP'
+    cagr_title = f'Average {varname} CAGR for ICT sectors ({first_year}–{last_year})'
+    end_years_title = f'{ICT} {varname} {first_year} and {last_year} Share by Country'
+    stacked_shares_title = f'Stacked Average ICT {varname} Share by Country, {first_year}-{last_year}'
+    worksheet_name = f"{varname} shares {first_year}-{last_year}"
+    
+    package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year, year_range, countries,
+                            ICTsectors, ICTcategories, highlighted, cagr_title, stacked_shares_title,
+                            end_years_title, xlsx_filename, worksheet_name, start_row, ICT,
+                            embed_or_plot
+    )
 
 
 
-# graphs 1 and 2 for GDP
-graphnumber=1
-varname = 'GDP'
-ICT = 'ICT'
-cagr_title = f'Average {varname} CAGR for ICT sectors ({first_year}–{last_year})'
-end_years_title = f'{ICT} {varname} {first_year} and {last_year} Share by Country'
-stacked_shares_title = f'Stacked Average ICT {varname} Share by Country, {first_year}-{last_year}'
-xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_data {first_year}-{last_year}.xlsx"
-worksheet_name = f"{varname} shares {first_year}-{last_year}"
-embed_or_plot = 2 #0: embed, 1: plot, 2: both
-start_row=5
-desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
-                     'ICT - Software and computer services', 'ICT - Communications services']
 
 
-package_print_embed_plot_option(dfGDP_4graph, varname, first_year, last_year, year_range, countries,
-                        ICTsectors,
-                        ICTcategories,
-                        highlighted,
-                        cagr_title,
-                        stacked_shares_title,
-                        end_years_title,
-                        xlsx_filename,
-                        worksheet_name,
-                        start_row,
-                        ICT,
-                        embed_or_plot
-)
+
+
+
+
+
+
+
 
 print('graphs GDP 1 and 2 are done')
 
