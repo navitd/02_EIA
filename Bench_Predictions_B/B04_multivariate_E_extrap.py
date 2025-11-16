@@ -179,6 +179,8 @@ def compute_E_G_ratio(dfEtotal, worldbank_gdp_data,countries, year_range):
                  ratio= dfEtotal[  (dfEtotal.year==year) & (dfEtotal.country== country)].Etotal.values[0] / gdp_temp
                  dfE_G_ratio.loc[ year, country] = ratio
     return dfE_G_ratio
+
+
 ##################################################        functions that calculate        ######################################################
 
 def multipliers2prediction(s2s_mo, fdf_year2, column_name):
@@ -648,12 +650,13 @@ print(f"\n Elapsed time: {(end_time - start_time)/60:.1f} minutes \n")
 ###########################
 #10. Employment extrapolation
 ###########################
-dfEict = (
-    dfE[dfE['sector'].isin(ICTsectors)]
-    .groupby(['country', 'year'], as_index=False)['Employment']
-    .sum()
-    .rename(columns={'Employment': 'Etotal'})
-)
+# delete, as well as temp above:
+#dfEict = (
+#    dfE[dfE['sector'].isin(ICTsectors)]
+#    .groupby(['country', 'year'], as_index=False)['Employment']
+#    .sum()
+#    .rename(columns={'Employment': 'Etotal'})
+#)
 
 ## 10.a. polynomial extrapolation
 #package extrapolation is polynomial extrapolation only with E
@@ -661,22 +664,23 @@ dfEict = (
 #dfGDP, dfGDPtotal, data_and_predictionGDP = package_extrapolation(dfGDP, 'GDP', 'GDPtotal', 0.8, 1, steps_forward=5, steps_back=4, alpha=50)
 
 #10.b. extrapolation by gdp
-dfE, dfEtotal = clc_v_tot(dfE, 'Employment', 'Etotal')
-dfGDP, dfGDPtotal = clc_v_tot(dfGDP, 'GDP', 'GDPtotal')
+dfE, dfEtotal = clc_v_tot(dfE, 'Employment', 'Etotal') # E of 2011-2020
+dfGDP, dfGDPtotal = clc_v_tot(dfGDP, 'GDP', 'GDPtotal') # GDP of 2011-2020
 
 # upload GDP data from World Bank - 1995-2024 or from "Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv"
 # GDP of world bank is in current USD dollars. 
 # input-ouput tables and E are in millions of that year's USD dollars.
+# 
 upload_from_gdp_extrapolated = True
 if upload_from_gdp_extrapolated:
-    #SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    #gdp_filename = os.path.join(SCRIPT_DIR, '..', '..', 'Data', 'Bench_predictions', 'gdp_ARIMAgdp_currentUSD04.csv')
+    #the following is gdp extrapolated by ARIMA from World Bank data 1995-2040
     gdp_filename = "Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv"
     gdp_data = pd.read_csv(gdp_filename)
     gdp_data.rename(columns={'Unnamed: 0': 'year'}, inplace=True) #renaming the column
     gdp_data['year'] = gdp_data['year'].astype(int)
     gdp_data.set_index('year', inplace=True)                  #setting year as index
 else:
+    # basis for extrapolation 1995-2024
     worldbank_gdp_data = get_worldbank_gdp_data(False)
     worldbank_gdp_data.rename(columns={'Time': 'year'}, inplace=True   ) #renaming the column
     worldbank_gdp_data['year'] = worldbank_gdp_data['year'].astype(int) #recasting as int
@@ -698,5 +702,7 @@ for country in countries:
 plot_v_by_year_1panel(Eextrap, countries, 'Employment', "Extrapolated Employment by Country")
 
 # print to excel
-Eextrap.to_csv("Bench_predictions/Etotal_multivariate_E_extrap03.csv", index=True)
+if 0:
+    Eextrap.to_csv("Bench_predictions/Etotal_multivariate_E_extrap03.csv", index=True)
+
 print("\n \n")

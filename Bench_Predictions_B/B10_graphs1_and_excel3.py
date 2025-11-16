@@ -1057,9 +1057,6 @@ def package_print_embed_plot_option(df_4graph, varname, first_year, last_year, y
 
 
 
-
-
-
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # upload gdp
 dfgdp_worldbank = pd.read_csv("Bench_predictions_B/A04_gdp_ARIMAgdp_currentUSD04.csv")
@@ -1207,7 +1204,7 @@ if 0:
     )
 
 #one file for both
-
+correct before I forget - remove Etot from total output when calculating shares
 if 1:
     graphnumber=1
     xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_data_{first_year}-{last_year}.xlsx"

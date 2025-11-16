@@ -1,0 +1,75 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath} % For advanced math typesetting
+\usepackage{amsfonts} % For additional math fonts
+\usepackage{amsthm} % For theorem environments
+\usepackage{graphicx}
+
+\newtheorem{definition}{Definition}
+
+\title{ARIMA theory}
+\author{Navit Dori}
+\date{\today}
+
+\begin{document}
+\maketitle
+\section*{Is ARIMA with $d=0$ Equivalent to Linear Regression?}
+
+No. ARIMA models with $d=0$ are \textbf{not} equivalent to linear regression.
+
+\subsection*{What ARIMA($d=0$) Represents}
+
+An ARIMA$(p,0,q)$ model is an autoregressive--moving-average model:
+\[
+y_t = c + \sum_{i=1}^{p} \phi_i y_{t-i} + \sum_{j=1}^{q} \theta_j e_{t-j} + e_t,
+\]
+where $y_t$ depends on past values $y_{t-i}$ and past forecast errors $e_{t-j}$.
+
+This is a \textbf{time-series model}, not a regression on external predictors.
+
+\subsection*{Why It Is Not Linear Regression}
+
+A linear regression model has the form
+\[
+y = \beta_0 + \beta_1 x + \varepsilon,
+\]
+in which $y$ is modeled using an external predictor $x$.
+
+In contrast, ARIMA$(p,0,q)$ uses only:
+\begin{itemize}
+    \item past values of $y$ (autoregressive part),
+    \item past forecast errors (moving-average part),
+    \item no external regressors.
+\end{itemize}
+
+Therefore it cannot be considered a linear regression model.
+
+\subsection*{When ARIMA Resembles Regression}
+
+If $p=1$, $q=0$, and $d=0$, the model becomes
+\[
+y_t = c + \phi_1 y_{t-1} + e_t,
+\]
+which resembles a regression of $y_t$ on $y_{t-1}$.  
+However, it is still \textbf{not} linear regression because:
+\begin{itemize}
+    \item parameters are estimated by maximum likelihood, not by OLS,
+    \item residuals must follow an AR(1) structure,
+    \item the model includes stochastic error dynamics typical of time series.
+\end{itemize}
+
+\subsection*{True Linear Regression on Time}
+
+A genuine regression model involving time is of the form
+\[
+y_t = \alpha + \beta t + \varepsilon_t.
+\]
+
+One may detrend the series first and then apply ARIMA, but this is separate from the ARIMA$(p,0,q)$ formulation.
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}

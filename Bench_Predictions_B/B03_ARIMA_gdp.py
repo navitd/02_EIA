@@ -1,3 +1,11 @@
+
+
+import warnings
+# Suppress FutureWarnings globally
+warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.filterwarnings('ignore', message=r".*force_all_finite.*")
+warnings.filterwarnings("ignore")
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import sys
@@ -6,7 +14,6 @@ import os
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'EIAfunctions'))
 from func_clean_world_bank_data import clean_world_bank_data
-import warnings
 from sklearn.metrics import mean_squared_error
 import pmdarima as pm
 
@@ -16,11 +23,6 @@ from openpyxl.styles import PatternFill, Alignment, Font, Border, Side
 import openpyxl
 
 
-# Ignore FutureWarnings from sklearn specifically
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
-# Optional: ignore all warnings
-warnings.simplefilter(action='ignore')
 
 
 def get_worldbank_gdp_data(plot_flag):
@@ -266,6 +268,7 @@ countries = ['ITA','JPN','CAN','FRA','DEU','GBR','USA']
 
 forecast_gdp = pd.DataFrame(index=pd.Index(forecast_years, dtype=int), columns=countries)
 
+arima_orders = {}
 for country in countries:
     print(f"\nProcessing {country}...")
     
@@ -275,18 +278,38 @@ for country in countries:
     
     # Systematic grid search for ARIMA(p,d,q)
     # d=1 sets difference y(t)-y(t-1)
-    model = pm.auto_arima(
-        train,
-        start_p=0, max_p=5,     # search range for AR terms
-        start_q=0, max_q=5,     # search range for MA terms
-        d=2,                 # let model decide via ADF test
-        seasonal=False,
-        stepwise=False,         # disable heuristic stepwise search
-        suppress_warnings=True,
-        error_action='ignore',
-        information_criterion='aic',  # use AIC for model selection
-        n_jobs=-1               # parallel processing for speed
-    )
+    #fixed d:
+    if 1:
+        d_title = 3
+        model = pm.auto_arima(
+            train,
+            start_p=0, max_p=5,     # search range for AR terms
+            start_q=0, max_q=5,     # search range for MA terms
+            d=d_title,                 # let model decide via ADF test
+            seasonal=False,
+            stepwise=False,         # disable heuristic stepwise search
+            suppress_warnings=True,
+            error_action='ignore',
+            information_criterion='aic',  # use AIC for model selection
+            n_jobs=-1               # parallel processing for speed
+        )
+
+    #automatic d
+    if 0:
+        d_title = 'automatic'
+        model = pm.auto_arima(
+            train,
+            start_p=0, max_p=5,
+            start_q=0, max_q=5,
+            d=None,               # <-- let auto_arima choose differencing
+            test='adf',           # unit-root test to determine d
+            seasonal=False,
+            stepwise=False,
+            suppress_warnings=True,
+            error_action='ignore',
+            information_criterion='aic',
+            n_jobs=-1
+        )
     
     print(f"\n\nSelected ARIMA order for {country}: {model.order}\n")
     
@@ -297,7 +320,8 @@ for country in countries:
     
     # Refit on full series
     model.fit(worldbank_gdp_data[country])
-    
+    arima_orders[country] = model.order
+
     # Forecast 10 years ahead
     forecast_values = model.predict(n_periods=forecast_horizon)
     forecast_values.index = forecast_years
@@ -306,12 +330,16 @@ for country in countries:
     forecast_gdp[country] = forecast_values
 
 
-plot_gdp_forecast(worldbank_gdp_data, forecast_gdp, countries, title="ARIMA gdp d=2")
+plot_gdp_forecast(worldbank_gdp_data, forecast_gdp, countries, title=f"ARIMA gdp d={d_title}")
 
+print("\nSelected ARIMA orders for all countries:\n")
+for country, order in arima_orders.items():
+    print(f"{country}: ARIMA{order}")
 
 # print to excel
-gdp = pd.concat([worldbank_gdp_data, forecast_gdp])
-gdp.to_csv("Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv", index=True)
+if 0:
+    gdp = pd.concat([worldbank_gdp_data, forecast_gdp])
+    gdp.to_csv("Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv", index=True)
 
 print("\n\n")
 
