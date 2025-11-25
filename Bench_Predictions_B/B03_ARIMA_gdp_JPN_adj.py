@@ -323,7 +323,9 @@ for year in forecast_years:
 plot_gdp_forecast(worldbank_gdp_data, forecast_gdp, countries, title=f"ARIMA gdp d={2}")
 # print to excel
 gdp = pd.concat([worldbank_gdp_data, forecast_gdp])
-gdp.to_csv("Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv", index=True)
+
+if 0:
+    gdp.to_csv("Bench_predictions/gdp_ARIMAgdp_currentUSD04.csv", index=True)
 
 print("\n\n")
 

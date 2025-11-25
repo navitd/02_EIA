@@ -74,7 +74,7 @@ def collect_m(m, country, year, m_value_name, dfm):
 
 
 
-
+'''
 #for extrapolation - calculating market total
 def clc_v_tot(df, value_col, col_tot):
     # add total employment per (country, year)
@@ -83,6 +83,25 @@ def clc_v_tot(df, value_col, col_tot):
     df[value_col+" sector ratio"] = df[value_col] / df[col_tot]
     dftotal = df[["country", "year", col_tot]].drop_duplicates()
     return df, dftotal
+'''
+#summung v_tot without compensation of employees or HFCE
+def clc_v_tot(df, value_col, col_tot, simple_II_labels):
+    # total only over selected labels
+    df_tot = (
+        df[df["sector"].isin(simple_II_labels)]
+        .groupby(["country", "year"])[value_col]
+        .sum()
+        .reset_index()
+        .rename(columns={value_col: col_tot})
+    )
+    # merge total back
+    df = df.merge(df_tot, on=["country", "year"], how="left")
+    # ratio
+    df[value_col + " sector ratio"] = df[value_col] / df[col_tot]
+    return df, df_tot
+
+
+
 
 # for extrapolation - calculating ratio with worldbank gdp
 def ratio_with_worldbank_gdp(dfv_total, gdp_long, worldbank_gdp_col_name, col_name):
@@ -357,17 +376,17 @@ for country in countries:
 ############################################################
 
 # to get the ratio of dfother_sector / dfother_tot for data years, and also dfv_total
-dfHFCE, dfHFCE_total = clc_v_tot(dfHFCE, HFCE_col_name, HFCE_col_name+' total')
-df8, df8_total = clc_v_tot(df8, f8_col_name, f8_col_name+' total')
-df9, df9_total = clc_v_tot(df9, f9_col_name, f9_col_name+' total')
-dfGDP, dfGDP_total = clc_v_tot(dfGDP, GDP_col_name, GDP_col_name+' total')
-dfoutput, dfoutput_total = clc_v_tot(dfoutput, output_col_name, output_col_name+' total')
-dfGDPj_by_xj, dfGDPj_by_xj_total = clc_v_tot(dfGDPj_by_xj, GDPj_by_xj_col_name, GDPj_by_xj_col_name+' total')
+dfHFCE, dfHFCE_total = clc_v_tot(dfHFCE, HFCE_col_name, HFCE_col_name+' total',simple_II_labels)
+df8, df8_total = clc_v_tot(df8, f8_col_name, f8_col_name+' total',simple_II_labels)
+df9, df9_total = clc_v_tot(df9, f9_col_name, f9_col_name+' total',simple_II_labels)
+dfGDP, dfGDP_total = clc_v_tot(dfGDP, GDP_col_name, GDP_col_name+' total',simple_II_labels)
+dfoutput, dfoutput_total = clc_v_tot(dfoutput, output_col_name, output_col_name+' total',simple_II_labels)
+dfGDPj_by_xj, dfGDPj_by_xj_total = clc_v_tot(dfGDPj_by_xj, GDPj_by_xj_col_name, GDPj_by_xj_col_name+' total',simple_II_labels)
 
 #clc_v_tot is accurate
 
 #print to csv
-if 1:
+if 0:
     dfTc.to_csv("Bench_predictions_B/B06_dfTc.csv", index=False)
     dfHFCE.to_csv("Bench_predictions_B/B06_dfHFCE.csv", index=False)
     df8.to_csv("Bench_predictions_B/B06_df8.csv", index=False)
@@ -432,7 +451,7 @@ dfGDPj_by_xj_extrap_and_data, dfGDPj_by_xj_extrap_and_data_wide = tot2future_by_
 #plot_v_by_year_1panel(dfGDP_extrap_and_data_wide, countries, 'GDP [Million USD]', "Extrapolated GDP by Country")
 
 # print to excel - correct dataframe to print
-if 0:
+if 1:
     dfHFCE_extrap_and_data.to_csv("Bench_predictions_B/B06_dfHFCE_tot.csv", index=False)
     df8_extrap_and_data.to_csv("Bench_predictions_B/B06_df8_tot.csv", index=False)
     df9_extrap_and_data.to_csv("Bench_predictions_B/B06_df9_tot.csv", index=False)
@@ -441,7 +460,7 @@ if 0:
     dfGDPj_by_xj_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj_tot.csv", index=False)
 
 
-if 1:
+if 0:
     #checks
     #1. GDPj_by_xj *output = GDP??
     #the above is not true. it's true only for _xj_, not the summing of output

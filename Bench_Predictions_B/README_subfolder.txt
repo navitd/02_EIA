@@ -27,6 +27,7 @@ PYTHON FILES & EXECUTION ORDER:
 6. B06_collecting_data_over_years.py
    - Collects OECD data (Tc, fHFCE, fother, output, GDPj_by_xj) for 1995-2020
    - Output: B06_df*.csv, B06_df*_tot.csv files
+   - here I make output_tot
 
 7. B07_base_sectors.py
    - Calculates base ratios (sector/total) for extrapolation
