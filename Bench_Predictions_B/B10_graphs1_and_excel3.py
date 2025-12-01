@@ -1204,7 +1204,7 @@ if 0:
     )
 
 #one file for both
-correct before I forget - remove Etot from total output when calculating shares
+
 if 1:
     graphnumber=1
     xlsx_filename = f"Bench_predictions_B/B10_graph{graphnumber}_data_{first_year}-{last_year}.xlsx"

@@ -316,6 +316,7 @@ for country in countries:
 x1,y1 = 2024, worldbank_gdp_data.loc[2024,'JPN']
 x2,y2 = 2040, worldbank_gdp_data.loc[2024, 'CAN']
 a = (y2-y1)/(x2-x1)
+print(f"Correcting JPN forecast with linear extrapolation slope a={a}")
 b = y1 - a*x1
 for year in forecast_years:
     forecast_gdp.loc[year,'JPN'] = a*year + b

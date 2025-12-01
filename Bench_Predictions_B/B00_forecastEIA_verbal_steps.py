@@ -15,6 +15,14 @@ B04 multivariate E extrap: extrapolating E based on the ration with gdp. assumin
 
 B05 Esectors from Etot
 
+
+I think B04 and B05 are old
+
+B06 is the file after B03
+
+
+
+
 #divergence from A version
 #B06 collect data 1995-2020: f, fother, Tc, output, GDPj_by_xj and everything else I may need later
 #save to one file
@@ -33,6 +41,7 @@ B05 Esectors from Etot
 #bases are the fixed ratio vsector/vtot
 
 #no B8, B9
+I guess I should delete b09? it uploads from A05 data B10 is instead of B09?
 
 #B10 extracting actual extrapolated data from all the above
 #plotting graph 1 cagr and graph 2 shares for output and GDP

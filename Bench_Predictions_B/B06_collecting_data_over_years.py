@@ -74,17 +74,8 @@ def collect_m(m, country, year, m_value_name, dfm):
 
 
 
-'''
-#for extrapolation - calculating market total
-def clc_v_tot(df, value_col, col_tot):
-    # add total employment per (country, year)
-    df[col_tot] = df.groupby(["country", "year"])[value_col].transform("sum")
-    # ratio of sector employment to total
-    df[value_col+" sector ratio"] = df[value_col] / df[col_tot]
-    dftotal = df[["country", "year", col_tot]].drop_duplicates()
-    return df, dftotal
-'''
-#summung v_tot without compensation of employees or HFCE
+
+#summing v_tot without compensation of employees or HFCE
 def clc_v_tot(df, value_col, col_tot, simple_II_labels):
     # total only over selected labels
     df_tot = (
@@ -96,7 +87,7 @@ def clc_v_tot(df, value_col, col_tot, simple_II_labels):
     )
     # merge total back
     df = df.merge(df_tot, on=["country", "year"], how="left")
-    # ratio
+    #  ratio
     df[value_col + " sector ratio"] = df[value_col] / df[col_tot]
     return df, df_tot
 
@@ -386,7 +377,8 @@ dfGDPj_by_xj, dfGDPj_by_xj_total = clc_v_tot(dfGDPj_by_xj, GDPj_by_xj_col_name, 
 #clc_v_tot is accurate
 
 #print to csv
-if 0:
+# there is another printing below for the full run of the program
+if 1:
     dfTc.to_csv("Bench_predictions_B/B06_dfTc.csv", index=False)
     dfHFCE.to_csv("Bench_predictions_B/B06_dfHFCE.csv", index=False)
     df8.to_csv("Bench_predictions_B/B06_df8.csv", index=False)

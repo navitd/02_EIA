@@ -194,7 +194,8 @@ dfE10years, Esector_only_extrap, Esector_extrap_and_data = insert_data_in_extrap
 
 
 # print to csv 
-Esector_extrap_and_data.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
+if 0:
+    Esector_extrap_and_data.to_csv("Bench_predictions/Esectors_from_Etot05.csv", index=False)
 
 
 
