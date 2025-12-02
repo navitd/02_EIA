@@ -1,0 +1,187 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath} % For advanced math typesetting
+\usepackage{amsfonts} % For additional math fonts
+\usepackage{amsthm} % For theorem environments
+\usepackage{graphicx}
+
+\newtheorem{definition}{Definition}
+
+\title{EIA GDP Indirect Impact Analysis}
+\author{Navit Dori}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+
+\section{Basic Leontieff equations}
+
+\begin{equation}
+\begin{array}{ll}  % 'll' ensures both columns are left-aligned
+    x   & \quad \text{Output} \\
+   II   & \quad \text{Intermediate input, also called IO matrix} \\
+    f    & \quad \text{Final demand} \\
+    T   & \quad \text{Technical coefficient matrix, sometimes called A} 
+\end{array}
+\end{equation}
+x is the total output vector, which is the total output productive sectors produce,
+\[
+\vec{x} =
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+\vdots \\
+x_n
+\end{pmatrix}
+\]
+
+II is the intermediate input matrix, or the IO matrix, which is what productive sectors buy and sell from other productive sectors,
+
+Each element in the intermediate input matrix $II$ is devided by the total output of the column (total output of the buying sector) to get the technical coeeficient:
+\begin{equation}\label{eq:Tdef}
+T_{ij} = \frac{II_{ij}}{x_j}
+\end{equation}
+This is an element-by-element multiplication, not a matrix multiplication. It is equivalent to
+\begin{equation}
+II_{ij} = T_{ij}x_j.
+\end{equation}
+
+
+The fundamental equation states that the total output is a sum of the intermediate input and the final demand,
+\begin{equation}
+\begin{aligned}
+    x_i &= II_i+f_i \\
+         &= \sum_k {T_{ik} x_k} + f_i, 
+\end{aligned}
+\end{equation}
+where $II_i=\sum_k{T_{ik}x_k}$ is what sector $i$ sells to the other sectors, a sum of the row correxponding to sector $i$.  $f_i$ is what sector $i$ sells to households.
+
+In matrix form the equation becomes
+\begin{equation}
+\vec{x} = T \vec{x} + f
+\end{equation}
+
+
+leading to
+\begin{equation}
+\vec{x} = (I-T)^{-1}f.
+\end{equation}
+
+We usually refer to $(I-T)^{-1}$ as the Leontieff matrix, $L$.
+
+\section{Value Added}
+GDP is the same as value added
+\begin{equation}
+\text{Value Added} = \text{Output} - \text{Intermediate Input} 
+\end{equation}
+
+\begin{equation}
+\text{Value Added} = \text{Wages} + \text{Taxes} - \text{Subsidies} + \text{Rent} +\text{Capital} + \text{Profit}
+\end{equation}
+
+\section{GDP Direct Impact}
+
+\begin{equation}
+\begin{aligned}
+\text{Direct Impact} &= \text{Wages} + \text{Taxes (of production)} - \text{Subsidies (of production)} \\
+&\quad + \text{Operating Surplus} + \text{Capital} + \text{Profit},
+\end{aligned}
+\end{equation}
+
+or
+\begin{equation}
+\text{GDP}_{\text{Direct Impact}} = \frac{VA}{Output} = \frac{GDP}{Output}
+\end{equation}
+
+\begin{equation}
+VA = GDP
+\end{equation}
+%
+The above formula has the advantage that for any new total output vector $\vec{x'}$ the new GDP is $GDP_{\text{Direct Impact}}\vec{x'}$, which is to say that for sector $i$ the new GDP is $GDP_{\text{Direct Impact},i}\vec{x'}_i$
+%
+
+\section{GDP indirect impact - our EIA model version}
+
+Here I follow the power point file \textit{EIA Modelling Workshop-Day 1\_Dec 23 2019.pptx}. 
+Reetika explained over the phone that the vector $E'$ is based on $II' = Outcome' - Value Added'$. 
+All variable denoted by $'$ refer to variables after the shock. 
+In the example given in the file (slide 21), 
+\begin{equation}
+II'_a = Output'_a - Value Added'_a = 5-3 = 2. 
+\end{equation}
+Value added is refered to as \textbf{GDP direct} in the file.
+
+The next step is
+\begin{equation}
+E'_a = T_{i1}(output'_a - \text{GDP}'_a)  = T_{i1} \cdot \text{II}'_a
+\end{equation}
+where $T_{i1}$ is the technical coefficients of the first column of T, refering to sector $a$.
+We could write $T_{i1} = T_{ia}$.
+The first column of $T$ is $[0.00, 0.17, 0.33]$ and so we have
+\begin{equation}
+E' = [0.00, 0.17, 0.33] \cdot 2 = [0.00, 0.34, 0.66]
+\end{equation}
+
+The next step is to multiply $E'$ by the inverse Leontieff matrix $L$ as if it were a final demand variable. The equation given in slide 21 is
+\begin{equation}
+Y' = (I-A)^{-1} E'
+\end{equation}
+where in the file's notation $Y'$ is the total output (here $x'$) and $A$ is the technical coefficient (here $T$).
+
+$Y'$ is thus
+\begin{equation}
+Y' = \begin{pmatrix}
+1.154 & 0.385 & 0.269 \\
+0.322 & 1.275 & 0.319 \\
+0.503 & 0.385 & 1.325
+\end{pmatrix}
+\begin{pmatrix}
+0.00 \\
+0.34 \\
+0.66
+\end{pmatrix}
+=
+\begin{pmatrix}
+0.31 \\
+0.64 \\
+1.01
+\end{pmatrix}
+\end{equation}
+
+The file continues with
+\begin{equation}\label{eq:typeI_Reetika}
+\text{GDP} type I = Y'  \cdot \text{GDP}_{\text{ratio}}
+\end{equation}
+
+where $\text{GDP}_{\text{ratio}}$ is calulated in slide 18 to be
+\begin{equation}
+\text{GDP to output ratio of sector j}  = \frac{\text{GDP}_j}{x_j}
+\end{equation}
+and the result is
+\begin{equation}
+\text{GDP to output ratio}  = [0.50, 0.47, 0.55]
+\end{equation}
+However, slide 21 uses a different vector
+\[
+\text{GDP}ratio = [0.44, 0.37, 0.50]
+\]
+
+The final step is to carry out the multiplication of eq. \ref{eq:typeI_Reetika} and sum over the result
+\begin{equation}
+\begin{aligned}
+\text{GDP} type I_a &= Y' \cdot \text{GDP}ratio \\
+                    &= [0.31, 0.64, 1.01] \cdot [0.44, 0.37, 0.50] \\
+                    &= [0.14, 0.24, 0.50]
+\end{aligned}
+\end{equation}
+\begin{equation}
+\text{GDP} indirect_a = \sum_i{ Y'_i \cdot \text{GDP}ratio_i }= 0.14+0.24+0.50 = 0.88
+\end{equation}
+ 
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}

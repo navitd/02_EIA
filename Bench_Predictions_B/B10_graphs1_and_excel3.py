@@ -1239,17 +1239,36 @@ if 1:
                             embed_or_plot
     )
 
+SHRED=1
+if SHRED:
+    df_can_2030 = dfoutput[(dfoutput['country']=="CAN") &
+                           (dfoutput['year']==2030)].iloc[:-1,:]
+
+    plt.figure(figsize=(18,4))   # wider
+    plt.plot(df_can_2030['sector'], df_can_2030['output'], marker='o')
+
+    plt.xticks(rotation=75, ha='right')  # strong rotation + right align
+
+    plt.xlabel("Sector")
+    plt.ylabel("output, Milions, current USD")
+    plt.title("Output by sector for Canada in 2030")
+    plt.tight_layout()
+    plt.show()
 
 
+    df_can_2030_GDP = dfGDP[(dfoutput['country']=="CAN") &
+                           (dfoutput['year']==2030)].iloc[:-1,:]
 
+    plt.figure(figsize=(18,4))   # wider
+    plt.plot(df_can_2030_GDP['sector'], df_can_2030_GDP['GDP'], marker='o')
 
+    plt.xticks(rotation=75, ha='right')  # strong rotation + right align
 
-
-
-
-
-
-
+    plt.xlabel("Sector")
+    plt.ylabel("GDP, Milions, current USD")
+    plt.title("GDP by sector for Canada in 2030")
+    plt.tight_layout()
+    plt.show()
 
 print('graphs GDP 1 and 2 are done')
 

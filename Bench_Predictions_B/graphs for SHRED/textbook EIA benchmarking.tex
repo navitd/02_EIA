@@ -1,0 +1,134 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\geometry{margin=1in}
+
+\title{Mathematical Description of I-O Based GDP Impact Calculation}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{1. Data Preparation}
+
+For each country $c$ and year $t$, we load:
+\begin{itemize}
+  \item The input-output matrix $II^{(c,t)}$.
+  \item Final household consumption expenditure $HFCE^{(c,t)}$.
+  \item Gross Domestic Product vector: $\text{GDP}^{(c,t)} = \text{VALU}^{(c,t)}$.
+  \item Total output vector: $\text{output}^{(c,t)} = \text{OUTPUT}^{(c,t)}$.
+\end{itemize}
+
+\section*{2. Leontief Inverse Matrices}
+
+\subsection*{Open Model}
+
+We define the technical coefficients matrix:
+\[
+T = \frac{II}{\text{output}}
+\]
+Then the Leontief inverse is:
+\[
+L = (I - T)^{-1}
+\]
+
+\subsection*{Closed Model}
+
+The closed model appends:
+\begin{itemize}
+  \item A new column to $II$: final demand from household income ($HFCE$).
+  \item A new row: employee compensation vector ($E$).
+\end{itemize}
+
+Denoting the extended matrix by $II_c$ and extended output by $\text{output}_c$, the new matrix of technical coefficients is:
+\[
+T_c = \frac{II_c}{\text{output}_c}
+\]
+The corresponding Leontief inverse is:
+\[
+L_c = (I - T_c)^{-1}
+\]
+
+\section*{3. Multipliers}
+
+\subsection*{Output Multipliers}
+\[
+m_o = L \cdot \mathbf{1}
+\]
+\[
+m_{oc} = L_c^{\text{truncated}} \cdot \mathbf{1}
+\]
+
+\subsection*{Income Multipliers}
+
+Let $E_j$ be employee compensation, $x_j$ be output:
+\[
+\frac{E_j}{x_j}
+\]
+Income multiplier matrix:
+\[
+M_h = L \cdot \text{diag}\left(\frac{E_j}{x_j}\right)
+\quad \text{and} \quad
+M_{hc} = L_c \cdot \text{diag}\left(\frac{E_j}{x_j}\right)
+\]
+
+\subsection*{GDP Multipliers}
+
+Let $G_j$ be GDP value-added:
+\[
+\frac{G_j}{x_j}
+\]
+\[
+M_g = L \cdot \text{diag}\left(\frac{G_j}{x_j}\right)
+\quad \text{and} \quad
+M_{gc} = L_c \cdot \text{diag}\left(\frac{G_j}{x_j}\right)
+\]
+
+\section*{4. Decomposing Effects}
+
+Let $n$ be the number of sectors.
+
+\begin{itemize}
+  \item \textbf{Direct}: Identity matrix or diagonal of $\frac{E_j}{x_j}$ or $\frac{G_j}{x_j}$.
+  \item \textbf{Indirect}: 
+    \[
+    \text{indirect}_o = L - I,\quad
+    \text{indirect}_h = M_h - \text{diag}\left(\frac{E_j}{x_j}\right)
+    \]
+  \item \textbf{Induced}: 
+    \[
+    \text{induced}_o = L_c^{\text{trunc}} - L,\quad
+    \text{induced}_h = M_{hc}^{\text{trunc}} - M_h
+    \]
+\end{itemize}
+
+\section*{5. Final Demand and Impacts}
+
+Let $f$ be the final demand vector (sum of final demand columns):
+\[
+\text{Direct Impact} = \text{direct multiplier matrix} \cdot f
+\]
+\[
+\text{Indirect Impact} = \text{indirect multiplier matrix} \cdot f
+\]
+\[
+\text{Induced Impact} = \text{induced multiplier matrix} \cdot f
+\]
+\[
+\text{Total Impact} = L_c^{\text{trunc}} \cdot f
+\]
+
+\section*{6. GDP Impact Table}
+
+Construct a table of the form:
+\[
+\text{GDP Impact}_{ij}^{(\text{type})}, \quad \text{type} \in \{\text{direct, indirect, induced, total}\}
+\]
+with $i$ as selling sector and $j$ as buying sector.
+
+\end{document}
