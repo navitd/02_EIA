@@ -73,8 +73,6 @@ def collect_m(m, country, year, m_value_name, dfm):
     return dfm
 
 
-
-
 #summing v_tot without compensation of employees or HFCE
 def clc_v_tot(df, value_col, col_tot, simple_II_labels):
     # total only over selected labels
@@ -90,8 +88,6 @@ def clc_v_tot(df, value_col, col_tot, simple_II_labels):
     #  ratio
     df[value_col + " sector ratio"] = df[value_col] / df[col_tot]
     return df, df_tot
-
-
 
 
 # for extrapolation - calculating ratio with worldbank gdp
@@ -328,8 +324,103 @@ for country in countries:
         outputc['HFCE'] = E.sum().values[0]
         Tc = safe_divide(IIc, outputc)
         Lcdf, Lc_minus_I = clc_L(Tc)
+        #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        if 0: #I removed it from the above, so probably should delete
+            if ((year == '2020') & (country == 'JPN')):
+                temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='JPN')), 'Employment']
+                IIc.loc['employees_compensation'] = \
+                dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'JPN'), ['sector', 'Employment']]\
+                .set_index('sector').reindex(IIc.columns)['Employment']
+                
+            if ((year == '2020') & (country == 'GBR')):
+                temp = dfE.loc[((dfE['year'] == year) & (dfE.country=='GBR')), 'Employment']
+                IIc.loc['employees_compensation'] = \
+                dfE.loc[(dfE['year'] == year) & (dfE['country'] == 'GBR'), ['sector', 'Employment']]\
+                .set_index('sector').reindex(IIc.columns)['Employment']
+            
         
 
+              
+        dfTc = collecting_year_country_data_matrix(country, year, dfTc, Tc, 'Tc')
+
+        
+        # 3. calculate multipliers
+        #############################
+        mo = Ldf.sum(axis=0)                       #dollar's worth of outcome per 1 dollar's worth of new final demand
+        moc_trancated = Lcdf.iloc[:-1].sum(axis=0) #dollar's worth of outcome per 1 dollar's worth of new final demand
+
+        # income multipliers mh
+        Ej_by_xj = Tc.iloc[-1,:-1] #hosehold income received per dollar's worth of sector output  
+        income_F_multipliers = Ldf.mul(Ej_by_xj, axis=0) #household income recieved per dollar's worth of secotr final demand
+        # Ej/xj*Ljk - Ljk is how much output was sold from j to k. and j is the sector that paid the salaries, so Ej/xj is used.
+        sum_income_F_multipliers = income_F_multipliers.sum(axis=0) 
+        
+
+        #income multipliers second time
+        Ej_by_xj = Tc.iloc[-1,:]
+        
+        # GDP multipliers
+        GDPc = OECD.loc['VALU', simple_II_labels + ['HFCE']]
+        GDPj_by_xj = safe_divide_vector(GDPc, outputc)
+
+        # summary of multipliers without typeI and typeII - 
+        # 6 multipliers output, income, GDP, X sector2sector X simple model, closed model
+        # all of the closed model multipliers are trancated (the row and column of salaries and final demand are not included)
+        s2s_mo = Ldf                       # direct + indirect effect
+        s2s_moc = Lcdf                     # direct + indirect + iduced effect
+        s2s_mh = Ldf.mul(Ej_by_xj.iloc[ :-1 ], axis=0) 
+        s2s_mhc = Lcdf.mul(Ej_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
+        s2s_mg =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
+        s2s_mgc = Lcdf.mul(GDPj_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
+        
+
+
+        ###################################################
+        # multipliers: direct, indirect, induced separately
+        ###################################################
+        n = T.shape[0]
+        # direct
+        direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
+        direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
+        np.fill_diagonal(direct_h.values, Ej_by_xj.values)
+        direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
+        np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
+        #indirect
+        indirect_o = s2s_mo - direct_o
+        #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
+        indirect_h  = s2s_mh - direct_h
+        #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
+        indirect_g  = s2s_mg - direct_g
+        #induced
+        induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
+        induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
+        induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
+
+        #################################
+        # impacts instead of multipliers
+        #################################
+        fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
+        fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
+        fcdf.loc['employees_compensation'] = 0        
+        
+        dftemp = pd.DataFrame()
+        dftemp = fcdf.reset_index()
+        dftemp.columns = ['sector', 'final demand']
+        dftemp['country'] = country
+        dftemp['year'] = year
+        dftemp = dftemp[['country', 'year', 'sector', 'final demand']]
+        dffc = pd.concat([dffc, dftemp], ignore_index=True)
+
+        dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
+        dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
+        
+
+
+
+
+
+
+        #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         dfTc    = collect_m(Tc, country, int(year), 'Tc', dfTc)
         fHFCEc  = fHFCE.copy(); fHFCEc.loc['employees_compensation'] = 0  #should this be sum(E)?
         f8c     = f8.copy();    f8c.loc['employees_compensation'] = 0  
