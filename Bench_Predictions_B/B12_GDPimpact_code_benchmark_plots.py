@@ -1027,7 +1027,7 @@ dfmhc = pd.read_csv("Bench_predictions_B/B06_dfmhc.csv")
 dfmg = pd.read_csv("Bench_predictions_B/B06_dfmg.csv")
 dfmgc = pd.read_csv("Bench_predictions_B/B06_dfmgc.csv")        
 dfTc = pd.read_csv("Bench_predictions_B/B06_dfTc.csv") # different than Tbase
-#note - change dfTc to dfTcbase here and in B10
+
 
 ########################################                           parameters                       ##################################################
 tart_time = time.time()
@@ -1115,7 +1115,7 @@ if 0:
     )
  # graphs 1 and 2 for GDP
 
-if 1:
+if 0:
    
     graphnumber=1
     varname = 'GDP'
@@ -1146,7 +1146,7 @@ if 1:
     )
 
 #one file for both
-if 1:
+if 0:
     graphnumber=1
     xlsx_filename = f"Bench_predictions_B/B12_graph{graphnumber}_data_{first_year}-{last_year}.xlsx"
     ICT = 'ICT'
@@ -1211,39 +1211,19 @@ if SHRED:
     plt.tight_layout()
     plt.show()
 
-print('graphs GDP 1 and 2 are done')
+print('B12 graphs 1 and 2 are checked')
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+'''
+variables I have:
+dfmo = pd.read_csv("Bench_predictions_B/B06_dfmo.csv")
+dfmoc = pd.read_csv("Bench_predictions_B/B06_dfmoc.csv")
+dfmh = pd.read_csv("Bench_predictions_B/B06_dfmh.csv")
+dfmhc = pd.read_csv("Bench_predictions_B/B06_dfmhc.csv")
+dfmg = pd.read_csv("Bench_predictions_B/B06_dfmg.csv")
+dfmgc = pd.read_csv("Bench_predictions_B/B06_dfmgc.csv")        
+dfTc = pd.read_csv("Bench_predictions_B/B06_dfTc.csv") # different than Tbase
+'''
 
 ##########################        version A of calculation - extract impacts from here
 
