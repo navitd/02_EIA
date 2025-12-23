@@ -303,6 +303,289 @@ def plot_share_compare_first_last_year(shares, value_column, first_year, last_ye
     plt.show()
 
 
+
+##################################################           print to excel fancy version B         ############################################
+
+def create_excel_file_with_title(ws_title: str, filename) -> int:
+
+    if os.path.exists(filename):
+        wb = load_workbook(filename)
+        if ws_title in wb.sheetnames:
+            ws = wb[ws_title]
+        else:
+            ws = wb.create_sheet(title=ws_title)
+    else:
+        wb = Workbook()
+        ws = wb.active
+        ws.title = ws_title
+    
+    # Styles
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    # Merge title box over first 4 columns and 3 rows
+    ws.merge_cells(start_row=1, start_column=1, end_row=3, end_column=4)
+    cell = ws.cell(row=1, column=1)
+    cell.value = f"EIA details - {ws_title}"
+    cell.fill = green
+    cell.font = bold_font
+    cell.alignment = center_align
+    cell.border = black_border
+
+    wb.save(filename)
+
+    return 1  # Next available column after title box
+
+def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col, filename, highlighted_sectors, title_size ) -> int:
+    
+    # Infer matrix name from variable name if not provided
+    if matrix_name is None:
+        frame = inspect.currentframe().f_back
+        matrix_name = next((name for name, val in frame.f_locals.items() if val is df), "UnnamedMatrix")
+    
+    wb = load_workbook(filename)
+    if worksheet_name not in wb.sheetnames:
+        raise ValueError(f"Sheet named '{worksheet_name}' does not exist. Create it first using create_excel_file_with_title.")
+    ws = wb[worksheet_name]
+
+    # Styles
+    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    fill_styles = {}
+    if highlighted_sectors:
+        for sector, color in highlighted_sectors.items():
+            fill_styles[sector] = PatternFill(start_color=color, end_color=color, fill_type="solid")
+
+    # Convert DataFrame to rows (including index and header)
+    rows = list(dataframe_to_rows(df, index=True, header=True))
+    n_rows = len(rows)
+    n_cols = len(rows[0])  # includes index
+
+    # Green title merged over up to 4 columns
+    merge_end_col = min(start_col + title_size, start_col + n_cols - 1)
+    if merge_end_col > start_col:
+        ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
+    title_cell = ws.cell(row=4, column=start_col)
+    title_cell.value = matrix_name
+    title_cell.fill = green
+    title_cell.font = bold_font
+    title_cell.alignment = center_align
+
+    # Write the matrix below the title
+    for r_idx, row in enumerate(rows, start=5):
+        fill_color = None
+        if r_idx > 5 and highlighted_sectors:  # skip header
+            try:
+                sector_col_idx = df.columns.get_loc("sector") + 1  # +1 for index col
+                sector_value = row[sector_col_idx]
+                if sector_value in fill_styles:
+                    fill_color = fill_styles[sector_value]
+            except Exception:
+                pass
+
+        for c_idx, val in enumerate(row):
+            col = start_col + c_idx
+            cell = ws.cell(row=r_idx, column=col, value=val)
+
+            if r_idx == 5 or c_idx == 0:  # header or index
+                cell.fill = light_blue
+                cell.font = bold_font
+            elif fill_color:
+                cell.fill = fill_color
+
+            cell.border = black_border
+            cell.alignment = center_align
+
+    # Add a black separator column
+    sep_col = start_col + n_cols
+    for r in range(4, 5 + n_rows):
+        cell = ws.cell(row=r, column=sep_col)
+        cell.border = black_border
+        cell.alignment = center_align
+
+    wb.save(filename)
+    return sep_col + 1
+
+# the following is a special printing of the category matrix. it is different because categoris are in columns, not rows. it prints well.
+def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matrix_name, start_col, ICTcategories, highlighted, title_size):
+    
+    # Infer matrix name if not provided
+    if matrix_name is None:
+        frame = inspect.currentframe().f_back
+        matrix_name = next((name for name, val in frame.f_locals.items() if val is df), "UnnamedMatrix")
+
+    wb = load_workbook(filename)
+    if worksheet_name not in wb.sheetnames:
+        raise ValueError(f"Sheet named '{worksheet_name}' does not exist.")
+    ws = wb[worksheet_name]
+
+    # === Styles ===
+    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    black_border = Border(
+        left=Side(style='thin', color='000000'),
+        right=Side(style='thin', color='000000'),
+        top=Side(style='thin', color='000000'),
+        bottom=Side(style='thin', color='000000')
+    )
+
+    # === Derive category colors from ICTcategories and highlighted ===
+    category_colors = {}
+    for category, sectors in ICTcategories.items():
+        if isinstance(sectors, list):
+            for s in sectors:
+                if s in highlighted:
+                    category_colors[category] = highlighted[s]
+                    break
+        else:
+            if sectors in highlighted:
+                category_colors[category] = highlighted[sectors]
+
+    # === Title ===
+    rows = list(dataframe_to_rows(df, index=True, header=True))
+    n_rows = len(rows)
+    n_cols = len(rows[0])
+    merge_end_col = min(start_col + title_size, start_col + n_cols - 1)
+    if merge_end_col > start_col:
+        ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
+
+    title_cell = ws.cell(row=4, column=start_col)
+    title_cell.value = matrix_name
+    title_cell.fill = green
+    title_cell.font = bold_font
+    title_cell.alignment = center_align
+
+    # === Write matrix with formatting ===
+    for r_idx, row in enumerate(rows, start=5):
+        for c_idx, val in enumerate(row):
+            col = start_col + c_idx
+            cell = ws.cell(row=r_idx, column=col, value=val)
+            col_name = df.columns[c_idx - 1] if (r_idx > 5 and c_idx > 0 and c_idx - 1 < len(df.columns)) else None
+
+            # Header or index
+            if r_idx == 5 or c_idx == 0:
+                cell.fill = light_blue
+                cell.font = bold_font
+            # Column-based background color (below header)
+            elif col_name in category_colors:
+                fill = PatternFill(start_color=category_colors[col_name], end_color=category_colors[col_name], fill_type="solid")
+                cell.fill = fill
+
+            cell.border = black_border
+            cell.alignment = center_align
+
+    # === Add separator column ===
+    sep_col = start_col + n_cols
+    for r in range(4, 5 + n_rows):
+        cell = ws.cell(row=r, column=sep_col)
+        cell.border = black_border
+        cell.alignment = center_align
+
+    wb.save(filename)
+    return sep_col + 1
+
+
+def package_print_embed_plot_option(df_4graph, varname, first_year, last_year, year_range, countries,
+                        ICTsectors, ICTcategories, highlighted, cagr_title, stacked_shares_title,
+                        end_years_title, xlsx_filename, worksheet_name, start_row, ICT,
+                        embed_or_plot):
+    
+    title_size=6
+    # fig 1:  CAGR 
+    cagr = clc_cagr(df_4graph, first_year, last_year, varname) 
+    if embed_or_plot>0:
+        # fig1: plot output CAGR
+        plot_cagr(cagr, cagr_title)
+
+    varname_shares, ICT_varname_shares = get_share(df_4graph, varname, first_year, last_year, ICTsectors)
+    varname_ICT_share_category = get_share_by_category(ICT_varname_shares, varname, ICTcategories, desired_order)
+    if embed_or_plot>0:
+        # fig2B: stacked output share
+        #this is the average of each category - stacked. 
+        #change the following: GDP_ICT_share_category alreadyby category
+        _ = plot_stacked_shares(varname_ICT_share_category, varname, ICTcategories, desired_order, stacked_shares_title, highlighted)
+
+    # fig 2C: end years comparison compare first_year with last_year, stacked
+    if embed_or_plot>0:
+        plot_share_compare_first_last_year(varname_shares, varname, first_year, last_year, end_years_title)
+                                            
+
+    # print data to excel (if I take it out of the if statement it will print every time it runs)
+    if (embed_or_plot==0) or (embed_or_plot==2):
+        # next 10 lines: previousely the function "package print shares to excel"
+        start_col = 1
+        start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
+        for year in year_range:
+            for country in countries: 
+                start_col = append_styled_matrix_to_excel(df_4graph[(df_4graph.country==country) & (df_4graph.year==year)], 
+                                                          varname, worksheet_name, start_col, xlsx_filename, highlighted, title_size )
+                 
+        
+        start_col = append_styled_matrix_to_excel(varname_shares, varname+'_shares', worksheet_name, start_col, filename=xlsx_filename, highlighted_sectors=highlighted, title_size=title_size)
+        start_col = append_styled_matrix_to_excel(ICT_varname_shares, ICT+varname+' shares', worksheet_name, start_col, filename=xlsx_filename, highlighted_sectors=highlighted, title_size=title_size)
+
+        start_col = append_styled_matrix_by_category_to_excel(varname_ICT_share_category, xlsx_filename, worksheet_name, varname+ICT+' by category',start_col, ICTcategories, highlighted, title_size=title_size)
+        #                                                     (df,                     filename,      worksheet_name,  matrix_name,              start_col, ICTcategories, highlighted, title_size)
+
+        # embed plots to excel
+        col_letter = get_column_letter(start_col)
+         
+        # === embed1. Create both plots and save to in-memory buffers ===
+        # CAGR plot
+        fig1 = plot_cagr(cagr, cagr_title)
+        buf1 = BytesIO()
+        fig1.savefig(buf1, format='png', bbox_inches='tight', dpi=200)
+        buf1.seek(0)
+
+        # Stacked shares plot
+        fig2 = plot_stacked_shares(varname_ICT_share_category, varname, ICTcategories, desired_order, stacked_shares_title, highlighted)
+                                       
+                
+        
+        buf2 = BytesIO()
+        fig2.savefig(buf2, format='png', bbox_inches='tight', dpi=200)
+        buf2.seek(0)
+
+        # === embed2. Open Excel workbook and worksheet ===
+        wb = load_workbook(xlsx_filename)
+        ws = wb[worksheet_name]
+
+        # === embed3. Insert both plots ===
+        img1 = XLImage(buf1)
+        img1.anchor = f"{col_letter}{start_row}"
+        ws.add_image(img1)
+
+        img2 = XLImage(buf2)
+        img2.anchor = f"{col_letter}{start_row+30}"
+        ws.add_image(img2)
+
+        # === embed4. Save the Excel workbook ===
+        wb.save(xlsx_filename)
+        print(f"✅ Two plots were embedded into '{worksheet_name}' of '{xlsx_filename}'.")
+
+
+
+
+####################################################         version A                 ######################################################
+############   plots A version    ###################
 # fig 3
 def get_one_year_value(df, year, forward_or_backward, sector_list, value_column):
     if forward_or_backward == 'backward':
@@ -661,289 +944,6 @@ def plot_impact_with_table(df_first, df_last, value_column, graph_title):
 
 
 
-##################################################           print to excel fancy version B         ############################################
-
-def create_excel_file_with_title(ws_title: str, filename) -> int:
-
-    if os.path.exists(filename):
-        wb = load_workbook(filename)
-        if ws_title in wb.sheetnames:
-            ws = wb[ws_title]
-        else:
-            ws = wb.create_sheet(title=ws_title)
-    else:
-        wb = Workbook()
-        ws = wb.active
-        ws.title = ws_title
-    
-    # Styles
-    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
-    bold_font = Font(bold=True)
-    center_align = Alignment(horizontal="center", vertical="center")
-    black_border = Border(
-        left=Side(style='thin', color='000000'),
-        right=Side(style='thin', color='000000'),
-        top=Side(style='thin', color='000000'),
-        bottom=Side(style='thin', color='000000')
-    )
-
-    # Merge title box over first 4 columns and 3 rows
-    ws.merge_cells(start_row=1, start_column=1, end_row=3, end_column=4)
-    cell = ws.cell(row=1, column=1)
-    cell.value = f"EIA details - {ws_title}"
-    cell.fill = green
-    cell.font = bold_font
-    cell.alignment = center_align
-    cell.border = black_border
-
-    wb.save(filename)
-
-    return 1  # Next available column after title box
-
-def append_styled_matrix_to_excel(df, matrix_name, worksheet_name, start_col, filename, highlighted_sectors, title_size ) -> int:
-    
-    # Infer matrix name from variable name if not provided
-    if matrix_name is None:
-        frame = inspect.currentframe().f_back
-        matrix_name = next((name for name, val in frame.f_locals.items() if val is df), "UnnamedMatrix")
-    
-    wb = load_workbook(filename)
-    if worksheet_name not in wb.sheetnames:
-        raise ValueError(f"Sheet named '{worksheet_name}' does not exist. Create it first using create_excel_file_with_title.")
-    ws = wb[worksheet_name]
-
-    # Styles
-    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
-    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
-    bold_font = Font(bold=True)
-    center_align = Alignment(horizontal="center", vertical="center")
-    black_border = Border(
-        left=Side(style='thin', color='000000'),
-        right=Side(style='thin', color='000000'),
-        top=Side(style='thin', color='000000'),
-        bottom=Side(style='thin', color='000000')
-    )
-
-    fill_styles = {}
-    if highlighted_sectors:
-        for sector, color in highlighted_sectors.items():
-            fill_styles[sector] = PatternFill(start_color=color, end_color=color, fill_type="solid")
-
-    # Convert DataFrame to rows (including index and header)
-    rows = list(dataframe_to_rows(df, index=True, header=True))
-    n_rows = len(rows)
-    n_cols = len(rows[0])  # includes index
-
-    # Green title merged over up to 4 columns
-    merge_end_col = min(start_col + title_size, start_col + n_cols - 1)
-    if merge_end_col > start_col:
-        ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
-    title_cell = ws.cell(row=4, column=start_col)
-    title_cell.value = matrix_name
-    title_cell.fill = green
-    title_cell.font = bold_font
-    title_cell.alignment = center_align
-
-    # Write the matrix below the title
-    for r_idx, row in enumerate(rows, start=5):
-        fill_color = None
-        if r_idx > 5 and highlighted_sectors:  # skip header
-            try:
-                sector_col_idx = df.columns.get_loc("sector") + 1  # +1 for index col
-                sector_value = row[sector_col_idx]
-                if sector_value in fill_styles:
-                    fill_color = fill_styles[sector_value]
-            except Exception:
-                pass
-
-        for c_idx, val in enumerate(row):
-            col = start_col + c_idx
-            cell = ws.cell(row=r_idx, column=col, value=val)
-
-            if r_idx == 5 or c_idx == 0:  # header or index
-                cell.fill = light_blue
-                cell.font = bold_font
-            elif fill_color:
-                cell.fill = fill_color
-
-            cell.border = black_border
-            cell.alignment = center_align
-
-    # Add a black separator column
-    sep_col = start_col + n_cols
-    for r in range(4, 5 + n_rows):
-        cell = ws.cell(row=r, column=sep_col)
-        cell.border = black_border
-        cell.alignment = center_align
-
-    wb.save(filename)
-    return sep_col + 1
-
-# the following is a special printing of the category matrix. it is different because categoris are in columns, not rows. it prints well.
-def append_styled_matrix_by_category_to_excel(df, filename, worksheet_name, matrix_name, start_col, ICTcategories, highlighted, title_size):
-    
-    # Infer matrix name if not provided
-    if matrix_name is None:
-        frame = inspect.currentframe().f_back
-        matrix_name = next((name for name, val in frame.f_locals.items() if val is df), "UnnamedMatrix")
-
-    wb = load_workbook(filename)
-    if worksheet_name not in wb.sheetnames:
-        raise ValueError(f"Sheet named '{worksheet_name}' does not exist.")
-    ws = wb[worksheet_name]
-
-    # === Styles ===
-    light_blue = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
-    green = PatternFill(start_color="00C000", end_color="00C000", fill_type="solid")
-    bold_font = Font(bold=True)
-    center_align = Alignment(horizontal="center", vertical="center")
-    black_border = Border(
-        left=Side(style='thin', color='000000'),
-        right=Side(style='thin', color='000000'),
-        top=Side(style='thin', color='000000'),
-        bottom=Side(style='thin', color='000000')
-    )
-
-    # === Derive category colors from ICTcategories and highlighted ===
-    category_colors = {}
-    for category, sectors in ICTcategories.items():
-        if isinstance(sectors, list):
-            for s in sectors:
-                if s in highlighted:
-                    category_colors[category] = highlighted[s]
-                    break
-        else:
-            if sectors in highlighted:
-                category_colors[category] = highlighted[sectors]
-
-    # === Title ===
-    rows = list(dataframe_to_rows(df, index=True, header=True))
-    n_rows = len(rows)
-    n_cols = len(rows[0])
-    merge_end_col = min(start_col + title_size, start_col + n_cols - 1)
-    if merge_end_col > start_col:
-        ws.merge_cells(start_row=4, start_column=start_col, end_row=4, end_column=merge_end_col)
-
-    title_cell = ws.cell(row=4, column=start_col)
-    title_cell.value = matrix_name
-    title_cell.fill = green
-    title_cell.font = bold_font
-    title_cell.alignment = center_align
-
-    # === Write matrix with formatting ===
-    for r_idx, row in enumerate(rows, start=5):
-        for c_idx, val in enumerate(row):
-            col = start_col + c_idx
-            cell = ws.cell(row=r_idx, column=col, value=val)
-            col_name = df.columns[c_idx - 1] if (r_idx > 5 and c_idx > 0 and c_idx - 1 < len(df.columns)) else None
-
-            # Header or index
-            if r_idx == 5 or c_idx == 0:
-                cell.fill = light_blue
-                cell.font = bold_font
-            # Column-based background color (below header)
-            elif col_name in category_colors:
-                fill = PatternFill(start_color=category_colors[col_name], end_color=category_colors[col_name], fill_type="solid")
-                cell.fill = fill
-
-            cell.border = black_border
-            cell.alignment = center_align
-
-    # === Add separator column ===
-    sep_col = start_col + n_cols
-    for r in range(4, 5 + n_rows):
-        cell = ws.cell(row=r, column=sep_col)
-        cell.border = black_border
-        cell.alignment = center_align
-
-    wb.save(filename)
-    return sep_col + 1
-
-
-def package_print_embed_plot_option(df_4graph, varname, first_year, last_year, year_range, countries,
-                        ICTsectors, ICTcategories, highlighted, cagr_title, stacked_shares_title,
-                        end_years_title, xlsx_filename, worksheet_name, start_row, ICT,
-                        embed_or_plot):
-    
-    title_size=6
-    # fig 1:  CAGR 
-    cagr = clc_cagr(df_4graph, first_year, last_year, varname) 
-    if embed_or_plot>0:
-        # fig1: plot output CAGR
-        plot_cagr(cagr, cagr_title)
-
-    varname_shares, ICT_varname_shares = get_share(df_4graph, varname, first_year, last_year, ICTsectors)
-    varname_ICT_share_category = get_share_by_category(ICT_varname_shares, varname, ICTcategories, desired_order)
-    if embed_or_plot>0:
-        # fig2B: stacked output share
-        #this is the average of each category - stacked. 
-        #change the following: GDP_ICT_share_category alreadyby category
-        _ = plot_stacked_shares(varname_ICT_share_category, varname, ICTcategories, desired_order, stacked_shares_title, highlighted)
-
-    # fig 2C: end years comparison compare first_year with last_year, stacked
-    if embed_or_plot>0:
-        plot_share_compare_first_last_year(varname_shares, varname, first_year, last_year, end_years_title)
-                                            
-
-    # print data to excel (if I take it out of the if statement it will print every time it runs)
-    if (embed_or_plot==0) or (embed_or_plot==2):
-        # next 10 lines: previousely the function "package print shares to excel"
-        start_col = 1
-        start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
-        for year in year_range:
-            for country in countries: 
-                start_col = append_styled_matrix_to_excel(df_4graph[(df_4graph.country==country) & (df_4graph.year==year)], 
-                                                          varname, worksheet_name, start_col, xlsx_filename, highlighted, title_size )
-                 
-        
-        start_col = append_styled_matrix_to_excel(varname_shares, varname+'_shares', worksheet_name, start_col, filename=xlsx_filename, highlighted_sectors=highlighted, title_size=title_size)
-        start_col = append_styled_matrix_to_excel(ICT_varname_shares, ICT+varname+' shares', worksheet_name, start_col, filename=xlsx_filename, highlighted_sectors=highlighted, title_size=title_size)
-
-        start_col = append_styled_matrix_by_category_to_excel(varname_ICT_share_category, xlsx_filename, worksheet_name, varname+ICT+' by category',start_col, ICTcategories, highlighted, title_size=title_size)
-        #                                                     (df,                     filename,      worksheet_name,  matrix_name,              start_col, ICTcategories, highlighted, title_size)
-
-        # embed plots to excel
-        col_letter = get_column_letter(start_col)
-         
-        # === embed1. Create both plots and save to in-memory buffers ===
-        # CAGR plot
-        fig1 = plot_cagr(cagr, cagr_title)
-        buf1 = BytesIO()
-        fig1.savefig(buf1, format='png', bbox_inches='tight', dpi=200)
-        buf1.seek(0)
-
-        # Stacked shares plot
-        fig2 = plot_stacked_shares(varname_ICT_share_category, varname, ICTcategories, desired_order, stacked_shares_title, highlighted)
-                                       
-                
-        
-        buf2 = BytesIO()
-        fig2.savefig(buf2, format='png', bbox_inches='tight', dpi=200)
-        buf2.seek(0)
-
-        # === embed2. Open Excel workbook and worksheet ===
-        wb = load_workbook(xlsx_filename)
-        ws = wb[worksheet_name]
-
-        # === embed3. Insert both plots ===
-        img1 = XLImage(buf1)
-        img1.anchor = f"{col_letter}{start_row}"
-        ws.add_image(img1)
-
-        img2 = XLImage(buf2)
-        img2.anchor = f"{col_letter}{start_row+30}"
-        ws.add_image(img2)
-
-        # === embed4. Save the Excel workbook ===
-        wb.save(xlsx_filename)
-        print(f"✅ Two plots were embedded into '{worksheet_name}' of '{xlsx_filename}'.")
-
-
-
-
-####################################################         version A                 ######################################################
-
-
 ##################################################        functions that calculate        ######################################################
 
 def multipliers2prediction(s2s_mo, fdf_year2, column_name):
@@ -1213,14 +1213,21 @@ if SHRED:
 
 print('B12 graphs 1 and 2 are checked')
 
-# graph 4 (backward, forward, full GDP impact)        
-if 1:
-    #for 1 country 1 year:
-    ###################################################
-    # multipliers: direct, indirect, induced separately
-    ###################################################
-    n = T.shape[0]
-    # direct
+country = 'CAN'
+year = 2012
+
+# graph 4 (backward, forward, full GDP impact)  
+def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, Ej_by_xj, GDPj_by_xj, simple_II_labels):
+    n = len(simple_II_labels)
+    s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
+    s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
+    s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
+     s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
+    s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
+    s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
+
+
+    # direct  
     direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
     direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
     np.fill_diagonal(direct_h.values, Ej_by_xj.values)
@@ -1236,7 +1243,10 @@ if 1:
     induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
     induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
     induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
+    return direct_o, indirect_o, induced_o, direct_h, indirect_h, induced_h, direct_g, indirect_g, induced_g    
 
+if 1:
+    #for 1 country 1 year:
     #################################
     # impacts instead of multipliers
     #################################
