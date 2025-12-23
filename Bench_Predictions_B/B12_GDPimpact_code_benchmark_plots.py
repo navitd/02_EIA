@@ -1030,7 +1030,7 @@ dfTc = pd.read_csv("Bench_predictions_B/B06_dfTc.csv") # different than Tbase
 
 
 ########################################                           parameters                       ##################################################
-tart_time = time.time()
+start_time = time.time()
 print("working directory of B12_graphs4-6.py is: ",os.getcwd())  # Print the current working directory
 
 table_type = 'TTL' #or'DOM'   
@@ -1213,244 +1213,70 @@ if SHRED:
 
 print('B12 graphs 1 and 2 are checked')
 
+# graph 4 (backward, forward, full GDP impact)        
+if 1:
+    #for 1 country 1 year:
+    ###################################################
+    # multipliers: direct, indirect, induced separately
+    ###################################################
+    n = T.shape[0]
+    # direct
+    direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
+    direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
+    np.fill_diagonal(direct_h.values, Ej_by_xj.values)
+    direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
+    np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
+    #indirect
+    indirect_o = s2s_mo - direct_o
+    #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
+    indirect_h  = s2s_mh - direct_h
+    #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
+    indirect_g  = s2s_mg - direct_g
+    #induced
+    induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
+    induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
+    induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
 
-'''
-variables I have:
-dfmo = pd.read_csv("Bench_predictions_B/B06_dfmo.csv")
-dfmoc = pd.read_csv("Bench_predictions_B/B06_dfmoc.csv")
-dfmh = pd.read_csv("Bench_predictions_B/B06_dfmh.csv")
-dfmhc = pd.read_csv("Bench_predictions_B/B06_dfmhc.csv")
-dfmg = pd.read_csv("Bench_predictions_B/B06_dfmg.csv")
-dfmgc = pd.read_csv("Bench_predictions_B/B06_dfmgc.csv")        
-dfTc = pd.read_csv("Bench_predictions_B/B06_dfTc.csv") # different than Tbase
-'''
+    #################################
+    # impacts instead of multipliers
+    #################################
+    fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
+    #there is what causes closed model to be in accuarete:
+    #fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
+    #I should take HFCE inside fcdf_year2. 
+    fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
+    fcdf.loc['employees_compensation'] = 0
 
-##########################        version A of calculation - extract impacts from here
+    # impacts
+    # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
+    scale_df_by_series(direct_o, fcdf[:-1]) # , 'Direct output impact' 
+    #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
+    #multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
+    #multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
+    #multipliers_by_f(direct_h, fcdf[:-1], 'Direct income impact'), 
+    #multipliers_by_f(indirect_h, fcdf[:-1], 'Indirect income impact'),
+    #multipliers_by_f(induced_h, fcdf[:-1], 'Induced income impact'),  
+    #multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf[:-1], 'Total income impact'),
+    #multipliers_by_f(direct_g, fcdf[:-1], 'Direct GDP impact'), 
+    #multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
+    #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
+    #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
+    
 
-
-# 1. upload OECD intput-output tables 1995-2020
-###############################################   
-#copied from Benchmarking/Employment.py
-
-final_demand_columns = ['HFCE',	'NPISH',	'GGFC',	'GFCF',	'INVNT',	'CONS_NONRES', 'EXPO'] # 'IMPO', 'DPABR', 
-
-dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
-dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
-dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
-dfEimpact = pd.DataFrame()
-dfTc = pd.DataFrame()
-dfLc = pd.DataFrame()
-for country in countries:
-    for year in year_range:
-        print(country, year)
-         # I have decided on the format: I'll put GDPimpact in a dfGDPimpact. I need for that the whole impact code
-        PPP_or_exch, OECD, simple_II_labels =  data_upload_OECD_without_E(year, currency_exchange_type, table_type, country)
-
-        # the following is calculated twice: in data_upload_OECD_salaries and here. I want to leave it here, but I also need it there - do I??
-        II = OECD.loc[simple_II_labels, simple_II_labels]
-        household_expenditure = OECD.loc[simple_II_labels, 'HFCE']
-        GDP         = OECD.loc['VALU', simple_II_labels]
-        output      = OECD.loc['OUTPUT', simple_II_labels]
-
-        dfoutput = collect_v(output, country, year, ['sector', 'output'], dfoutput)
-        dfGDP    = collect_v(GDP,    country, year, ['sector', 'GDP'],    dfGDP)
-        f = OECD.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
-        f = f.rename_axis("sector")
-        dff     = collect_v(f,       country, year, ['sector', 'other final demand total'], dff)
-        
-
-        E = dfE[(dfE.country==country) & (dfE.year==int(year))].copy()
-        #remove country and year from E and add 0 at the end [employees_compensation, HFCE]=0
-        E.drop(columns=['country','year'], inplace=True)
-        E.set_index('sector', inplace=True)
-        E.loc["HFCE"] = 0
-
-        # 2. calculate L and Lc
-        ##########################
-        T = safe_divide(II, output)
-        Ldf, L_minus_I = clc_L(T)
-
-        IIc = II.copy()
-        IIc["HFCE"] = household_expenditure # added a column for closed model
-        # Convert Series to a one-row DataFrame with sectors as columns
-        ET = E.T  # .T transposes to make index=0, columns=sectors
-        ET.index = ["employees_compensation"]  # name the row
-        IIc = pd.concat([IIc, ET], axis=0)
-        IIc.loc['employees_compensation', 'HFCE'] = 0 
-
-        outputc = output.copy()
-        outputc['HFCE'] = E.sum().values[0]
-        Tc = safe_divide(IIc, outputc)
-        Lcdf, Lc_minus_I = clc_L(Tc)
-   
-        dfTc = collect_m(Tc, country, year, 'Tc', dfTc)
-        dfLc = collect_m(Lcdf, country, year, 'Lc', dfLc)
-
-
-        # 3. calculate multipliers
-        #############################
-        mo = Ldf.sum(axis=0)                       #dollar's worth of outcome per 1 dollar's worth of new final demand
-        moc_trancated = Lcdf.iloc[:-1].sum(axis=0) #dollar's worth of outcome per 1 dollar's worth of new final demand
-
-        # income multipliers mh
-        Ej_by_xj = Tc.iloc[-1,:-1] #hosehold income received per dollar's worth of sector output  
-        income_F_multipliers = Ldf.mul(Ej_by_xj, axis=0) #household income recieved per dollar's worth of secotr final demand
-        # Ej/xj*Ljk - Ljk is how much output was sold from j to k. and j is the sector that paid the salaries, so Ej/xj is used.
-        sum_income_F_multipliers = income_F_multipliers.sum(axis=0) 
-        # m(h)_k = sum_j(Ej/xj*Ljk) - sum over j of the detailed income_F_multipliers - sum over the rows
-        # an additional dolar of final demand in sector k generates m(h)_k dollars of new household income when all direct and
-        # indirect effects are converted into dollar estimates of income.
-        # income_F_multipliers is the details for each sector - how much income is generated by an additional dollar of final demand in sector k for each of the other sectors
-        # the above is only direct+indirect effects
-        # direct + indirect + induced effect - same calculation but with Lcdf
-
-        #income multipliers second time
-        Ej_by_xj = Tc.iloc[-1,:]
-        
-        # GDP multipliers
-        GDPc = OECD.loc['VALU', simple_II_labels + ['HFCE']]
-        GDPj_by_xj = safe_divide_vector(GDPc, outputc)
-
-        # summary of multipliers without typeI and typeII - 
-        # 6 multipliers output, income, GDP, X sector2sector X simple model, closed model
-        # all of the closed model multipliers are trancated (the row and column of salaries and final demand are not included)
-        s2s_mo = Ldf                       # direct + indirect effect
-        s2s_moc = Lcdf                     # direct + indirect + iduced effect
-        s2s_mh = Ldf.mul(Ej_by_xj.iloc[ :-1 ], axis=0) 
-        s2s_mhc = Lcdf.mul(Ej_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
-        s2s_mg =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
-        s2s_mgc = Lcdf.mul(GDPj_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
-        #sector2market multipliers
-        #mo = s2s_mo.sum(axis=0)
-        #moc = s2s_moc.sum(axis=0)
-        #mh = s2s_mh.sum(axis=0)
-        #mhc = s2s_mhc.sum(axis=0)
-        #mg = s2s_mg.sum(axis=0)
-        #mgc = s2s_mgc.sum(axis=0)
-
-
-        ###################################################
-        # multipliers: direct, indirect, induced separately
-        ###################################################
-        n = T.shape[0]
-        # direct
-        direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
-        direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
-        np.fill_diagonal(direct_h.values, Ej_by_xj.values)
-        direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
-        np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
-        #indirect
-        indirect_o = s2s_mo - direct_o
-        #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
-        indirect_h  = s2s_mh - direct_h
-        #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
-        indirect_g  = s2s_mg - direct_g
-        #induced
-        induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
-        induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
-        induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
-
-        #################################
-        # impacts instead of multipliers
-        #################################
-        fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
-        #there is what causes closed model to be in accuarete:
-        #fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
-        #I should take HFCE inside fcdf_year2. 
-        fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
-        fcdf.loc['employees_compensation'] = 0
-
-        # impacts
-        # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
-        scale_df_by_series(direct_o, fcdf[:-1]) # , 'Direct output impact' 
-        #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
-        #multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
-        #multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
-        #multipliers_by_f(direct_h, fcdf[:-1], 'Direct income impact'), 
-        #multipliers_by_f(indirect_h, fcdf[:-1], 'Indirect income impact'),
-        #multipliers_by_f(induced_h, fcdf[:-1], 'Induced income impact'),  
-        #multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf[:-1], 'Total income impact'),
-        #multipliers_by_f(direct_g, fcdf[:-1], 'Direct GDP impact'), 
-        #multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
-        #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
-        #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
-        
-             
-        dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
-        dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
-        
-        
-
-
-end_time = time.time()
-print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
-
-
-#dfTc.to_csv("Bench_predictions/dfTc_Tc_Lc_to_csv07.csv", index=False)
-#dfLc.to_csv("Bench_predictions/dfLc_Tc_Lc_to_csv07.csv", index=False)
+    
+    #################################
+    # impacts instead of multipliers for multipler years
+    #################################
+    dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
+    dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
+    #add GDP graph here
 
 
 
 
-
-##########################################             Benchmark  plots version A         ######################################################
-
-print(f'Fig 1: ICT Sector Revenue Compound Annual Growth Rate (CAGR) ({first_year}-{last_year})')
-# graph 1,2 for output
-if 0:
-    # fig 1: output CAGR 
-    ICT_cagr = clc_cagr(dfoutput, first_year, last_year,'output')
-    # fig1: plot output CAGR
-    plot_cagr(ICT_cagr, f'Average CAGR for ICT sectors ({first_year}–{last_year})')
-
-
-    print(f'Fig 2: Average ICT Sector Share in Total National Output ({first_year}-{last_year})')
-    # fig 2: average ICT sector share in total output 2010-2020
-    # data manipulation for figure 2: output share of ICT sectors
-    output_shares, ICT_output_shares = get_share(dfoutput, first_year, last_year, ICTsectors,'output')
-    # TODO: I'm not sure if ICT_output_shares should be in data manipulation or plotting
-    plot_share(ICT_output_shares, f'Average ICT Output Share by Country, {first_year}-{last_year}','output')
-    #the above is average of average - average over the 6 ICT sectorsa as well as over the years
-
-    # fig2B: stacked output share
-    #this is the average of each category (factor) - stacked. 
-    plot_stacked_shares(output_shares, ICT_factors,f'Stacked Average ICT Output Share by Country, {first_year}-{last_year}','output')
-
-
-# graphs 1 and 2 for GDP
-if 0:
-    # fig 1: output CAGR 
-    ICT_GDP_cagr = clc_cagr(dfGDP, first_year, last_year,'GDP') 
-    # fig1: plot output CAGR
-    plot_cagr(ICT_GDP_cagr, f'Average GDP CAGR for ICT sectors ({first_year}–{last_year})')
-
-    # fig 2: average ICT sector share in GDP 2011-2020
-    GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
-    plot_share(ICT_GDP_shares, f'Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
-
-    # fig2B: stacked output share
-    #this is the average of each category (factor) - stacked. 
-    plot_stacked_shares(GDP_shares, ICT_factors,f'Stacked Average ICT GDP Share by Country, {first_year}-{last_year}','GDP')
-
-#GDP share stacked, not average but comparison between 2011 and 2020
-if 0:
-    GDP_shares, ICT_GDP_shares = get_share(dfGDP, first_year, last_year, ICTsectors,'GDP')
-    plot_share_compare_frist_last_year(GDP_shares, first_year, last_year, 'GDP', f'ICT GDP {first_year} and {last_year} Share by Country')
-
-
-print('graphs 1 and 2 are done')
-
-
-# graph 3: GDP impact of ICT sectors total, 5 graphs
-# 19.12.25
-#################################
-# impacts instead of multipliers
-#################################
-dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
-dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
-#add GDP graph here
-
-if 0:
+    #this is graph 4 in the ksa file
+    # first make 2 functions: mo to direct/indirect/induced, and that to impacts
+    # then go below and do 1 year value differently
     ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
     ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
     ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
@@ -1464,6 +1290,11 @@ if 0:
             sector_list = [sector_list]
         plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, 'GDP impact total', sector_label)
         # plot_GDPimpact_top_bottom is inside it
+
+
+
+##########################################             Benchmark  plots version A         ######################################################
+
 
 # graph 4 GDP stacked backward forward
 if 0:
@@ -1495,5 +1326,9 @@ if 0:
 
 #Japan is missing 2020 Employment data (from the SUT file)
 print(dfEimpact)
+
+
+end_time = time.time()
+print(f"Elapsed time: {(end_time - start_time)/60:.1f} minutes")
 
 
