@@ -1215,18 +1215,16 @@ print('B12 graphs 1 and 2 are checked')
 
 country = 'CAN'
 year = 2012
-
+data_years = range(195, 2020)
 # graph 4 (backward, forward, full GDP impact)  
 def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, Ej_by_xj, GDPj_by_xj, simple_II_labels):
     n = len(simple_II_labels)
     s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
     s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
     s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
-     s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
-    s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
-    s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
-
-
+    s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
+    s2s_mhc = dfmhc[(dfmhc['country'] == country) & (dfmhc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
+    s2s_mgc = dfmgc[(dfmgc['country'] == country) & (dfmgc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
     # direct  
     direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
     direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
@@ -1243,9 +1241,14 @@ def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc,
     induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
     induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
     induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
+    #todo: I need to arrange all matrices in one bigg df for 1 country 1 year. use zip? 
     return direct_o, indirect_o, induced_o, direct_h, indirect_h, induced_h, direct_g, indirect_g, induced_g    
 
 if 1:
+    start_year = 2015
+    end_year = 2024
+    if start_year in data_years:
+
     #for 1 country 1 year:
     #################################
     # impacts instead of multipliers
