@@ -31,21 +31,6 @@ def calc_multipliers(country, year, Ldf, Lcdf, Tc, GDP, outputc):
 
 
 
-
-#multipliers:
-    dfmo.to_csv("Bench_predictions_B/B06_dfmo.csv", index=False)
-    dfmoc.to_csv("Bench_predictions_B/B06_dfmoc.csv", index=False)
-    dfmh.to_csv("Bench_predictions_B/B06_dfmh.csv", index=False)
-    dfmhc.to_csv("Bench_predictions_B/B06_dfmhc.csv", index=False)
-    dfmg.to_csv("Bench_predictions_B/B06_dfmg.csv", index=False)
-    dfmgc.to_csv("Bench_predictions_B/B06_dfmgc.csv", index=False)                    
-
-
-
-
-
-
-
 from now on it should be moved to B12_GDPimpact_code_benchmark_plots.py
             ###################################################
             # multipliers: direct, indirect, induced separately
