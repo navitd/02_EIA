@@ -38,7 +38,6 @@ from func_data_upload_OECD_without_E import data_upload_OECD_without_E
 from func_plot_L import plot_matrix_columns
 from func_clc_L import clc_L
 from func_safe_divide import safe_divide, safe_divide_vector
-from func_multipliers_by_f import multipliers_by_f
 from func_plot_real_vs_predicted import plot_real_vs_predicted
        
 
@@ -945,29 +944,66 @@ def plot_impact_with_table(df_first, df_last, value_column, graph_title):
 
 
 ##################################################        functions that calculate        ######################################################
+# B version
+def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, Ej_by_xj, GDPj_by_xj, simple_II_labels):
+    n = len(simple_II_labels)
+    s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
+    s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
+    s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
+    s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
+    s2s_mhc = dfmhc[(dfmhc['country'] == country) & (dfmhc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
+    s2s_mgc = dfmgc[(dfmgc['country'] == country) & (dfmgc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
+    # direct  
+    direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
+    direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
+    np.fill_diagonal(direct_h.values, Ej_by_xj.values)
+    direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
+    np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
+    #indirect
+    indirect_o = s2s_mo - direct_o
+    #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
+    indirect_h  = s2s_mh - direct_h
+    #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
+    indirect_g  = s2s_mg - direct_g
+    #induced
+    induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
+    induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
+    induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
+   
+    multipliers1country1year = {
+    "country": country,
+    "year": year,
+    "direct_o": direct_o,
+    "indirect_o": indirect_o,
+    "induced_o": induced_o,
+    "direct_h": direct_h,
+    "indirect_h": indirect_h,
+    "induced_h": induced_h,
+    "direct_g": direct_g,
+    "indirect_g": indirect_g,
+    "induced_g": induced_g,
+}
+    return multipliers1country1year   
 
+
+
+# A version
 def multipliers2prediction(s2s_mo, fdf_year2, column_name):
     predicted_output_year2_np  = np.round(s2s_mo.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
     
     predicted_output_year2 = pd.DataFrame(predicted_output_year2_np, index=s2s_mo.index, columns=[column_name])
     
     return predicted_output_year2
-
-
-
+# A version
 def scale_df_by_series(direct_o: pd.DataFrame, fcdf: pd.Series) -> pd.DataFrame:
     
     return direct_o[fcdf.index].mul(fcdf, axis=1)
-
-
+# A version
 def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
     return m.reset_index().melt(id_vars=m.index.name or 'index',
                                 var_name='buying sector',
                                 value_name=value).rename(columns={m.index.name or 'index': 'selling sector'})
-
-
-
-
+# A version
 def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
     impact_cols = [value_col+' impact direct', value_col+' impact indirect', value_col+' impact induced', value_col+' impact total']
     dftemp2 = None
@@ -1215,52 +1251,35 @@ print('B12 graphs 1 and 2 are checked')
 
 country = 'CAN'
 year = 2012
-data_years = range(195, 2020)
+data_years = range(1995, 2020)
 # graph 4 (backward, forward, full GDP impact)  
-def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, Ej_by_xj, GDPj_by_xj, simple_II_labels):
-    n = len(simple_II_labels)
-    s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
-    s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
-    s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
-    s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
-    s2s_mhc = dfmhc[(dfmhc['country'] == country) & (dfmhc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
-    s2s_mgc = dfmgc[(dfmgc['country'] == country) & (dfmgc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
-    # direct  
-    direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
-    direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
-    np.fill_diagonal(direct_h.values, Ej_by_xj.values)
-    direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
-    np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
-    #indirect
-    indirect_o = s2s_mo - direct_o
-    #Ej_by_xj*L_minus_I = s2s_mh-Ej_by_xj
-    indirect_h  = s2s_mh - direct_h
-    #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
-    indirect_g  = s2s_mg - direct_g
-    #induced
-    induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
-    induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
-    induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
-    #todo: I need to arrange all matrices in one bigg df for 1 country 1 year. use zip? 
-    return direct_o, indirect_o, induced_o, direct_h, indirect_h, induced_h, direct_g, indirect_g, induced_g    
 
 if 1:
     start_year = 2015
     end_year = 2024
+    base_year = 2020
     if start_year in data_years:
+        multipliers_start_year = multipliers_direct_indirect_induced(country, start_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
+    else:
+        multipliers_start_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
+    if end_year in data_years:
+        multipliers_end_year = multipliers_direct_indirect_induced(country, end_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
+    else:
+        multipliers_end_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
 
-    #for 1 country 1 year:
     #################################
     # impacts instead of multipliers
     #################################
-    fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
+    #comment abnormality in OECD structure:
+    #fdf = OECD.loc[simple_II_labels, final_demand_columns].sum(axis=1)
     #there is what causes closed model to be in accuarete:
     #fcdf_year2 = OECD_year2.loc[simple_II_labels,final_demand_columns[1:]].sum(axis=1)
     #I should take HFCE inside fcdf_year2. 
-    fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
-    fcdf.loc['employees_compensation'] = 0
+    #fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
+    #fcdf.loc['employees_compensation'] = 0
 
     # impacts
+    ''' to delete:
     # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
     scale_df_by_series(direct_o, fcdf[:-1]) # , 'Direct output impact' 
     #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
@@ -1274,7 +1293,7 @@ if 1:
     #multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
     #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
     #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
-    
+    '''
 
     
     #################################
