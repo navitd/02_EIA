@@ -144,7 +144,7 @@ def clc_multipliers(country, year, Ldf, Lcdf, Tc, GDP, outputc):
     s2s_mg  =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
     s2s_mgc = Lcdf.mul(GDPj_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
     
-    return s2s_mo, s2s_moc, s2s_mh, s2s_mhc, s2s_mg, s2s_mgc, Ej_by_xj, GDPj_by_xj
+    return s2s_mo, s2s_moc, s2s_mh, s2s_mhc, s2s_mg, s2s_mgc
 
 
 
@@ -295,13 +295,12 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 
 dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
 dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
-#dfGDPimpact = pd.DataFrame() # this will hold country, year, buying sector, selling sector, GDPimpact
-#dfEimpact = pd.DataFrame()
 dfTc = pd.DataFrame()
 dfGDPj_by_xj= pd.DataFrame()
 dfHFCE = pd.DataFrame()
 df8 = pd.DataFrame()
 df9 = pd.DataFrame()
+dfmo = pd.DataFrame()
 for country in countries:
     for year in year_range:
         
@@ -366,7 +365,7 @@ for country in countries:
         GDPj_by_xjc = safe_divide_vector(GDPc, outputc)
 
         # calculate multipliers
-        s2s_mo, s2s_moc, s2s_mh, s2s_mhc, s2s_mg, s2s_mgc, Ej_by_xj, GDPj_by_xj = clc_multipliers(country, year, Ldf, Lcdf, Tc, GDPc, outputc)
+        s2s_mo, s2s_moc, s2s_mh, s2s_mhc, s2s_mg, s2s_mgc = clc_multipliers(country, year, Ldf, Lcdf, Tc, GDPc, outputc)
 
         # collect closed model
         HFCE_col_name = 'HFCE'
@@ -381,7 +380,15 @@ for country in countries:
         dfGDP    = collect_v(GDPc,    country, int(year), ['sector', GDP_col_name],    dfGDP)
         dfoutput = collect_v(outputc, country, int(year), ['sector', output_col_name], dfoutput)
         dfGDPj_by_xj = collect_v(GDPj_by_xjc,country, int(year), ["sector",GDPj_by_xj_col_name], dfGDPj_by_xj)
-        
+        # above is checked and correct
+
+        dfmo = collect_m(s2s_mo, country, year, "mo", dfmo)
+        dfmoc = collect_m(s2s_moc, country, year, "moc", dfmoc)
+        dfmh = collect_m(s2s_mh, country, year, "mh", dfmh)
+        dfmhc = collect_m(s2s_mhc, country, year, "mhc", dfmhc)
+        dfmg = collect_m(s2s_mg, country, year, "mg", dfmg)
+        dfmgc = collect_m(s2s_mgc, country, year, "mgc", dfmgc)
+
 
         #check:
         #xcheck = multipliers2prediction(Lcdf, f8c, "predicted output")

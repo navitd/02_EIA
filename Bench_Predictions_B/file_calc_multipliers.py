@@ -20,13 +20,14 @@ def calc_multipliers(country, year, Ldf, Lcdf, Tc, GDP, outputc):
             # summary of multipliers without typeI and typeII - 
             # 6 multipliers output, income, GDP, X sector2sector X simple model, closed model
             # all of the closed model multipliers are trancated (the row and column of salaries and final demand are not included)
-            s2s_mo = Ldf                       # direct + indirect effect
-            s2s_moc = Lcdf                     # direct + indirect + iduced effect
-            s2s_mh = Ldf.mul(Ej_by_xj.iloc[ :-1 ], axis=0) 
+            s2s_mo  = Ldf                       # direct + indirect effect
+            s2s_moc = Lcdf                      # direct + indirect + iduced effect
+            s2s_mh  = Ldf.mul(Ej_by_xj.iloc[ :-1 ], axis=0) 
             s2s_mhc = Lcdf.mul(Ej_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
-            s2s_mg =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
+            s2s_mg  =  Ldf.mul(GDPj_by_xj.iloc[ :-1 ], axis=0)    
             s2s_mgc = Lcdf.mul(GDPj_by_xj.rename(index={'HFCE': 'employees_compensation'}), axis=0)
             
+            return s2s_mo, s2s_moc, s2s_mh, s2s_mhc, s2s_mg, s2s_mgc, Ej_by_xj, GDPj_by_xj
 
 from now on it should be moved to B12_GDPimpact_code_benchmark_plots.py
             ###################################################
