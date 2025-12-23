@@ -300,7 +300,7 @@ dfGDPj_by_xj= pd.DataFrame()
 dfHFCE = pd.DataFrame()
 df8 = pd.DataFrame()
 df9 = pd.DataFrame()
-dfmo = pd.DataFrame()
+dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc  = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 for country in countries:
     for year in year_range:
         
@@ -425,7 +425,13 @@ if 1:
     dfGDP.to_csv("Bench_predictions_B/B06_dfGDP.csv", index=False)
     dfoutput.to_csv("Bench_predictions_B/B06_dfoutput.csv", index=False)
     dfGDPj_by_xj.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv", index=False)
-
+    #multipliers:
+    dfmo.to_csv("Bench_predictions_B/B06_dfmo.csv", index=False)
+    dfmoc.to_csv("Bench_predictions_B/B06_dfmoc.csv", index=False)
+    dfmh.to_csv("Bench_predictions_B/B06_dfmh.csv", index=False)
+    dfmhc.to_csv("Bench_predictions_B/B06_dfmhc.csv", index=False)
+    dfmg.to_csv("Bench_predictions_B/B06_dfmg.csv", index=False)
+    dfmgc.to_csv("Bench_predictions_B/B06_dfmgc.csv", index=False)                    
 
 
 # to get the ratio dfother_total / gdp_total for each extrap year
