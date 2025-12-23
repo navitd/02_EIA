@@ -1049,6 +1049,14 @@ print('graphs 1 and 2 are done')
 
 
 # graph 3: GDP impact of ICT sectors total, 5 graphs
+# 19.12.25
+#################################
+# impacts instead of multipliers
+#################################
+dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
+dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
+#add GDP graph here
+
 if 0:
     ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
     ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
