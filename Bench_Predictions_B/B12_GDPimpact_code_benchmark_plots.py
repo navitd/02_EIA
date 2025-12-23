@@ -785,23 +785,24 @@ dfgdp_worldbank = dfgdp_worldbank.set_index('year')
 # upload E
 dfE = pd.read_csv("Bench_predictions_B/A05_Esectors_from_Etot05.csv")
 dfE.rename(columns={"E": "Employment"}, inplace=True)
+# dfE already has data until 2040 - base extrapolation already done.
 
+# for base extrapolation
+dfTcbase = pd.read_csv("Bench_predictions_B/B071_Tc_base_1years.csv")
+dfHFCE = pd.read_csv("Bench_predictions_B/B072_dfHFCE_data_and_extrap.csv")
+df8    = pd.read_csv("Bench_predictions_B/B072_df8_data_and_extrap.csv")
+df9    = pd.read_csv("Bench_predictions_B/B072_df9_data_and_extrap.csv")
+dfGDP  = pd.read_csv("Bench_predictions_B/B072_dfGDP_data_and_extrap.csv")
+dfoutput = pd.read_csv("Bench_predictions_B/B072_dfoutput_data_and_extrap.csv")
+dfGDPj_by_xj = pd.read_csv("Bench_predictions_B/B072_dfGDPj_by_xj_data_and_extrap.csv")
 
-dfHFCE = pd.read_csv("Bench_predictions_B/B06_dfHFCE.csv")
-df8    = pd.read_csv("Bench_predictions_B/B06_df8.csv")
-df9    = pd.read_csv("Bench_predictions_B/B06_df9.csv")
-dfGDP  = pd.read_csv("Bench_predictions_B/B06_dfGDP.csv")
-dfoutput = pd.read_csv("Bench_predictions_B/B06_dfoutput.csv")
-dfGDPj_by_xj = pd.read_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv")
-
-dfHFCE_tot       = pd.read_csv("Bench_predictions_B/B06_dfHFCE_tot.csv")
-df8_tot          = pd.read_csv("Bench_predictions_B/B06_df8_tot.csv")
-df9_tot          = pd.read_csv("Bench_predictions_B/B06_df9_tot.csv")
-dfGDP_tot        = pd.read_csv("Bench_predictions_B/B06_dfGDP_tot.csv")
-dfoutput_tot     = pd.read_csv("Bench_predictions_B/B06_dfoutput_tot.csv")
-dfGDPj_by_xj_tot = pd.read_csv("Bench_predictions_B/B06_dfGDPj_by_xj_tot.csv")
-
-
+#multipliers, pivoted to long form 
+dfmo = pd.read_csv("Bench_predictions_B/B06_dfmo.csv")
+dfmoc = pd.read_csv("Bench_predictions_B/B06_dfmoc.csv")
+dfmh = pd.read_csv("Bench_predictions_B/B06_dfmh.csv")
+dfmhc = pd.read_csv("Bench_predictions_B/B06_dfmhc.csv")
+dfmg = pd.read_csv("Bench_predictions_B/B06_dfmg.csv")
+dfmgc = pd.read_csv("Bench_predictions_B/B06_dfmgc.csv")        
 
 ########################################                           parameters                       ##################################################
 start_time = time.time()
