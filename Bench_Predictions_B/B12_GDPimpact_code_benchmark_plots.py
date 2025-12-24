@@ -956,7 +956,7 @@ def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc,
     s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="moc").copy()
     s2s_mhc = dfmhc[(dfmhc['country'] == country) & (dfmhc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mhc").copy()
     s2s_mgc = dfmgc[(dfmgc['country'] == country) & (dfmgc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mgc").copy()
-    # correct pivot: HFCE appears in the middle of them matrix (alphabetically)
+    # correct pivot: HFCE appears in the middle of them matrix (alphabetically) 
     
     # direct  
     direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
@@ -971,9 +971,10 @@ def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc,
     #GDPj_by_xj*L_minus_I = s2s_mg-GDPj_by_xj
     indirect_g  = s2s_mg - direct_g
     #induced
-    induced_o = s2s_moc.iloc[:-1,:-1] - s2s_mo
-    induced_h = s2s_mhc.iloc[:-1,:-1] - s2s_mh
-    induced_g = s2s_mgc.iloc[:-1,:-1] - s2s_mg
+    #first remove HFCE row from s2s_moc, s2s_mhc, s2s_mgc
+    induced_o = s2s_moc.drop('HFCE', axis=0).drop('employees_compensation', axis=1) - s2s_mo
+    induced_h = s2s_mhc.drop('HFCE', axis=0).drop('employees_compensation', axis=1) - s2s_mh
+    induced_g = s2s_mgc.drop('HFCE', axis=0).drop('employees_compensation', axis=1) - s2s_mg
    
     multipliers1country1year = {
     "country": country,
@@ -1278,13 +1279,13 @@ if 1:
         multipliers_end_year = multipliers_direct_indirect_induced(country, end_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
     else:
         multipliers_end_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
-    # check why multipliers have NaN
+    
+    #when making f8 and f9: sector should become index
 
-
-    f8_start_year = df8[(df8['country'] == country) & (df8['year'] == start_year)]['f8'].values[0]
-    f9_start_year = df9[(df9['country'] == country) & (df9['year'] == start_year)]['f9'].values[0]
-    f8_end_year = df8[(df8['country'] == country) & (df8['year'] == end_year)]['f8'].values[0]
-    f9_end_year = df9[(df9['country'] == country) & (df9['year'] == end_year)]['f9'].values[0]
+    f8_start_year = df8[(df8['country'] == country) & (df8['year'] == start_year)]['8 final demand']
+    f9_start_year = df9[(df9['country'] == country) & (df9['year'] == start_year)]['9 final demand']
+    f8_end_year = df8[(df8['country'] == country) & (df8['year'] == end_year)]['8 final demand']
+    f9_end_year = df9[(df9['country'] == country) & (df9['year'] == end_year)]['9 final demand']
     #################################
     # impacts instead of multipliers
     #################################
@@ -1317,7 +1318,7 @@ if 1:
         direct_impact = direct[f8.index].mul(f8, axis=1)
         return  direct_impact
                
-    direct_o = get_impacts(country, start_year, multipliers_start_year, f8_start_year,f9_start_year, "output")
+    direct_o = get_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "output")
 
     # back to A version:
 
