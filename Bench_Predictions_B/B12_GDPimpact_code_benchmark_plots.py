@@ -1009,32 +1009,6 @@ def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
     return m.reset_index().melt(id_vars=m.index.name or 'index',
                                 var_name='buying sector',
                                 value_name=value).rename(columns={m.index.name or 'index': 'selling sector'})
-# A version
-def get_impacts_A_version(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
-    #to correct: fcdf is not an intput. should be in the input
-    impact_cols = [value_col+' impact direct', value_col+' impact indirect', value_col+' impact induced', value_col+' impact total']
-    dftemp2 = None
-    for data, value in zip( [mdirect, mindirect, minduced, ms2s], impact_cols ):
-        m = scale_df_by_series(data, fcdf[:-1])       #this is the multiplication
-        dftemp1 = pivot_matrix_to_3_columns(m, value) #this is the matrix in 3 columns
-        if dftemp2 is None:
-            dftemp2 = dftemp1  # First iteration: just assign
-        else:
-            dftemp2 = pd.merge(
-                dftemp2,
-                dftemp1,
-                on=["selling sector", "buying sector"],
-                how="outer"
-            )
-    # dftemp2 contains 4 GDP impacts 
-    dftemp2['country'] = country
-    dftemp2['year'] = year
-    dftemp2[value_vec_name] = value_vec.sum()
-    cols = ['country', 'year', 'buying sector', 'selling sector'] + impact_cols + [value_vec_name]
-    dftemp2 = dftemp2[cols]
-    dfimpact = pd.concat([dfimpact, dftemp2], ignore_index=True)
-    return dfimpact
-
 
 
 
@@ -1263,9 +1237,27 @@ print('B12 graphs 1 and 2 are checked')
 country = 'CAN'
 year = 2012
 data_years = range(1995, 2020)
-# graph 3 (backward, forward, full GDP impact)  
+# graph 3 (backward, forward, full GDP impact)  - not finished. check impact calculation first
+def get_impacts(country, year, multipliers, f8, f9, value_name):
+        #multipliers are only for these country and year:
+        country = multipliers['country']
+        year = multipliers['year']
+        if value_name =="output":
+            names = ["direct_o", "indirect_o", "induced_o"]
+        elif value_name =="GDP":
+            names = ["direct_g", "indirect_g", "induced_g"]
+        elif value_name =="Employment":
+            names = ["direct_h", "indirect_h", "induced_h"]
+        direct = multipliers[names[0]]
+        indirect = multipliers[names[1]]
+        induced = multipliers[names[2]]
+        direct_impact = direct[f9.drop("employees_compensation").index].mul(f9.drop("employees_compensation"), axis=1)
+        indirect_impact = indirect[f9.drop("employees_compensation").index].mul(f9.drop("employees_compensation"), axis=1)
+        induced_impact = induced[f9.drop("employees_compensation").index].mul(f8.drop("employees_compensation"), axis=1)
+        # induced is trancated - not n+1 but n rows/columns
+        return  country, year, direct_impact, indirect_impact, induced_impact
 
-if 1:
+if 0:
     start_year = 2015
     end_year = 2024
     base_year = 2020
@@ -1282,10 +1274,10 @@ if 1:
     
     #when making f8 and f9: sector should become index
 
-    f8_start_year = df8[(df8['country'] == country) & (df8['year'] == start_year)]['8 final demand']
-    f9_start_year = df9[(df9['country'] == country) & (df9['year'] == start_year)]['9 final demand']
-    f8_end_year = df8[(df8['country'] == country) & (df8['year'] == end_year)]['8 final demand']
-    f9_end_year = df9[(df9['country'] == country) & (df9['year'] == end_year)]['9 final demand']
+    f8_start_year = df8[(df8['country'] == country) & (df8['year'] == start_year)].set_index("sector")['8 final demand'].copy()
+    f9_start_year = df9[(df9['country'] == country) & (df9['year'] == start_year)].set_index("sector")['9 final demand'].copy()
+    f8_end_year   = df8[(df8['country'] == country) & (df8['year'] == end_year)].set_index("sector")['8 final demand'].copy()
+    f9_end_year   = df9[(df9['country'] == country) & (df9['year'] == end_year)].set_index("sector")['9 final demand'].copy()
     #################################
     # impacts instead of multipliers
     #################################
@@ -1296,34 +1288,15 @@ if 1:
     #I should take HFCE inside fcdf_year2. 
     #fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
     #fcdf.loc['employees_compensation'] = 0
-
-    # A version impacts   
-    #dfGDPimpact = get_impacts_A_version(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
-    #dfEimpact   = get_impacts_A_version(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
-   
-    #I need to have multipliers and f8 and f9 start year and end year
-
-    def get_impacts(country, year, multipliers, f8, f9, value_name):
-        country = multipliers['country']
-        year = multipliers['year']
-        if value_name =="output":
-            names = ["direct_o", "indirect_o", "induced_o"]
-        elif value_name =="GDP":
-            names = ["direct_g", "indirect_g", "induced_g"]
-        elif value_name =="Employment":
-            names = ["direct_h", "indirect_h", "induced_h"]
-        direct = multipliers[names[0]]
-        indirect = multipliers[names[1]]
-        induced = multipliers[names[2]]
-        direct_impact = direct[f8.index].mul(f8, axis=1)
-        return  direct_impact
-               
-    direct_o = get_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "output")
-
+    
+    # 1 country 1 year
+    country_temp, year_temp, im_direct_o, im_indirect_o, im_induced_o = get_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "output")
+    country_temp, year_temp,im_direct_h, im_indirect_h, im_induced_h = get_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "Employment")
+    country_temp, year_temp,im_direct_g, im_indirect_g, im_induced_g = get_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "GDP")
+    '''
     # back to A version:
 
-    # then go below and do 1 year value differently
-    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
+    # then go below and do 1 year value differently    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
     ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
     ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
     ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
@@ -1336,7 +1309,21 @@ if 1:
             sector_list = [sector_list]
         plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, 'GDP impact total', sector_label)
         # plot_GDPimpact_top_bottom is inside it
-
+    '''
+if 1:
+    #to check if impacts are correct:
+    country = "CAN"
+    year = 2012
+    multipliers_CAN2012 = multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
+    f9_CAN2012 = df9[(df9['country'] == country) & (df9['year'] == year)].set_index("sector")['9 final demand'].copy()
+    f8_CAN2012 = df8[(df8['country'] == country) & (df8['year'] == year)].set_index("sector")['8 final demand'].copy() #to delete
+    country_temp, year_temp, im_direct_o, im_indirect_o, im_induced_o = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "output")
+    country_temp, year_temp,im_direct_h, im_indirect_h, im_induced_h = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "Employment")
+    country_temp, year_temp,im_direct_g, im_indirect_g, im_induced_g = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "GDP")
+    x_tot_CAN2012 = im_direct_o+ im_indirect_o + im_induced_o
+    GDP_tot_CAN2012 = im_direct_g+ im_indirect_g + im_induced_g
+    E_tot_CAN2012 = im_direct_h+ im_indirect_h + im_induced_h
+    x_tot_CAN2012_original = dfoutput[(dfoutput['country']==country) & (dfoutput['year']==year)].set_index('sector')['output']
 
 
 ##########################################             Benchmark  plots version A         ######################################################
