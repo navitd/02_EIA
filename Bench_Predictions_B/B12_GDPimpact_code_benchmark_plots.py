@@ -950,19 +950,20 @@ def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc,
     #notice that dfEj_by_xj and dfGDPj_by_xj were uploaded from B06 and therefore contain only data years
     Ej_by_xj   = dfEj_by_xj[(dfEj_by_xj['country'] == country) & (dfEj_by_xj['year'] == year)].set_index('sector')['Ej_by_xj']
     GDPj_by_xj = dfGDPj_by_xj[(dfGDPj_by_xj['country'] == country) & (dfGDPj_by_xj['year'] == year)].set_index('sector')['GDPj_by_xj']    
-    s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo").copy()
-    s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh").copy()
-    s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg").copy()
-    s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="moc").copy()
-    s2s_mhc = dfmhc[(dfmhc['country'] == country) & (dfmhc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mhc").copy()
-    s2s_mgc = dfmgc[(dfmgc['country'] == country) & (dfmgc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mgc").copy()
-    # correct pivot: HFCE appears in the middle of them matrix (alphabetically) 
-    
+    s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="selling_sector",columns="buying_sector",values="mo").copy()
+    s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="selling_sector",columns="buying_sector",values="mh").copy()
+    s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="selling_sector",columns="buying_sector",values="mg").copy()
+    s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="selling_sector",columns="buying_sector",values="moc").copy()
+    s2s_mhc = dfmhc[(dfmhc['country'] == country) & (dfmhc['year'] == year)].pivot(index="selling_sector",columns="buying_sector",values="mhc").copy()
+    s2s_mgc = dfmgc[(dfmgc['country'] == country) & (dfmgc['year'] == year)].pivot(index="selling_sector",columns="buying_sector",values="mgc").copy()
+    # correct pivot: HFCE appears in the middle of them matrix (alphabetically) HFCE in rows and employees_compensation in columns
+    s2s_moc = s2s_moc[[c for c in s2s_moc.columns if c != 'HFCE'] + ['HFCE']]
+
     # direct  
     direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
-    direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
+    direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.drop("HFCE").index, columns=Ej_by_xj.drop("HFCE").index)
     np.fill_diagonal(direct_h.values, Ej_by_xj.values)
-    direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.iloc[:-1].index, columns=GDPj_by_xj.iloc[:-1].index)
+    direct_g = pd.DataFrame(np.zeros((n, n)), index=GDPj_by_xj.drop("HFCE").index, columns=GDPj_by_xj.drop("HFCE").index)
     np.fill_diagonal(direct_g.values, GDPj_by_xj.values)
     #indirect
     indirect_o = s2s_mo - direct_o
@@ -972,9 +973,9 @@ def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc,
     indirect_g  = s2s_mg - direct_g
     #induced
     #first remove HFCE row from s2s_moc, s2s_mhc, s2s_mgc
-    induced_o = s2s_moc.drop('HFCE', axis=0).drop('employees_compensation', axis=1) - s2s_mo
-    induced_h = s2s_mhc.drop('HFCE', axis=0).drop('employees_compensation', axis=1) - s2s_mh
-    induced_g = s2s_mgc.drop('HFCE', axis=0).drop('employees_compensation', axis=1) - s2s_mg
+    induced_o = s2s_moc.drop('employees_compensation', axis=0).drop('HFCE', axis=1) - s2s_mo
+    induced_h = s2s_mhc.drop('employees_compensation', axis=0).drop('HFCE', axis=1) - s2s_mh
+    induced_g = s2s_mgc.drop('employees_compensation', axis=0).drop('HFCE', axis=1) - s2s_mg
    
     multipliers1country1year = {
     "country": country,
@@ -1010,6 +1011,29 @@ def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
                                 var_name='buying sector',
                                 value_name=value).rename(columns={m.index.name or 'index': 'selling sector'})
 
+#################################################                 check               #############################################
+def check_L_Lc(country, year, dfTc, dfoutput, df8, df9):
+        HFCE_col_name = 'HFCE'
+        f8_col_name = "8 final demand"
+        f9_col_name = "9 final demand"
+        GDP_col_name = 'GDP'
+        Tctemp = (
+            dfTc[(dfTc.country == country) & (dfTc.year == year)]
+            .pivot(index="selling_sector", columns="buying_sector", values="Tc")
+        )
+        x = dfoutput[(dfoutput.country == country) & (dfoutput.year == year)].set_index('sector')['output']
+        f8temp = df8[(df8.country == country) & (df8.year == year)].set_index('sector')[f8_col_name]
+        f8temp.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        f9temp = df9[(df9.country == country) & (df9.year == year)].set_index('sector')[f9_col_name]
+        f9temp.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        Tctemp = Tctemp[[c for c in Tctemp.columns if c != 'HFCE'] + ['HFCE']] #put 'HFCE' at the end
+        Lctemp,_ = clc_L(Tctemp)
+        xcheck = multipliers2prediction(Lctemp, f8temp,'output') #it is important to use this instead of @ because when the row names don't agree the multiplication is inaccurate  
+        #Lc shoudl be multilied by f8
+        Ltemp,_ = clc_L(Tctemp.iloc[:-1,:-1])
+        xcheck2 = Ltemp@f9temp.iloc[:-1]
+        print('        xcheck   ',' xcheck2', '   x dfoutput')
+        print(pd.concat([xcheck.iloc[:-1].round(), xcheck2.round(), x.iloc[:-1].round() ], axis=1))
 
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                    main                  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -1239,6 +1263,9 @@ year = 2012
 data_years = range(1995, 2020)
 # graph 3 (backward, forward, full GDP impact)  - not finished. check impact calculation first
 def get_impacts(country, year, multipliers, f8, f9, value_name):
+        #correct:
+        #f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        #f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
         #multipliers are only for these country and year:
         country = multipliers['country']
         year = multipliers['year']
@@ -1251,13 +1278,15 @@ def get_impacts(country, year, multipliers, f8, f9, value_name):
         direct = multipliers[names[0]]
         indirect = multipliers[names[1]]
         induced = multipliers[names[2]]
-        direct_impact = direct[f9.drop("employees_compensation").index].mul(f9.drop("employees_compensation"), axis=1)
-        indirect_impact = indirect[f9.drop("employees_compensation").index].mul(f9.drop("employees_compensation"), axis=1)
-        induced_impact = induced[f9.drop("employees_compensation").index].mul(f8.drop("employees_compensation"), axis=1)
+        
+        direct_impact = multipliers2prediction(direct, f9.drop("HFCE"), value_name)
+        indirect_impact = multipliers2prediction(indirect, f9.drop("HFCE"), value_name)
+        induced_impact = multipliers2prediction(induced, f8.drop("HFCE"), value_name)
         # induced is trancated - not n+1 but n rows/columns
         return  country, year, direct_impact, indirect_impact, induced_impact
 
 if 0:
+#    graph 3?
     start_year = 2015
     end_year = 2024
     base_year = 2020
@@ -1314,16 +1343,31 @@ if 1:
     #to check if impacts are correct:
     country = "CAN"
     year = 2012
+    output = dfoutput[(dfoutput['country'] == country) & (dfoutput['year'] == year)].set_index("sector")['output'].copy()
+
     multipliers_CAN2012 = multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
     f9_CAN2012 = df9[(df9['country'] == country) & (df9['year'] == year)].set_index("sector")['9 final demand'].copy()
-    f8_CAN2012 = df8[(df8['country'] == country) & (df8['year'] == year)].set_index("sector")['8 final demand'].copy() #to delete
+    f8_CAN2012 = df8[(df8['country'] == country) & (df8['year'] == year)].set_index("sector")['8 final demand'].copy()
+    f8_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+    f9_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) 
     country_temp, year_temp, im_direct_o, im_indirect_o, im_induced_o = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "output")
-    country_temp, year_temp,im_direct_h, im_indirect_h, im_induced_h = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "Employment")
-    country_temp, year_temp,im_direct_g, im_indirect_g, im_induced_g = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "GDP")
+    #country_temp, year_temp,im_direct_h, im_indirect_h, im_induced_h = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "Employment")
+    #country_temp, year_temp,im_direct_g, im_indirect_g, im_induced_g = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "GDP")
     x_tot_CAN2012 = im_direct_o+ im_indirect_o + im_induced_o
-    GDP_tot_CAN2012 = im_direct_g+ im_indirect_g + im_induced_g
-    E_tot_CAN2012 = im_direct_h+ im_indirect_h + im_induced_h
-    x_tot_CAN2012_original = dfoutput[(dfoutput['country']==country) & (dfoutput['year']==year)].set_index('sector')['output']
+    #x_tot_CAN2012_original = dfoutput[(dfoutput['country']==country) & (dfoutput['year']==year)].set_index('sector')['output']
+    s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="selling_sector",columns="buying_sector",values="moc").copy()
+    s2s_moc = s2s_moc[[c for c in s2s_moc.columns if c != 'HFCE'] + ['HFCE']]
+    output_moc = multipliers2prediction(s2s_moc, f8_CAN2012, "output")
+    print('                 output   ',' s2s_moc@f8','   direct+indirect+induced')
+    print(pd.concat([output.iloc[:-1].round(), output_moc.round() , x_tot_CAN2012], axis=1))
+
+    
+
+
+
+
+
+
 
 
 ##########################################             Benchmark  plots version A         ######################################################
