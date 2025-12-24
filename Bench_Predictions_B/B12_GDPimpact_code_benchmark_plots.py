@@ -947,7 +947,8 @@ def plot_impact_with_table(df_first, df_last, value_column, graph_title):
 # B version
 def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels):
     n = len(simple_II_labels)
-    Ej_by_xj = dfEj_by_xj[(dfEj_by_xj['country'] == country) & (dfEj_by_xj['year'] == year)].set_index('sector')['Ej_by_xj']
+    #notice that dfEj_by_xj and dfGDPj_by_xj were uploaded from B06 and therefore contain only data years
+    Ej_by_xj   = dfEj_by_xj[(dfEj_by_xj['country'] == country) & (dfEj_by_xj['year'] == year)].set_index('sector')['Ej_by_xj']
     GDPj_by_xj = dfGDPj_by_xj[(dfGDPj_by_xj['country'] == country) & (dfGDPj_by_xj['year'] == year)].set_index('sector')['GDPj_by_xj']    
     s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo").copy()
     s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh").copy()
@@ -955,6 +956,8 @@ def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc,
     s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="moc").copy()
     s2s_mhc = dfmhc[(dfmhc['country'] == country) & (dfmhc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mhc").copy()
     s2s_mgc = dfmgc[(dfmgc['country'] == country) & (dfmgc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mgc").copy()
+    # correct pivot: HFCE appears in the middle of them matrix (alphabetically)
+    
     # direct  
     direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
     direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
@@ -1265,16 +1268,19 @@ if 1:
     start_year = 2015
     end_year = 2024
     base_year = 2020
+    #multipliers can be calculated only for data years
     if start_year in data_years:
         # multipliers_direc_indirect_induced is only for 1 country and 1 year!
-        multipliers_start_year = multipliers_direct_indirect_induced(country, start_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
+        multipliers_start_year = multipliers_direct_indirect_induced(country, start_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
     else:
-        multipliers_start_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
+        multipliers_start_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
     if end_year in data_years:
-        multipliers_end_year = multipliers_direct_indirect_induced(country, end_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
+        multipliers_end_year = multipliers_direct_indirect_induced(country, end_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
     else:
-        multipliers_end_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
-    
+        multipliers_end_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
+    # check why multipliers have NaN
+
+
     f8_start_year = df8[(df8['country'] == country) & (df8['year'] == start_year)]['f8'].values[0]
     f9_start_year = df9[(df9['country'] == country) & (df9['year'] == start_year)]['f9'].values[0]
     f8_end_year = df8[(df8['country'] == country) & (df8['year'] == end_year)]['f8'].values[0]
