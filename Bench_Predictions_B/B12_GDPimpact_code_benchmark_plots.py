@@ -1280,10 +1280,22 @@ def get_impacts(country, year, multipliers, f8, f9, value_name):
         indirect = multipliers[names[1]]
         induced = multipliers[names[2]]
         
-        direct_impact = multipliers2prediction(direct, f9.drop("HFCE"), value_name)
-        indirect_impact = multipliers2prediction(indirect, f9.drop("HFCE"), value_name)
+        direct_impact = multipliers2prediction(direct, f8.drop("HFCE"), value_name)
+        indirect_impact = multipliers2prediction(indirect, f8.drop("HFCE"), value_name)
         induced_impact = multipliers2prediction(induced, f8.drop("HFCE"), value_name)
         # induced is trancated - not n+1 but n rows/columns
+
+        m_tot = multipliers["induced_o"]+multipliers["indirect_o"]+multipliers["direct_o"]
+        output_mul = multipliers2prediction(m_tot,f8.drop("HFCE"),'output')
+        print(pd.concat([multipliers2prediction(multipliers["induced_o"],f8.drop("HFCE"),"output"),induced_impact],axis=1))
+
+        print(pd.concat([multipliers2prediction(multipliers["indirect_o"],f8.drop("HFCE"),"output"),indirect_impact],axis=1))
+
+
+
+
+
+
         return  country, year, direct_impact, indirect_impact, induced_impact
 
 if 0:
@@ -1347,8 +1359,8 @@ if 1:
     output = dfoutput[(dfoutput['country'] == country) & (dfoutput['year'] == year)].set_index("sector")['output'].copy()
 
     multipliers_CAN2012 = multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
-    f9_CAN2012 = df9[(df9['country'] == country) & (df9['year'] == year)].set_index("sector")['9 final demand'].copy()
     f8_CAN2012 = df8[(df8['country'] == country) & (df8['year'] == year)].set_index("sector")['8 final demand'].copy()
+    f9_CAN2012 = df9[(df9['country'] == country) & (df9['year'] == year)].set_index("sector")['9 final demand'].copy()
     f8_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) 
     f9_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) 
     country_temp, year_temp, im_direct_o, im_indirect_o, im_induced_o = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "output")
