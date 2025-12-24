@@ -25,11 +25,6 @@ def safe_divide(II, output):
     return T
 
 def safe_divide_vector(vector, output):
-    # Check if there are NaNs in either II or output
-    if vector.isna().any():
-        raise ValueError("numerator contains NaN values.")
-    if output.isna().any():
-        raise ValueError("Output contains NaN values.")
     
     # Replace zeros in outputc with NaN to avoid division by zero
     output_safe = output.replace(0, np.nan)
@@ -38,3 +33,6 @@ def safe_divide_vector(vector, output):
     # Replace any NaN values (from division by zero) with zero
     coefficient = coefficient.fillna(0)
     return coefficient
+
+
+

@@ -945,14 +945,16 @@ def plot_impact_with_table(df_first, df_last, value_column, graph_title):
 
 ##################################################        functions that calculate        ######################################################
 # B version
-def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, Ej_by_xj, GDPj_by_xj, simple_II_labels):
+def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels):
     n = len(simple_II_labels)
-    s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
-    s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
-    s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
-    s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo")
-    s2s_mhc = dfmhc[(dfmhc['country'] == country) & (dfmhc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh")
-    s2s_mgc = dfmgc[(dfmgc['country'] == country) & (dfmgc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg")
+    Ej_by_xj = dfEj_by_xj[(dfEj_by_xj['country'] == country) & (dfEj_by_xj['year'] == year)].set_index('sector')['Ej_by_xj']
+    GDPj_by_xj = dfGDPj_by_xj[(dfGDPj_by_xj['country'] == country) & (dfGDPj_by_xj['year'] == year)].set_index('sector')['GDPj_by_xj']    
+    s2s_mo = dfmo[(dfmo['country'] == country) & (dfmo['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mo").copy()
+    s2s_mh = dfmh[(dfmh['country'] == country) & (dfmh['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mh").copy()
+    s2s_mg = dfmg[(dfmg['country'] == country) & (dfmg['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mg").copy()
+    s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="moc").copy()
+    s2s_mhc = dfmhc[(dfmhc['country'] == country) & (dfmhc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mhc").copy()
+    s2s_mgc = dfmgc[(dfmgc['country'] == country) & (dfmgc['year'] == year)].pivot(index="buying_sector",columns="selling_sector",values="mgc").copy()
     # direct  
     direct_o = pd.DataFrame(np.eye(n), index=s2s_mo.index, columns=s2s_mo.columns)
     direct_h = pd.DataFrame(np.zeros((n, n)), index=Ej_by_xj.iloc[:-1].index, columns=Ej_by_xj.iloc[:-1].index)
@@ -994,7 +996,7 @@ def multipliers2prediction(s2s_mo, fdf_year2, column_name):
     predicted_output_year2 = pd.DataFrame(predicted_output_year2_np, index=s2s_mo.index, columns=[column_name])
     
     return predicted_output_year2
-# A version
+# A version next three functions are for calculating the impact A version
 def scale_df_by_series(direct_o: pd.DataFrame, fcdf: pd.Series) -> pd.DataFrame:
     
     return direct_o[fcdf.index].mul(fcdf, axis=1)
@@ -1004,7 +1006,8 @@ def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
                                 var_name='buying sector',
                                 value_name=value).rename(columns={m.index.name or 'index': 'selling sector'})
 # A version
-def get_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
+def get_impacts_A_version(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
+    #to correct: fcdf is not an intput. should be in the input
     impact_cols = [value_col+' impact direct', value_col+' impact indirect', value_col+' impact induced', value_col+' impact total']
     dftemp2 = None
     for data, value in zip( [mdirect, mindirect, minduced, ms2s], impact_cols ):
@@ -1053,7 +1056,11 @@ df8    = pd.read_csv("Bench_predictions_B/B072_df8_data_and_extrap.csv")
 df9    = pd.read_csv("Bench_predictions_B/B072_df9_data_and_extrap.csv")
 dfGDP  = pd.read_csv("Bench_predictions_B/B072_dfGDP_data_and_extrap.csv")
 dfoutput = pd.read_csv("Bench_predictions_B/B072_dfoutput_data_and_extrap.csv")
-dfGDPj_by_xj = pd.read_csv("Bench_predictions_B/B072_dfGDPj_by_xj_data_and_extrap.csv")
+#dfGDPj_by_xj = pd.read_csv("Bench_predictions_B/B072_dfGDPj_by_xj_data_and_extrap.csv")
+#dfEj_by_xj = pd.read_csv("Bench_predictions_B/B072_dfEj_by_xj_data_and_extrap.csv") - this file doesn't exit. If I want it I should make it copy from dfGDPj_by_xj in B07
+#upload from B06 and not B072 because I want only data years (for impact calculation)
+dfGDPj_by_xj = pd.read_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv") 
+dfEj_by_xj = pd.read_csv("Bench_predictions_B/B06_dfEj_by_xj.csv")
 
 #multipliers, pivoted to long form 
 dfmo = pd.read_csv("Bench_predictions_B/B06_dfmo.csv")
@@ -1252,13 +1259,14 @@ print('B12 graphs 1 and 2 are checked')
 country = 'CAN'
 year = 2012
 data_years = range(1995, 2020)
-# graph 4 (backward, forward, full GDP impact)  
+# graph 3 (backward, forward, full GDP impact)  
 
 if 1:
     start_year = 2015
     end_year = 2024
     base_year = 2020
     if start_year in data_years:
+        # multipliers_direc_indirect_induced is only for 1 country and 1 year!
         multipliers_start_year = multipliers_direct_indirect_induced(country, start_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
     else:
         multipliers_start_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
@@ -1266,7 +1274,11 @@ if 1:
         multipliers_end_year = multipliers_direct_indirect_induced(country, end_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
     else:
         multipliers_end_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfE, dfGDPj_by_xj, simple_II_labels)
-
+    
+    f8_start_year = df8[(df8['country'] == country) & (df8['year'] == start_year)]['f8'].values[0]
+    f9_start_year = df9[(df9['country'] == country) & (df9['year'] == start_year)]['f9'].values[0]
+    f8_end_year = df8[(df8['country'] == country) & (df8['year'] == end_year)]['f8'].values[0]
+    f9_end_year = df9[(df9['country'] == country) & (df9['year'] == end_year)]['f9'].values[0]
     #################################
     # impacts instead of multipliers
     #################################
@@ -1278,36 +1290,31 @@ if 1:
     #fcdf = OECD.loc[simple_II_labels,final_demand_columns].sum(axis=1)
     #fcdf.loc['employees_compensation'] = 0
 
-    # impacts
-    ''' to delete:
-    # multipliers_by_f returns a vector, and I want a matrix. I need to do the multiplication again
-    scale_df_by_series(direct_o, fcdf[:-1]) # , 'Direct output impact' 
-    #multipliers_by_f(indirect_o, fcdf[:-1], 'Indirect output impact'),
-    #multipliers_by_f(induced_o, fcdf[:-1], 'Induced output impact'),  
-    #multipliers_by_f(s2s_moc.iloc[:-1,:-1], fcdf[:-1], 'Total output impact'),
-    #multipliers_by_f(direct_h, fcdf[:-1], 'Direct income impact'), 
-    #multipliers_by_f(indirect_h, fcdf[:-1], 'Indirect income impact'),
-    #multipliers_by_f(induced_h, fcdf[:-1], 'Induced income impact'),  
-    #multipliers_by_f(s2s_mhc.iloc[:-1,:-1], fcdf[:-1], 'Total income impact'),
-    #multipliers_by_f(direct_g, fcdf[:-1], 'Direct GDP impact'), 
-    #multipliers_by_f(indirect_g, fcdf[:-1], 'Indirect GDP impact'),
-    #multipliers_by_f(induced_g, fcdf[:-1], 'Induced GDP impact'),  
-    #multipliers_by_f(s2s_mgc.iloc[:-1,:-1], fcdf[:-1], 'Total GDP impact'),  
-    '''
+    # A version impacts   
+    #dfGDPimpact = get_impacts_A_version(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
+    #dfEimpact   = get_impacts_A_version(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
+   
+    #I need to have multipliers and f8 and f9 start year and end year
 
-    
-    #################################
-    # impacts instead of multipliers for multipler years
-    #################################
-    dfGDPimpact = get_impacts(dfGDPimpact, direct_g, indirect_g, induced_g, s2s_mgc.iloc[:-1,:-1], GDP, 'national GDP','GDP',country, year )
-    dfEimpact   = get_impacts(dfEimpact, direct_h, indirect_h, induced_h, s2s_mhc.iloc[:-1,:-1], E, 'national Employment','Employment',country, year )
-    #add GDP graph here
+    def get_impacts(country, year, multipliers, f8, f9, value_name):
+        country = multipliers['country']
+        year = multipliers['year']
+        if value_name =="output":
+            names = ["direct_o", "indirect_o", "induced_o"]
+        elif value_name =="GDP":
+            names = ["direct_g", "indirect_g", "induced_g"]
+        elif value_name =="Employment":
+            names = ["direct_h", "indirect_h", "induced_h"]
+        direct = multipliers[names[0]]
+        indirect = multipliers[names[1]]
+        induced = multipliers[names[2]]
+        direct_impact = direct[f8.index].mul(f8, axis=1)
+        return  direct_impact
+               
+    direct_o = get_impacts(country, start_year, multipliers_start_year, f8_start_year,f9_start_year, "output")
 
+    # back to A version:
 
-
-
-    #this is graph 4 in the ksa file
-    # first make 2 functions: mo to direct/indirect/induced, and that to impacts
     # then go below and do 1 year value differently
     ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
     ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')

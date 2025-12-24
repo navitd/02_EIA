@@ -1,4 +1,5 @@
 # B06 data collection for prediction and extrapolation (not for graphs)
+# below, in L356 I add to outputc sum(E) - perhaps remove?
 
 # B version
 ##########################
@@ -296,7 +297,7 @@ fixed_sectors = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T15',
 dfoutput = pd.DataFrame() # this will hold output by country, year, sector, output
 dfGDP = pd.DataFrame() # this will hold the GDP by country, year, sector, GDP
 dfTc = pd.DataFrame()
-dfGDPj_by_xj= pd.DataFrame()
+dfGDPj_by_xj, dfEj_by_xj = pd.DataFrame(), pd.DataFrame()
 dfHFCE = pd.DataFrame()
 df8 = pd.DataFrame()
 df9 = pd.DataFrame()
@@ -353,7 +354,7 @@ for country in countries:
         IIc.loc['employees_compensation', 'HFCE'] = 0 
 
         outputc = output.copy()
-        outputc['HFCE'] = E.sum().values[0]
+        outputc['HFCE'] = E.sum().values[0] #should this be removed?
         Tc = safe_divide(IIc, outputc)
         Lcdf, Lc_minus_I = clc_L(Tc)
         
@@ -363,6 +364,7 @@ for country in countries:
         f9c     = f9.copy();    f9c.loc['employees_compensation'] = 0  
         GDPc    = OECD.loc['VALU', simple_II_labels + ['HFCE']]
         GDPj_by_xjc = safe_divide_vector(GDPc, outputc)
+        Ej_by_xjc = safe_divide_vector(E, outputc)
 
         # calculate multipliers
         s2s_mo, s2s_moc, s2s_mh, s2s_mhc, s2s_mg, s2s_mgc = clc_multipliers(country, year, Ldf, Lcdf, Tc, GDPc, outputc)
@@ -374,12 +376,14 @@ for country in countries:
         GDP_col_name = 'GDP'
         output_col_name = 'output'
         GDPj_by_xj_col_name = "GDPj_by_xj"
+        Ej_by_xj_col_name = "Ej_by_xj"
         dfHFCE   = collect_v(fHFCEc,  country, int(year), ['sector', HFCE_col_name], dfHFCE)
         df8      = collect_v(f8c,     country, int(year), ['sector', f8_col_name], df8)
         df9      = collect_v(f9c,     country, int(year), ['sector', f9_col_name], df9)
         dfGDP    = collect_v(GDPc,    country, int(year), ['sector', GDP_col_name],    dfGDP)
         dfoutput = collect_v(outputc, country, int(year), ['sector', output_col_name], dfoutput)
         dfGDPj_by_xj = collect_v(GDPj_by_xjc,country, int(year), ["sector",GDPj_by_xj_col_name], dfGDPj_by_xj)
+        dfEj_by_xj = collect_v(Ej_by_xjc,country, int(year), ["sector",Ej_by_xj_col_name], dfEj_by_xj)
         # above is checked and correct
 
         dfmo = collect_m(s2s_mo, country, year, "mo", dfmo)
@@ -412,7 +416,7 @@ df9, df9_total = clc_v_tot(df9, f9_col_name, f9_col_name+' total',simple_II_labe
 dfGDP, dfGDP_total = clc_v_tot(dfGDP, GDP_col_name, GDP_col_name+' total',simple_II_labels)
 dfoutput, dfoutput_total = clc_v_tot(dfoutput, output_col_name, output_col_name+' total',simple_II_labels)
 dfGDPj_by_xj, dfGDPj_by_xj_total = clc_v_tot(dfGDPj_by_xj, GDPj_by_xj_col_name, GDPj_by_xj_col_name+' total',simple_II_labels)
-
+dfEj_by_xj, dfEj_by_xj_total = clc_v_tot(dfEj_by_xj, Ej_by_xj_col_name, Ej_by_xj_col_name+' total',simple_II_labels)
 #clc_v_tot is accurate
 
 #print to csv
@@ -425,6 +429,9 @@ if 1:
     dfGDP.to_csv("Bench_predictions_B/B06_dfGDP.csv", index=False)
     dfoutput.to_csv("Bench_predictions_B/B06_dfoutput.csv", index=False)
     dfGDPj_by_xj.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj.csv", index=False)
+    dfEj_by_xj.to_csv("Bench_predictions_B/B06_dfEj_by_xj.csv", index=False)
+    
+    
     #multipliers:
     dfmo.to_csv("Bench_predictions_B/B06_dfmo.csv", index=False)
     dfmoc.to_csv("Bench_predictions_B/B06_dfmoc.csv", index=False)
@@ -459,7 +466,7 @@ df9_total, ratio_col_name_f9 = ratio_with_worldbank_gdp(df9_total, gdp_long, wor
 dfGDP_total, ratio_col_name_GDP = ratio_with_worldbank_gdp(dfGDP_total, gdp_long, worldbank_gdp_col_name, GDP_col_name)
 dfoutput_total, ratio_col_name_output = ratio_with_worldbank_gdp(dfoutput_total, gdp_long, worldbank_gdp_col_name, output_col_name)
 dfGDPj_by_xj_total, ratio_col_name_GDPj_by_xj = ratio_with_worldbank_gdp(dfGDPj_by_xj_total, gdp_long, worldbank_gdp_col_name, GDPj_by_xj_col_name)
-
+dfEj_by_xj_total, ratio_col_name_Ej_by_xj = ratio_with_worldbank_gdp(dfEj_by_xj_total, gdp_long, worldbank_gdp_col_name, Ej_by_xj_col_name)
 #so far it is just the ratio. I still need the extrapolation!!
 
 ####################################
@@ -480,6 +487,7 @@ df9_extrap_and_data, df9_extrap_and_data_wide = tot2future_by_gdp_extrapolation(
 dfGDP_extrap_and_data, dfGDP_extrap_and_data_wide = tot2future_by_gdp_extrapolation(dfGDP_total,GDP_col_name, ratio_col_name_GDP,n_for_tot2future,dfgdp_worldbank)
 dfoutput_extrap_and_data, dfoutput_extrap_and_data_wide = tot2future_by_gdp_extrapolation(dfoutput_total,output_col_name, ratio_col_name_output,n_for_tot2future,dfgdp_worldbank)
 dfGDPj_by_xj_extrap_and_data, dfGDPj_by_xj_extrap_and_data_wide = tot2future_by_gdp_extrapolation(dfGDPj_by_xj_total,GDPj_by_xj_col_name, ratio_col_name_GDPj_by_xj,n_for_tot2future,dfgdp_worldbank)
+dfEj_by_xj_extrap_and_data, dfEj_by_xj_extrap_and_data_wide = tot2future_by_gdp_extrapolation(dfEj_by_xj_total,Ej_by_xj_col_name, ratio_col_name_Ej_by_xj,n_for_tot2future,dfgdp_worldbank)
 
 
 #plot extrapolation
@@ -495,8 +503,7 @@ if 1:
     dfGDP_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDP_tot.csv", index=False)
     dfoutput_extrap_and_data.to_csv("Bench_predictions_B/B06_dfoutput_tot.csv", index=False)
     dfGDPj_by_xj_extrap_and_data.to_csv("Bench_predictions_B/B06_dfGDPj_by_xj_tot.csv", index=False)
-
-
+    dfEj_by_xj_extrap_and_data.to_csv("Bench_predictions_B/B06_dfEj_by_xj_tot.csv", index=False)
 if 0:
     #checks
     #1. GDPj_by_xj *output = GDP??
