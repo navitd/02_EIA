@@ -1360,7 +1360,8 @@ if 1:
             dfGDPimpact = pd.concat([dfGDPimpact, dftemp], ignore_index=True)
 
     
-
+plot GDP % share of ICT
+print to excel
 
 
 ##########################################             Benchmark  plots version A         ######################################################
