@@ -1051,10 +1051,10 @@ def check_impacts():
     multipliers_CAN2012 = multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
     f8_CAN2012 = df8[(df8['country'] == country) & (df8['year'] == year)].set_index("sector")['8 final demand'].copy()
     f9_CAN2012 = df9[(df9['country'] == country) & (df9['year'] == year)].set_index("sector")['9 final demand'].copy()
-    f8_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) 
-    f9_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+    #f8_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) to delete
+    #f9_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) te delete
     country_temp, year_temp, im_direct_o, im_indirect_o, im_induced_o = \
-        get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "output",'f8')
+        get_vector_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "output",'f8')
     #country_temp, year_temp,im_direct_h, im_indirect_h, im_induced_h = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "Employment")
     #country_temp, year_temp,im_direct_g, im_indirect_g, im_induced_g = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "GDP")
     x_tot_CAN2012 = im_direct_o + im_indirect_o + im_induced_o
@@ -1295,7 +1295,7 @@ country = 'CAN'
 year = 2012
 data_years = range(1995, 2020)
 # graph 3 (backward, forward, full GDP impact)  - not finished. check impact calculation first
-def get_impacts(country, year, multipliers, f8, f9, value_name, induced_flag='f8'):
+def get_vector_impacts(country, year, multipliers, f8, f9, value_name, induced_flag='f8'):
         #correct:
         #f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
         #f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
@@ -1312,6 +1312,8 @@ def get_impacts(country, year, multipliers, f8, f9, value_name, induced_flag='f8
         indirect = multipliers[names[1]]
         induced = multipliers[names[2]]
         # note that in the following I multiply L by f8 and not f9. this is so that they sum to output.
+        f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
         direct_impact = multipliers2prediction(direct, f8.drop("HFCE"), value_name)
         indirect_impact = multipliers2prediction(indirect, f8.drop("HFCE"), value_name)
         if induced_flag=='f8':
@@ -1321,7 +1323,7 @@ def get_impacts(country, year, multipliers, f8, f9, value_name, induced_flag='f8
         # induced is trancated - not n+1 but n rows/columns
         return  country, year, direct_impact, indirect_impact, induced_impact
 
-if 0:
+if 1:
 #    graph 3?
     start_year = 2015
     end_year = 2024
@@ -1343,6 +1345,7 @@ if 0:
     f9_start_year = df9[(df9['country'] == country) & (df9['year'] == start_year)].set_index("sector")['9 final demand'].copy()
     f8_end_year   = df8[(df8['country'] == country) & (df8['year'] == end_year)].set_index("sector")['8 final demand'].copy()
     f9_end_year   = df9[(df9['country'] == country) & (df9['year'] == end_year)].set_index("sector")['9 final demand'].copy()
+    
     #################################
     # impacts instead of multipliers
     #################################
@@ -1356,25 +1359,26 @@ if 0:
     
     # 1 country 1 year
     country_temp, year_temp, im_direct_o, im_indirect_o, im_induced_o = \
-    get_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "output",'f9')
+    get_vector_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "output",'f8')
     country_temp, year_temp,im_direct_h, im_indirect_h, im_induced_h = \
-    get_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "Employment",'f9')
+    get_vector_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "Employment",'f8')
     country_temp, year_temp,im_direct_g, im_indirect_g, im_induced_g = \
-    get_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "GDP",'f9')
+    get_vector_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "GDP",'f8')
     
     
     
-    '''
+    
     # back to A version:
 
-    # then go below and do 1 year value differently    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
+    # then go below and do 1 year value differently    
+    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
     ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
     ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
     ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
     plot_GDPimpact_top_bottom( ICT_first_year_backward_impact, ICT_last_year_backward_impact,
                             ICT_first_year_forward_impact, ICT_last_year_forward_impact,
                             'GDP impact total','ICT' )
-
+    '''
     for sector_label, sector_list in ICT_factors.items():
         if isinstance(sector_list, str):
             sector_list = [sector_list]
