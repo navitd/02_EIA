@@ -1323,6 +1323,68 @@ def get_vector_impacts(country, year, multipliers, f8, f9, value_name, induced_f
         # induced is trancated - not n+1 but n rows/columns
         return  country, year, direct_impact, indirect_impact, induced_impact
 
+def get_vector_impacts(country, year, multipliers, f8, f9, value_name, induced_flag='f8'):
+        #correct:
+        #f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        #f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        #multipliers are only for these country and year:
+        country = multipliers['country']
+        year = multipliers['year']
+        if value_name =="output":
+            names = ["direct_o", "indirect_o", "induced_o"]
+        elif value_name =="GDP":
+            names = ["direct_g", "indirect_g", "induced_g"]
+        elif value_name =="Employment":
+            names = ["direct_h", "indirect_h", "induced_h"]
+        direct = multipliers[names[0]]
+        indirect = multipliers[names[1]]
+        induced = multipliers[names[2]]
+        # note that in the following I multiply L by f8 and not f9. this is so that they sum to output.
+        f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        direct_impact = multipliers2prediction(direct, f8.drop("HFCE"), value_name)
+        indirect_impact = multipliers2prediction(indirect, f8.drop("HFCE"), value_name)
+        if induced_flag=='f8':
+            induced_impact = multipliers2prediction(induced, f8.drop("HFCE"), value_name)
+        elif induced_flag=='f9':
+            induced_impact = multipliers2prediction(induced, f9.drop("HFCE"), value_name)
+        # induced is trancated - not n+1 but n rows/columns
+        return  country, year, direct_impact, indirect_impact, induced_impact
+
+
+
+
+def get_A_version_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
+
+    impact_cols = [value_col+' impact direct', value_col+' impact indirect', value_col+' impact induced', value_col+' impact total']
+    dftemp2 = None
+    for data, value in zip( [mdirect, mindirect, minduced, ms2s], impact_cols ):
+        m = scale_df_by_series(data, fcdf[:-1])       #this is the multiplication
+        dftemp1 = pivot_matrix_to_3_columns(m, value) #this is the matrix in 3 columns
+        if dftemp2 is None:
+            dftemp2 = dftemp1  # First iteration: just assign
+        else:
+            dftemp2 = pd.merge(
+                dftemp2,
+                dftemp1,
+                on=["selling sector", "buying sector"],
+                how="outer"
+            )
+    # dftemp2 contains 4 GDP impacts 
+    dftemp2['country'] = country
+    dftemp2['year'] = year
+    dftemp2[value_vec_name] = value_vec.sum()
+    cols = ['country', 'year', 'buying sector', 'selling sector'] + impact_cols + [value_vec_name]
+    dftemp2 = dftemp2[cols]
+    dfimpact = pd.concat([dfimpact, dftemp2], ignore_index=True)
+    return dfimpact
+
+
+
+
+
+
+
 if 1:
 #    graph 3?
     start_year = 2015
