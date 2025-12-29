@@ -41,33 +41,6 @@ from func_safe_divide import safe_divide, safe_divide_vector
 from func_plot_real_vs_predicted import plot_real_vs_predicted
        
 
-def get_vector_impacts(country, year, multipliers, f8, f9, value_name, induced_flag='f8'):
-        #correct:
-        #f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
-        #f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
-        #multipliers are only for these country and year:
-        country = multipliers['country']
-        year = multipliers['year']
-        if value_name =="output":
-            names = ["direct_o", "indirect_o", "induced_o"]
-        elif value_name =="GDP":
-            names = ["direct_g", "indirect_g", "induced_g"]
-        elif value_name =="Employment":
-            names = ["direct_h", "indirect_h", "induced_h"]
-        direct = multipliers[names[0]]
-        indirect = multipliers[names[1]]
-        induced = multipliers[names[2]]
-        # note that in the following I multiply L by f8 and not f9. this is so that they sum to output.
-        f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
-        f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
-        direct_impact = multipliers2prediction(direct, f8.drop("HFCE"), value_name)
-        indirect_impact = multipliers2prediction(indirect, f8.drop("HFCE"), value_name)
-        if induced_flag=='f8':
-            induced_impact = multipliers2prediction(induced, f8.drop("HFCE"), value_name)
-        elif induced_flag=='f9':
-            induced_impact = multipliers2prediction(induced, f9.drop("HFCE"), value_name)
-        # induced is trancated - not n+1 but n rows/columns
-        return  country, year, direct_impact, indirect_impact, induced_impact
 
 
 #######################################        functions that plot B version from B10        #####################################   
@@ -1322,83 +1295,97 @@ country = 'CAN'
 year = 2012
 data_years = range(1995, 2020)
 # graph 3 (backward, forward, full GDP impact)  - not finished. check impact calculation first
+#forward linkage useful for everything
+def get_vector_impacts(country, year, multipliers, f8, f9, value_name, induced_flag='f8'):
+         
+        #multipliers are only for these country and year:
+        country = multipliers['country']
+        year = multipliers['year']
+        if value_name =="output":
+            names = ["direct_o", "indirect_o", "induced_o"]
+        elif value_name =="GDP":
+            names = ["direct_g", "indirect_g", "induced_g"]
+        elif value_name =="Employment":
+            names = ["direct_h", "indirect_h", "induced_h"]
+        direct = multipliers[names[0]]
+        indirect = multipliers[names[1]]
+        induced = multipliers[names[2]]
+        # note that in the following I multiply L by f8 and not f9. this is so that they sum to output.
+        f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        direct_impact = multipliers2prediction(direct, f8.drop("HFCE"), value_name)
+        indirect_impact = multipliers2prediction(indirect, f8.drop("HFCE"), value_name)
+        if induced_flag=='f8':
+            induced_impact = multipliers2prediction(induced, f8.drop("HFCE"), value_name)
+        elif induced_flag=='f9':
+            induced_impact = multipliers2prediction(induced, f9.drop("HFCE"), value_name)
+        # induced is trancated - not n+1 but n rows/columns
+        return  country, year, direct_impact, indirect_impact, induced_impact
 
 
-if 0:
-    check_impacts()
-    
-if 1:
-    #plot backward GDP impact % share + excel
-    start_year = 2015
-    end_year = 2024
-    base_year = 2020
-    year_range = range(start_year, end_year + 1)
-    dftemp,  dfGDPimpact = pd.DataFrame(), pd.DataFrame()
-    #multipliers can be calculated only for data years
-    for country in countries:
-        for year in year_range:
-            #when making f8 and f9: sector should become index
-            f8 = df8[(df8['country'] == country) & (df8['year'] == start_year)].set_index("sector")['8 final demand'].copy()
-            f9 = df9[(df9['country'] == country) & (df9['year'] == start_year)].set_index("sector")['9 final demand'].copy()
-            if year in data_years:
-                # multipliers_direc_indirect_induced is only for 1 country and 1 year!
-                multipliers = multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
-            else:
-                multipliers = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
-            _, _, im_direct_g, im_indirect_g, im_induced_g = \
-                get_vector_impacts(country, year, multipliers, f8, f9, "GDP",'f8')
-            
-            dftemp = im_direct_g.rename(columns={"GDP": "direct GDP"}).copy()
-            dftemp = dftemp.merge(im_indirect_g.rename(columns={"GDP": "indirect GDP"}), left_index=True, right_index=True, how="left")
-            dftemp = dftemp.merge(im_induced_g.rename(columns={"GDP": "induced GDP"}), left_index=True, right_index=True, how="left")
-            dftemp["sector"] = dftemp.index
-            dftemp["country"] = country
-            dftemp["year"] = year
-            dftemp["backward_forward"] = "backward"
-            dftemp = dftemp[["country", "year", "sector", "backward_forward", "direct GDP", "indirect GDP", "induced GDP"]]
-            dftemp = dftemp.reset_index(drop=True)
-            dfGDPimpact = pd.concat([dfGDPimpact, dftemp], ignore_index=True)
-
-    
-
-
-
-##########################################             Benchmark  plots version A         ######################################################
-if 0:
-    # fig 5. Education graphs
-    ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
-    ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
-
-    plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Education')
-
-    # fig 6. Health graphs
-    ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
-    ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
-    plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Health')
-
-
-# fig 7: Employment stacked backward forward
-# graph 4 GDP stacked backward forward
-if 0:
-    ICT_last_year_backward_impact = get_one_year_value(dfEimpact, last_year,'backward', ICTsectors, 'Employment impact total')
-    ICT_last_year_forward_impact = get_one_year_value(dfEimpact, last_year,'forward', ICTsectors, 'Employment impact total')
-    plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'Employment impact total', 'ICT Employment Impact')
-
-
-# graph 4 GDP stacked backward forward
-if 0:
-    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
-    ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
-    ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
-    ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
-    plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'GDP impact total', 'ICT GDP Impact')
+#started work on the following but not finished
+to get the matrix impacts for the backward linkage - but after I read chapter 12 in the book I'm not sure this is the correct way
+    need to check if the division by output is correct and a transpose is all that's needed.
+def get_matrix_impacts(country, year, multipliers, f8, f9, value_name, induced_flag='f8'):
+        
+        #multipliers are only for these country and year:
+        country = multipliers['country']
+        year = multipliers['year']
+        if value_name =="output":
+            names = ["direct_o", "indirect_o", "induced_o"]
+        elif value_name =="GDP":
+            names = ["direct_g", "indirect_g", "induced_g"]
+        elif value_name =="Employment":
+            names = ["direct_h", "indirect_h", "induced_h"]
+        direct = multipliers[names[0]]
+        indirect = multipliers[names[1]]
+        induced = multipliers[names[2]]
+        # note that in the following I multiply L by f8 and not f9. this is so that they sum to output.
+        f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
+        direct_impact = multipliers2prediction(direct, f8.drop("HFCE"), value_name)
+        indirect_impact = multipliers2prediction(indirect, f8.drop("HFCE"), value_name)
+        if induced_flag=='f8':
+            induced_impact = multipliers2prediction(induced, f8.drop("HFCE"), value_name)
+        elif induced_flag=='f9':
+            induced_impact = multipliers2prediction(induced, f9.drop("HFCE"), value_name)
+        # induced is trancated - not n+1 but n rows/columns
+        return  country, year, direct_impact, indirect_impact, induced_impact
 
 
 
 
-#####################  backward-forward GDP plot    ######################
+def get_A_version_impacts(dfimpact, mdirect, mindirect, minduced, ms2s, value_vec, value_vec_name, value_col, country,year):
 
-'''
+    impact_cols = [value_col+' impact direct', value_col+' impact indirect', value_col+' impact induced', value_col+' impact total']
+    dftemp2 = None
+    for data, value in zip( [mdirect, mindirect, minduced, ms2s], impact_cols ):
+        m = scale_df_by_series(data, fcdf[:-1])       #this is the multiplication
+        dftemp1 = pivot_matrix_to_3_columns(m, value) #this is the matrix in 3 columns
+        if dftemp2 is None:
+            dftemp2 = dftemp1  # First iteration: just assign
+        else:
+            dftemp2 = pd.merge(
+                dftemp2,
+                dftemp1,
+                on=["selling sector", "buying sector"],
+                how="outer"
+            )
+    # dftemp2 contains 4 GDP impacts 
+    dftemp2['country'] = country
+    dftemp2['year'] = year
+    dftemp2[value_vec_name] = value_vec.sum()
+    cols = ['country', 'year', 'buying sector', 'selling sector'] + impact_cols + [value_vec_name]
+    dftemp2 = dftemp2[cols]
+    dfimpact = pd.concat([dfimpact, dftemp2], ignore_index=True)
+    return dfimpact
+
+
+
+
+
+
+
 if 1:
 #    graph 3?
     start_year = 2015
@@ -1454,15 +1441,57 @@ if 1:
     plot_GDPimpact_top_bottom( ICT_first_year_backward_impact, ICT_last_year_backward_impact,
                             ICT_first_year_forward_impact, ICT_last_year_forward_impact,
                             'GDP impact total','ICT' )
-    
+    '''
     for sector_label, sector_list in ICT_factors.items():
         if isinstance(sector_list, str):
             sector_list = [sector_list]
         plot_GDPimpact_wrapper(dfGDPimpact, first_year, last_year, sector_list, 'GDP impact total', sector_label)
         # plot_GDPimpact_top_bottom is inside it
     '''
+if 0:
+    check_impacts()
+    
 
 
+
+
+
+
+
+
+##########################################             Benchmark  plots version A         ######################################################
+
+
+# graph 4 GDP stacked backward forward
+if 0:
+    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
+    ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
+    ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
+    ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
+    plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'GDP impact total', 'ICT GDP Impact')
+
+if 0:
+    # fig 5. Education graphs
+    ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
+    ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['P'], 'GDP impact total')
+
+    plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Education')
+
+    # fig 6. Health graphs
+    ICT_on_Education_first_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, first_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
+    ICT_on_Education_last_year_forward_impact = get_one_year_imapct_on_sector(dfGDPimpact, last_year, 'forward', ICTsectors, ['Q'], 'GDP impact total')
+    plot_impact_with_table(ICT_on_Education_first_year_forward_impact, ICT_on_Education_last_year_forward_impact, 'GDP impact total', 'GDP Impact Total ICT Sectors Forward Impact on Health')
+
+
+# fig 7: Employment stacked backward forward
+# graph 4 GDP stacked backward forward
+if 0:
+    ICT_last_year_backward_impact = get_one_year_value(dfEimpact, last_year,'backward', ICTsectors, 'Employment impact total')
+    ICT_last_year_forward_impact = get_one_year_value(dfEimpact, last_year,'forward', ICTsectors, 'Employment impact total')
+    plot_stacked_ict_impact(ICT_last_year_backward_impact, ICT_last_year_forward_impact, year, 'Employment impact total', 'ICT Employment Impact')
+
+#Japan is missing 2020 Employment data (from the SUT file)
+print(dfEimpact)
 
 
 end_time = time.time()
