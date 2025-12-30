@@ -64,8 +64,8 @@ def get_vector_impacts(country, year, multipliers, f8, f9, value_name, induced_f
         # note that in the following I multiply L by f8 and not f9. this is so that they sum to output.
         f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
         f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
-        direct_impact = multipliers2prediction(direct, f8.drop("HFCE"), value_name)
-        indirect_impact = multipliers2prediction(indirect, f8.drop("HFCE"), value_name)
+        direct_impact = multipliers2prediction(direct, f9.drop("HFCE"), value_name)
+        indirect_impact = multipliers2prediction(indirect, f9.drop("HFCE"), value_name)
         if induced_flag=='f8':
             induced_impact = multipliers2prediction(induced, f8.drop("HFCE"), value_name)
         elif induced_flag=='f9':
@@ -1458,7 +1458,9 @@ if 1:
             dftemp = dftemp[["country", "year", "sector", "backward_forward", "direct GDP", "indirect GDP", "induced GDP"]]
             dftemp = dftemp.reset_index(drop=True)
             dfGDPimpact = pd.concat([dfGDPimpact, dftemp], ignore_index=True)
-
+            
+    dfGDPimpact["sum GDP impact"] = dfGDPimpact.loc[:,"direct GDP"]+ dfGDPimpact.loc[:, "indirect GDP"] + dfGDPimpact.loc[:, "induced GDP"]
+    dfGDPimpact["direct+indirect GDP impact"] = dfGDPimpact.loc[:,"direct GDP"]+ dfGDPimpact.loc[:, "indirect GDP"]
 #GDP impact instead of GDP
 #dfGDPimpact instead of dfGDP_4graph
 if 1:
