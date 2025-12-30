@@ -972,6 +972,18 @@ def plot_impact_with_table(df_first, df_last, value_column, graph_title):
 
 ##################################################        functions that calculate        ######################################################
 # B version
+def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
+    # reset_index() selling sector into a column
+    return m.reset_index().melt(id_vars=m.index.name or 'index',
+                                var_name='buying sector',
+                                value_name=value).rename(columns={m.index.name or 'index': 'selling sector'})
+# reset_index() turns the row index (selling sector) into a column
+# melt(...) collapses all columns (buying sectors) into one column
+# id_vars keeps the selling sector fixed
+# var_name='buying sector' names the column holding former column labels
+# value_name=value names the numbers column
+# rename(...) renames the index column to selling sector
+
 def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels):
     n = len(simple_II_labels)
     #notice that dfEj_by_xj and dfGDPj_by_xj were uploaded from B06 and therefore contain only data years
@@ -1005,19 +1017,31 @@ def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc,
     induced_h = (s2s_mhc.drop('employees_compensation', axis=0).drop('HFCE', axis=1) - s2s_mh).copy()
     induced_g = (s2s_mgc.drop('employees_compensation', axis=0).drop('HFCE', axis=1) - s2s_mg).copy()
    
-    multipliers1country1year = {
-    "country": country,
-    "year": year,
-    "direct_o": direct_o,
-    "indirect_o": indirect_o,
-    "induced_o": induced_o,
-    "direct_h": direct_h,
-    "indirect_h": indirect_h,
-    "induced_h": induced_h,
-    "direct_g": direct_g,
-    "indirect_g": indirect_g,
-    "induced_g": induced_g,
-}
+
+   dfdirect_o = pivot_matrix_to_3_columns(direct_o, 'direct_o')
+   dfindirect_o = pivot_matrix_to_3_columns(indirect_o, 'indirect_o')
+   dfinduced_o = pivot_matrix_to_3_columns(induced_o, 'induced_o')
+   dfdirect_h = pivot_matrix_to_3_columns(direct_h, 'direct_h')
+   dfindirect_h = pivot_matrix_to_3_columns(indirect_h, 'indirect_h')
+   dfinduced_h = pivot_matrix_to_3_columns(induced_h, 'induced_h')
+   dfdirect_g = pivot_matrix_to_3_columns(direct_g, 'direct_g')
+   dfindirect_g = pivot_matrix_to_3_columns(indirect_g, 'indirect_g')
+   dfinduced_g = pivot_matrix_to_3_columns(induced_g, 'induced_g')
+    
+    multipliers1country1year = dfdirect_o.copy()
+    multipliers1country1year = multipliers1country1year.merge(dfindirect_o, on=['selling sector', 'buying sector'], how='left')
+    multipliers1country1year = multipliers1country1year.merge(dfinduced_o, on=['selling sector', 'buying sector'], how='left')          
+    multipliers1country1year = multipliers1country1year.merge(dfdirect_h, on=['selling sector', 'buying sector'], how='left')
+    multipliers1country1year = multipliers1country1year.merge(dfindirect_h, on=['selling sector', 'buying sector'], how='left')
+    multipliers1country1year = multipliers1country1year.merge(dfinduced_h, on=['selling sector', 'buying sector'], how='left')  
+    multipliers1country1year = multipliers1country1year.merge(dfdirect_g, on=['selling sector', 'buying sector'], how='left')
+    multipliers1country1year = multipliers1country1year.merge(dfindirect_g, on=['selling sector', 'buying sector'], how='left')          
+    multipliers1country1year = multipliers1country1year.merge(dfinduced_g, on=['selling sector', 'buying sector'], how='left')
+    multipliers1country1year["country"] = country
+    multipliers1country1year["year"] = year     
+
+
+   
     return multipliers1country1year   
 
 
@@ -1033,11 +1057,7 @@ def multipliers2prediction(s2s_mo, fdf_year2, column_name):
 def scale_df_by_series(direct_o: pd.DataFrame, fcdf: pd.Series) -> pd.DataFrame:
     
     return direct_o[fcdf.index].mul(fcdf, axis=1)
-# A version
-def pivot_matrix_to_3_columns(m: pd.DataFrame, value: str) -> pd.DataFrame:
-    return m.reset_index().melt(id_vars=m.index.name or 'index',
-                                var_name='buying sector',
-                                value_name=value).rename(columns={m.index.name or 'index': 'selling sector'})
+
 
 #################################################                 check               #############################################
 def check_L_Lc(country, year, dfTc, dfoutput, df8, df9):
@@ -1172,9 +1192,12 @@ simple_II_labels = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T1
                   'J62_63', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 
 
-first_year = 2025 
-last_year = 2034  
+
+first_year = 2015 
+last_year = 2024  
 year_range = [int(year) for year in range(int(first_year), int(last_year) + 1)]
+data_years = [int(year) for year in range(int(1995), int(2020) + 1)]
+base_year = 2020
 dfoutput_4graph = dfoutput[(dfoutput.year >= first_year) & (dfoutput.year <= last_year) ].copy()
 dfGDP_4graph = dfGDP[(dfGDP.year >= first_year) & (dfGDP.year <= last_year) ].copy()
 
@@ -1318,28 +1341,104 @@ if SHRED:
 
 print('B12 graphs 1 and 2 are checked')
 
-country = 'CAN'
-year = 2012
-data_years = range(1995, 2020)
+
 # graph 3 (backward, forward, full GDP impact)  - not finished. check impact calculation first
+def package_print_embed_plot_option_impacts(dfim, varname, first_year, last_year, year_range, countries,
+                        ICTsectors, ICTcategories, highlighted, cagr_title, stacked_shares_title,
+                        end_years_title, xlsx_filename, worksheet_name, start_row, ICT,
+                        embed_or_plot):
+    
+    title_size=6
+    # fig 1:  CAGR 
+    cagr = clc_cagr(dfim, first_year, last_year, varname) 
+    #varname used to be GDP, output, etc. now I want to be able to choose 
+    if embed_or_plot>0:
+        # fig1: plot output CAGR
+        plot_cagr(cagr, cagr_title)
+
+    varname_shares, ICT_varname_shares = get_share(dfim, varname, first_year, last_year, ICTsectors)
+    varname_ICT_share_category = get_share_by_category(ICT_varname_shares, varname, ICTcategories, desired_order)
+    if embed_or_plot>0:
+        # fig2B: stacked output share
+        #this is the average of each category - stacked. 
+        #change the following: GDP_ICT_share_category alreadyby category
+        _ = plot_stacked_shares(varname_ICT_share_category, varname, ICTcategories, desired_order, stacked_shares_title, highlighted)
+
+    # fig 2C: end years comparison compare first_year with last_year, stacked
+    if embed_or_plot>0:
+        plot_share_compare_first_last_year(varname_shares, varname, first_year, last_year, end_years_title)
+                                            
+
+    # print data to excel (if I take it out of the if statement it will print every time it runs)
+    if (embed_or_plot==0) or (embed_or_plot==2):
+        # next 10 lines: previousely the function "package print shares to excel"
+        start_col = 1
+        start_col = create_excel_file_with_title(worksheet_name, xlsx_filename )
+        for year in year_range:
+            for country in countries: 
+                start_col = append_styled_matrix_to_excel(dfim[(dfim.country==country) & (dfim.year==year)], 
+                                                          varname, worksheet_name, start_col, xlsx_filename, highlighted, title_size )
+                 
+        
+        start_col = append_styled_matrix_to_excel(varname_shares, varname+'_shares', worksheet_name, start_col, filename=xlsx_filename, highlighted_sectors=highlighted, title_size=title_size)
+        start_col = append_styled_matrix_to_excel(ICT_varname_shares, ICT+varname+' shares', worksheet_name, start_col, filename=xlsx_filename, highlighted_sectors=highlighted, title_size=title_size)
+
+        start_col = append_styled_matrix_by_category_to_excel(varname_ICT_share_category, xlsx_filename, worksheet_name, varname+ICT+' by category',start_col, ICTcategories, highlighted, title_size=title_size)
+        #                                                     (df,                     filename,      worksheet_name,  matrix_name,              start_col, ICTcategories, highlighted, title_size)
+
+        # embed plots to excel
+        col_letter = get_column_letter(start_col)
+         
+        # === embed1. Create both plots and save to in-memory buffers ===
+        # CAGR plot
+        fig1 = plot_cagr(cagr, cagr_title)
+        buf1 = BytesIO()
+        fig1.savefig(buf1, format='png', bbox_inches='tight', dpi=200)
+        buf1.seek(0)
+
+        # Stacked shares plot
+        fig2 = plot_stacked_shares(varname_ICT_share_category, varname, ICTcategories, desired_order, stacked_shares_title, highlighted)
+                                       
+                
+        
+        buf2 = BytesIO()
+        fig2.savefig(buf2, format='png', bbox_inches='tight', dpi=200)
+        buf2.seek(0)
+
+        # === embed2. Open Excel workbook and worksheet ===
+        wb = load_workbook(xlsx_filename)
+        ws = wb[worksheet_name]
+
+        # === embed3. Insert both plots ===
+        img1 = XLImage(buf1)
+        img1.anchor = f"{col_letter}{start_row}"
+        ws.add_image(img1)
+
+        img2 = XLImage(buf2)
+        img2.anchor = f"{col_letter}{start_row+30}"
+        ws.add_image(img2)
+
+        # === embed4. Save the Excel workbook ===
+        wb.save(xlsx_filename)
+        print(f"✅ Two plots were embedded into '{worksheet_name}' of '{xlsx_filename}'.")
 
 
-if 0:
-    check_impacts()
+
     
 if 1:
+    if 0:
+        check_impacts()
     #plot backward GDP impact % share + excel
-    start_year = 2015
-    end_year = 2024
-    base_year = 2020
-    year_range = range(start_year, end_year + 1)
+    
+    
+    year_range = range(first_year, last_year + 1)
     dftemp,  dfGDPimpact = pd.DataFrame(), pd.DataFrame()
     #multipliers can be calculated only for data years
     for country in countries:
         for year in year_range:
             #when making f8 and f9: sector should become index
-            f8 = df8[(df8['country'] == country) & (df8['year'] == start_year)].set_index("sector")['8 final demand'].copy()
-            f9 = df9[(df9['country'] == country) & (df9['year'] == start_year)].set_index("sector")['9 final demand'].copy()
+            f8 = df8[(df8['country'] == country) & (df8['year'] == year)].set_index("sector")['8 final demand'].copy()
+            f9 = df9[(df9['country'] == country) & (df9['year'] == year)].set_index("sector")['9 final demand'].copy()
             if year in data_years:
                 # multipliers_direc_indirect_induced is only for 1 country and 1 year!
                 multipliers = multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
@@ -1359,9 +1458,36 @@ if 1:
             dftemp = dftemp.reset_index(drop=True)
             dfGDPimpact = pd.concat([dfGDPimpact, dftemp], ignore_index=True)
 
-    
-plot GDP % share of ICT
-print to excel
+#GDP impact instead of GDP
+#dfGDPimpact instead of dfGDP_4graph
+if 1:
+    graphnumber=3
+    varname = 'direct GDP'
+    ICT = 'ICT'
+    cagr_title = f'Average {varname} CAGR for ICT sectors ({first_year}–{last_year})'
+    end_years_title = f'{ICT} {varname} {first_year} and {last_year} Share by Country'
+    stacked_shares_title = f'Stacked Average ICT {varname} Share by Country, {first_year}-{last_year}'
+    xlsx_filename = f"Bench_predictions_B/B12_graph{graphnumber}_data {first_year}-{last_year}.xlsx"
+    worksheet_name = f"{varname} shares {first_year}-{last_year}"
+    embed_or_plot = 2 #0: embed, 1: plot, 2: both
+    start_row=5
+    desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
+                        'ICT - Software and computer services', 'ICT - Communications services']
+
+
+    package_print_embed_plot_option_impacts(dfGDPimpact, varname, first_year, last_year, year_range, countries,
+                            ICTsectors,
+                            ICTcategories,
+                            highlighted,
+                            cagr_title,
+                            stacked_shares_title,
+                            end_years_title,
+                            xlsx_filename,
+                            worksheet_name,
+                            start_row,
+                            ICT,
+                            embed_or_plot
+    )
 
 
 ##########################################             Benchmark  plots version A         ######################################################
@@ -1402,26 +1528,26 @@ if 0:
 '''
 if 1:
 #    graph 3?
-    start_year = 2015
-    end_year = 2024
+    first_year = 2015
+    last_year = 2024
     base_year = 2020
     #multipliers can be calculated only for data years
-    if start_year in data_years:
+    if first_year in data_years:
         # multipliers_direc_indirect_induced is only for 1 country and 1 year!
-        multipliers_start_year = multipliers_direct_indirect_induced(country, start_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
+        multipliers_first_year = multipliers_direct_indirect_induced(country, first_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
     else:
-        multipliers_start_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
-    if end_year in data_years:
-        multipliers_end_year = multipliers_direct_indirect_induced(country, end_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
+        multipliers_first_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
+    if last_year in data_years:
+        multipliers_last_year = multipliers_direct_indirect_induced(country, last_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
     else:
-        multipliers_end_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
-    
-    #when making f8 and f9: sector should become index
+        multipliers_last_year = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
+    # when making f8 and f9: sector should become index
+     
 
-    f8_start_year = df8[(df8['country'] == country) & (df8['year'] == start_year)].set_index("sector")['8 final demand'].copy()
-    f9_start_year = df9[(df9['country'] == country) & (df9['year'] == start_year)].set_index("sector")['9 final demand'].copy()
-    f8_end_year   = df8[(df8['country'] == country) & (df8['year'] == end_year)].set_index("sector")['8 final demand'].copy()
-    f9_end_year   = df9[(df9['country'] == country) & (df9['year'] == end_year)].set_index("sector")['9 final demand'].copy()
+    f8_first_year = df8[(df8['country'] == country) & (df8['year'] == first_year)].set_index("sector")['8 final demand'].copy()
+    f9_first_year = df9[(df9['country'] == country) & (df9['year'] == first_year)].set_index("sector")['9 final demand'].copy()
+    f8_last_year   = df8[(df8['country'] == country) & (df8['year'] == last_year)].set_index("sector")['8 final demand'].copy()
+    f9_last_year   = df9[(df9['country'] == country) & (df9['year'] == last_year)].set_index("sector")['9 final demand'].copy()
     
     #################################
     # impacts instead of multipliers
@@ -1448,10 +1574,10 @@ if 1:
     # back to A version:
 
     # then go below and do 1 year value differently    
-    ICT_first_year_backward_impact= get_one_year_value(dfGDPimpact, first_year,'backward', ICTsectors, 'GDP impact total')
-    ICT_last_year_backward_impact = get_one_year_value(dfGDPimpact, last_year,'backward', ICTsectors, 'GDP impact total')
-    ICT_first_year_forward_impact= get_one_year_value(dfGDPimpact, first_year,'forward', ICTsectors, 'GDP impact total')
-    ICT_last_year_forward_impact = get_one_year_value(dfGDPimpact, last_year,'forward', ICTsectors, 'GDP impact total')
+    ICT_start_year_backward_impact= get_one_year_value(dfGDPimpact, start_year,'backward', ICTsectors, 'GDP impact total')
+    ICT_end_year_backward_impact = get_one_year_value(dfGDPimpact, end_year,'backward', ICTsectors, 'GDP impact total')
+    ICT_start_year_forward_impact= get_one_year_value(dfGDPimpact, start_year,'forward', ICTsectors, 'GDP impact total')
+    ICT_end_year_forward_impact = get_one_year_value(dfGDPimpact, end_year,'forward', ICTsectors, 'GDP impact total')
     plot_GDPimpact_top_bottom( ICT_first_year_backward_impact, ICT_last_year_backward_impact,
                             ICT_first_year_forward_impact, ICT_last_year_forward_impact,
                             'GDP impact total','ICT' )
