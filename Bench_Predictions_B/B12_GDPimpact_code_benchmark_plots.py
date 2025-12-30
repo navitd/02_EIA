@@ -64,12 +64,15 @@ def get_vector_impacts(country, year, multipliers, f8, f9, value_name, induced_f
         # note that in the following I multiply L by f8 and not f9. this is so that they sum to output.
         f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
         f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
-        direct_impact = multipliers2prediction(direct, f9.drop("HFCE"), value_name)
-        indirect_impact = multipliers2prediction(indirect, f9.drop("HFCE"), value_name)
-        if induced_flag=='f8':
+        
+        if induced_flag=='f8': #to check that output = sum of impacts
+            direct_impact = multipliers2prediction(direct, f8.drop("HFCE"), value_name)
+            indirect_impact = multipliers2prediction(indirect, f8.drop("HFCE"), value_name)
             induced_impact = multipliers2prediction(induced, f8.drop("HFCE"), value_name)
-        elif induced_flag=='f9':
-            induced_impact = multipliers2prediction(induced, f9.drop("HFCE"), value_name)
+        elif induced_flag=='f9': # real caclulation
+            direct_impact = multipliers2prediction(direct, f9.drop("HFCE"), value_name)
+            indirect_impact = multipliers2prediction(indirect, f9.drop("HFCE"), value_name)
+            induced_impact = multipliers2prediction(induced, f8.drop("HFCE"), value_name)
         # induced is trancated - not n+1 but n rows/columns
         return  country, year, direct_impact, indirect_impact, induced_impact
 
@@ -1099,19 +1102,25 @@ def check_impacts():
     output = dfoutput[(dfoutput['country'] == country) & (dfoutput['year'] == year)].set_index("sector")['output'].copy()
 
     multipliers_CAN2012 = multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
+    mul_direct = multipliers_CAN2012[["selling sector", "buying sector", 'direct_o']].copy().pivot_table(index=['selling sector'], columns='buying sector',
+        values='direct_o')
+    mul_indirect = multipliers_CAN2012[["selling sector", "buying sector", 'indirect_o']].copy().pivot_table(index=["selling sector"], columns="buying sector", 
+                                                                                                        values='indirect_o') 
+    mul_induced = multipliers_CAN2012[["selling sector", "buying sector", 'induced_o']].copy().pivot_table(index=["selling sector"], columns="buying sector", 
+                                                                                                        values='induced_o')
+
     f8_CAN2012 = df8[(df8['country'] == country) & (df8['year'] == year)].set_index("sector")['8 final demand'].copy()
     f9_CAN2012 = df9[(df9['country'] == country) & (df9['year'] == year)].set_index("sector")['9 final demand'].copy()
     #f8_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) to delete
     #f9_CAN2012.rename(index={"employees_compensation":"HFCE"},inplace=True) te delete
-    country_temp, year_temp, im_direct_o, im_indirect_o, im_induced_o = \
+    _, _, im_direct_o, im_indirect_o, im_induced_o = \
         get_vector_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "output",'f8')
     #country_temp, year_temp,im_direct_h, im_indirect_h, im_induced_h = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "Employment")
     #country_temp, year_temp,im_direct_g, im_indirect_g, im_induced_g = get_impacts(country, year, multipliers_CAN2012, f8_CAN2012, f9_CAN2012, "GDP")
     x_tot_CAN2012 = im_direct_o + im_indirect_o + im_induced_o
     #x_tot_CAN2012_original = dfoutput[(dfoutput['country']==country) & (dfoutput['year']==year)].set_index('sector')['output']
-    m_tot = multipliers_CAN2012["indirect_o"]+multipliers_CAN2012["direct_o"]
-    
-    output_mul = multipliers2prediction(multipliers_CAN2012["induced_o"]+multipliers_CAN2012["indirect_o"]+multipliers_CAN2012["direct_o"],f8_CAN2012.drop("HFCE"),'output')
+    m_tot = mul_direct+mul_indirect    
+    output_mul = multipliers2prediction(mul_direct + mul_indirect + mul_induced, f8_CAN2012.drop("HFCE"),'output')
     s2s_moc = dfmoc[(dfmoc['country'] == country) & (dfmoc['year'] == year)].pivot(index="selling_sector",columns="buying_sector",values="moc").copy()
     s2s_moc = s2s_moc[[c for c in s2s_moc.columns if c != 'HFCE'] + ['HFCE']]
     output_moc = multipliers2prediction(s2s_moc, f8_CAN2012, "output")
@@ -1429,7 +1438,7 @@ def package_print_embed_plot_option_impacts(dfim, varname, first_year, last_year
 
     
 if 1:
-    if 0:
+    if 1:
         check_impacts()
     #plot backward GDP impact % share + excel
     
@@ -1458,7 +1467,7 @@ if 1:
             dftemp = dftemp[["country", "year", "sector", "backward_forward", "direct GDP", "indirect GDP", "induced GDP"]]
             dftemp = dftemp.reset_index(drop=True)
             dfGDPimpact = pd.concat([dfGDPimpact, dftemp], ignore_index=True)
-            
+
     dfGDPimpact["sum GDP impact"] = dfGDPimpact.loc[:,"direct GDP"]+ dfGDPimpact.loc[:, "indirect GDP"] + dfGDPimpact.loc[:, "induced GDP"]
     dfGDPimpact["direct+indirect GDP impact"] = dfGDPimpact.loc[:,"direct GDP"]+ dfGDPimpact.loc[:, "indirect GDP"]
 #GDP impact instead of GDP
