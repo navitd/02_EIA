@@ -54,9 +54,13 @@ def get_vector_impacts(country, year, multipliers, f8, f9, value_name, induced_f
             names = ["direct_g", "indirect_g", "induced_g"]
         elif value_name =="Employment":
             names = ["direct_h", "indirect_h", "induced_h"]
-        direct = multipliers[names[0]]
-        indirect = multipliers[names[1]]
-        induced = multipliers[names[2]]
+
+        direct = multipliers[["selling sector", "buying sector", names[0]]].copy().pivot_table(index=['selling sector'], columns='buying sector',
+        values=names[0])
+        indirect = multipliers[["selling sector", "buying sector", names[1]]].copy().pivot_table(index=["selling sector"], columns="buying sector", 
+                                                                                                        values=names[1]) 
+        induced = multipliers[["selling sector", "buying sector", names[2]]].copy().pivot_table(index=["selling sector"], columns="buying sector", 
+                                                                                                        values=names[2])
         # note that in the following I multiply L by f8 and not f9. this is so that they sum to output.
         f8.rename(index={"employees_compensation":"HFCE"},inplace=True) 
         f9.rename(index={"employees_compensation":"HFCE"},inplace=True) 
@@ -1018,15 +1022,15 @@ def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc,
     induced_g = (s2s_mgc.drop('employees_compensation', axis=0).drop('HFCE', axis=1) - s2s_mg).copy()
    
 
-   dfdirect_o = pivot_matrix_to_3_columns(direct_o, 'direct_o')
-   dfindirect_o = pivot_matrix_to_3_columns(indirect_o, 'indirect_o')
-   dfinduced_o = pivot_matrix_to_3_columns(induced_o, 'induced_o')
-   dfdirect_h = pivot_matrix_to_3_columns(direct_h, 'direct_h')
-   dfindirect_h = pivot_matrix_to_3_columns(indirect_h, 'indirect_h')
-   dfinduced_h = pivot_matrix_to_3_columns(induced_h, 'induced_h')
-   dfdirect_g = pivot_matrix_to_3_columns(direct_g, 'direct_g')
-   dfindirect_g = pivot_matrix_to_3_columns(indirect_g, 'indirect_g')
-   dfinduced_g = pivot_matrix_to_3_columns(induced_g, 'induced_g')
+    dfdirect_o = pivot_matrix_to_3_columns(direct_o, 'direct_o')
+    dfindirect_o = pivot_matrix_to_3_columns(indirect_o, 'indirect_o')
+    dfinduced_o = pivot_matrix_to_3_columns(induced_o, 'induced_o')
+    dfdirect_h = pivot_matrix_to_3_columns(direct_h, 'direct_h')
+    dfindirect_h = pivot_matrix_to_3_columns(indirect_h, 'indirect_h')
+    dfinduced_h = pivot_matrix_to_3_columns(induced_h, 'induced_h')
+    dfdirect_g = pivot_matrix_to_3_columns(direct_g, 'direct_g')
+    dfindirect_g = pivot_matrix_to_3_columns(indirect_g, 'indirect_g')
+    dfinduced_g = pivot_matrix_to_3_columns(induced_g, 'induced_g')
     
     multipliers1country1year = dfdirect_o.copy()
     multipliers1country1year = multipliers1country1year.merge(dfindirect_o, on=['selling sector', 'buying sector'], how='left')
@@ -1040,17 +1044,16 @@ def multipliers_direct_indirect_induced(country, year, dfmo, dfmoc, dfmh, dfmhc,
     multipliers1country1year["country"] = country
     multipliers1country1year["year"] = year     
 
-
-   
+  
     return multipliers1country1year   
 
 
 
 # A version
-def multipliers2prediction(s2s_mo, fdf_year2, column_name):
-    predicted_output_year2_np  = np.round(s2s_mo.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
+def multipliers2prediction(s2s_m, fdf_year2, column_name):
+    predicted_output_year2_np  = np.round(s2s_m.to_numpy() @ fdf_year2.values.reshape(-1, 1), 1)
     
-    predicted_output_year2 = pd.DataFrame(predicted_output_year2_np, index=s2s_mo.index, columns=[column_name])
+    predicted_output_year2 = pd.DataFrame(predicted_output_year2_np, index=s2s_m.index, columns=[column_name])
     
     return predicted_output_year2
 # A version next three functions are for calculating the impact A version
@@ -1193,8 +1196,8 @@ simple_II_labels = ['A01_02', 'A03', 'B05_06', 'B07_08', 'B09', 'C10T12', 'C13T1
 
 
 
-first_year = 2015 
-last_year = 2024  
+first_year = 2010 
+last_year = 2020  
 year_range = [int(year) for year in range(int(first_year), int(last_year) + 1)]
 data_years = [int(year) for year in range(int(1995), int(2020) + 1)]
 base_year = 2020
@@ -1253,7 +1256,7 @@ if 0:
     stacked_shares_title = f'Stacked Average ICT {varname} Share by Country, {first_year}-{last_year}'
     xlsx_filename = f"Bench_predictions_B/B12_graph{graphnumber}_data {first_year}-{last_year}.xlsx"
     worksheet_name = f"{varname} shares {first_year}-{last_year}"
-    embed_or_plot = 2 #0: embed, 1: plot, 2: both
+    embed_or_plot = 0 #0: embed, 1: plot, 2: both
     start_row=5
     desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
                         'ICT - Software and computer services', 'ICT - Communications services']
@@ -1342,7 +1345,7 @@ if SHRED:
 print('B12 graphs 1 and 2 are checked')
 
 
-# graph 3 (backward, forward, full GDP impact)  - not finished. check impact calculation first
+# graph 3 (backward)
 def package_print_embed_plot_option_impacts(dfim, varname, first_year, last_year, year_range, countries,
                         ICTsectors, ICTcategories, highlighted, cagr_title, stacked_shares_title,
                         end_years_title, xlsx_filename, worksheet_name, start_row, ICT,
@@ -1430,8 +1433,6 @@ if 1:
         check_impacts()
     #plot backward GDP impact % share + excel
     
-    
-    year_range = range(first_year, last_year + 1)
     dftemp,  dfGDPimpact = pd.DataFrame(), pd.DataFrame()
     #multipliers can be calculated only for data years
     for country in countries:
@@ -1469,7 +1470,7 @@ if 1:
     stacked_shares_title = f'Stacked Average ICT {varname} Share by Country, {first_year}-{last_year}'
     xlsx_filename = f"Bench_predictions_B/B12_graph{graphnumber}_data {first_year}-{last_year}.xlsx"
     worksheet_name = f"{varname} shares {first_year}-{last_year}"
-    embed_or_plot = 2 #0: embed, 1: plot, 2: both
+    embed_or_plot = 0 #0: embed, 1: plot, 2: both
     start_row=5
     desired_order = ['ICT - Manufacturing', 'ICT - Wholesaling',
                         'ICT - Software and computer services', 'ICT - Communications services']
