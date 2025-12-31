@@ -80,9 +80,9 @@ def get_vector_impacts(country, year, multipliers, f8, f9, value_name, induced_f
 #######################################        functions that plot B version from B10        #####################################   
 
 #Fig 1: CAGR data manipulation
-def clc_cagr(dfoutput, first_year, last_year, value_column):
+def clc_cagr(dfdata, first_year, last_year, value_column):
     # pivoting is a great idea there's no groupby. there's just taking first_year and last_year, then pivoting to ahve each row isolate an equation, then we manipulate numbers in each row
-    df_filtered = dfoutput[dfoutput['year'].isin([first_year, last_year])]
+    df_filtered = dfdata[dfdata['year'].isin([first_year, last_year])]
     pivot_df = df_filtered.pivot_table(
         index=['country', 'sector'],
         columns='year',
@@ -136,7 +136,7 @@ def get_share(dfoutput, value_column, first_year, last_year, ICTsectors):
     columns='year',
     values=value_column
     ).reset_index()
-
+    # I calculate the total and the rate here
     yearly_output = dfoutput.groupby(['country', 'year'])[value_column].sum().reset_index()
     yearly_output = yearly_output.rename(columns={value_column: f'total yearly {value_column}'})
 
@@ -1285,7 +1285,7 @@ if 0:
                             embed_or_plot
     )
 
-#one file for both
+#one file for both GDP and output
 if 0:
     graphnumber=1
     xlsx_filename = f"Bench_predictions_B/B12_graph{graphnumber}_data_{first_year}-{last_year}.xlsx"
@@ -1438,7 +1438,7 @@ def package_print_embed_plot_option_impacts(dfim, varname, first_year, last_year
 
     
 if 1:
-    if 1:
+    if 0:
         check_impacts()
     #plot backward GDP impact % share + excel
     
@@ -1455,8 +1455,8 @@ if 1:
             else:
                 multipliers = multipliers_direct_indirect_induced(country, base_year, dfmo, dfmoc, dfmh, dfmhc, dfmg, dfmgc, dfEj_by_xj, dfGDPj_by_xj, simple_II_labels)
             _, _, im_direct_g, im_indirect_g, im_induced_g = \
-                get_vector_impacts(country, year, multipliers, f8, f9, "GDP",'f8')
-            
+                get_vector_impacts(country, year, multipliers, f8, f9, "GDP",'f9')
+            # for calculation use f9
             dftemp = im_direct_g.rename(columns={"GDP": "direct GDP"}).copy()
             dftemp = dftemp.merge(im_indirect_g.rename(columns={"GDP": "indirect GDP"}), left_index=True, right_index=True, how="left")
             dftemp = dftemp.merge(im_induced_g.rename(columns={"GDP": "induced GDP"}), left_index=True, right_index=True, how="left")
@@ -1474,7 +1474,7 @@ if 1:
 #dfGDPimpact instead of dfGDP_4graph
 if 1:
     graphnumber=3
-    varname = 'direct GDP'
+    varname = "direct+indirect GDP impact"
     ICT = 'ICT'
     cagr_title = f'Average {varname} CAGR for ICT sectors ({first_year}–{last_year})'
     end_years_title = f'{ICT} {varname} {first_year} and {last_year} Share by Country'
@@ -1574,11 +1574,11 @@ if 1:
     
     # 1 country 1 year
     country_temp, year_temp, im_direct_o, im_indirect_o, im_induced_o = \
-    get_vector_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "output",'f8')
+    get_vector_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "output",'f9')
     country_temp, year_temp,im_direct_h, im_indirect_h, im_induced_h = \
-    get_vector_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "Employment",'f8')
+    get_vector_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "Employment",'f9')
     country_temp, year_temp,im_direct_g, im_indirect_g, im_induced_g = \
-    get_vector_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "GDP",'f8')
+    get_vector_impacts(country, start_year, multipliers_start_year, f8_start_year, f9_start_year, "GDP",'f9')
     
     
     
