@@ -5,11 +5,12 @@ import time
 
 OECD_PATH = '../Data/' # windows style: r".\\"
 
-def data_upload_OECD_without_E(year, currency_exchange_type, table_type='TTL', country = 'CAN'):
+def data_upload_OECD_without_E(year, currency_exchange_type, table_type, country, sector_map):
 
     start_time = time.time()
     if table_type == 'DOM':
-        input_filename = f'{OECD_PATH}NATIO{table_type}IMP/{country}{year}{table_type.lower()}.csv' # windows style: r".\\"
+        #IOTs_NATIODOMIMP
+        input_filename = f'{OECD_PATH}IOTs_NATIO{table_type}IMP/{country}{year}{table_type.lower()}.csv' # windows style: r".\\"
     elif table_type == 'TTL':
         input_filename = f'{OECD_PATH}NATIO{table_type}/{country}{year}{table_type.lower()}.csv'
 
@@ -41,6 +42,10 @@ def data_upload_OECD_without_E(year, currency_exchange_type, table_type='TTL', c
 
     # 3. Loading OECD data
     OECD_rough = pd.read_csv(input_filename)
+    # 30.12.25
+    # DOM has prolbems:
+    #map from D to A, 24A and 24B are not mapped
+    # treat DOM_ and remove all lines starting with IMP_
 
     # Remove imports from matrix
     OECD_rough = OECD_rough.set_index(OECD_rough.columns[0])  # Set first column as index
