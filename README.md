@@ -7,7 +7,7 @@ Economic-impact modeling pipeline built around Leontieff input-output analysis: 
 
 - **Input-output modeling** — Leontieff matrix construction and multiplier calculation
 - **Multi-source data integration** — StatCan salary data, OECD salary data, and World Bank indicators, each with dedicated cleaning/upload pipelines
-- **Benchmarking** — reproduces sector-level impact figures against a reference benchmarking report, validated across multiple prediction rounds
+- **Benchmarking** — reproduces sector-level impact of GDP, total output, and employment. Calculation is sector specific and separates direct, indirect and induced impacts.
 - **Forecasting** — polynomial extrapolation of economic indicators (e.g. GDP), validated with real-vs-predicted comparison plots
 
 ## Structure
