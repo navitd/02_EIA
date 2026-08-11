@@ -18,4 +18,4 @@ Economic-impact modeling pipeline built around Leontieff input-output analysis: 
 
 ## Technologies
 
-Python · pandas · Leontieff input-output modeling · World Bank / OECD / StatCan data sources# Economic Impact Analysis (EIA)
+Python · pandas · Leontieff input-output modeling · World Bank / OECD / StatCan data sources · Economic Impact Analysis (EIA)
